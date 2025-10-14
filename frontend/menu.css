@@ -1,0 +1,294 @@
+/* Importando fontes modernas do Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fredoka:wght@400;500;600&display=swap');
+
+/* Reset e configurações base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* Paleta de cores aconchegante e elegante */
+    --primary: #6b4226;        /* marrom café */
+    --secondary: #d9a441;     /* dourado suave */
+    --accent: #f3e5d8;        /* bege claro */
+    --bg-light: #fffaf5;      /* fundo quente */
+    --bg-dark: #2c2c2c;       /* contraste */
+    
+    --text-dark: #2c2c2c;
+    --text-light: #7a7a7a;
+
+    --shadow-sm: 0 4px 8px rgba(0,0,0,0.08);
+    --shadow-md: 0 8px 20px rgba(0,0,0,0.12);
+    --shadow-lg: 0 15px 40px rgba(0,0,0,0.15);
+
+    --radius-md: 15px;
+    --radius-lg: 25px;
+    --transition: all 0.3s ease;
+}
+
+/* Fundo animado sutil (em degradê pão assado) */
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #fffaf5, #f8e9d2, #f4d7a7);
+    background-size: 200% 200%;
+    animation: gradientShift 10s ease-in-out infinite;
+    color: var(--text-dark);
+    line-height: 1.7;
+    min-height: 100vh;
+}
+
+@keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+/* Header moderno com glassmorphism */
+header {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(15px);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding: 1.2rem 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: var(--shadow-sm);
+    animation: fadeInDown 0.8s ease;
+}
+
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.topo h3 {
+    font-family: 'Fredoka', cursive;
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--primary);
+    letter-spacing: 1px;
+    position: relative;
+}
+
+.topo h3::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 50%;
+    height: 3px;
+    background: var(--secondary);
+    border-radius: 2px;
+    animation: underlineAnim 3s infinite alternate;
+}
+
+@keyframes underlineAnim {
+    from { width: 40%; }
+    to { width: 80%; }
+}
+
+/* Botão de login */
+#btnLogin {
+    padding: 0.7rem 1.5rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+}
+
+#btnLogin::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    transition: left 0.6s;
+}
+
+#btnLogin:hover::before {
+    left: 100%;
+}
+
+#btnLogin:hover {
+    background: var(--secondary);
+    color: var(--text-dark);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Menu */
+.nav {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    padding: 1rem 0;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    box-shadow: var(--shadow-sm);
+}
+
+.nav__menu {
+    list-style: none;
+    display: flex;
+    justify-content: center;
+    gap: 1.8rem;
+    margin: 0;
+    flex-wrap: wrap;
+}
+
+.nav__menu-item > a {
+    color: var(--text-dark);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.7rem 1.2rem;
+    border-radius: var(--radius-md);
+    transition: var(--transition);
+    position: relative;
+}
+
+.nav__menu-item > a:hover {
+    background: var(--accent);
+    color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Submenu */
+.nav__submenu {
+    list-style: none;
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+    background: white;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: var(--radius-md);
+    opacity: 0;
+    visibility: hidden;
+    transition: var(--transition);
+    min-width: 220px;
+    padding: 0.8rem 0;
+    box-shadow: var(--shadow-md);
+    z-index: 100;
+}
+
+.nav__submenu-item a {
+    color: var(--text-dark);
+    padding: 0.6rem 1rem;
+    display: block;
+    transition: var(--transition);
+}
+
+.nav__submenu-item a:hover {
+    background: var(--accent);
+    color: var(--primary);
+}
+
+.nav__menu-item:hover .nav__submenu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Conteúdo principal */
+main {
+    padding: 4rem 2rem;
+}
+
+section {
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: center;
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 3rem 2rem;
+    box-shadow: var(--shadow-lg);
+    animation: fadeInUp 1s ease;
+}
+
+section h2 {
+    font-family: 'Fredoka', cursive;
+    font-size: 2.2rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 1rem;
+}
+
+section p {
+    font-size: 1.15rem;
+    color: var(--text-light);
+}
+
+/* Rodapé */
+footer {
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    color: var(--text-light);
+    text-align: center;
+    font-size: 0.95rem;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    margin-top: 3rem;
+    box-shadow: var(--shadow-sm);
+}
+
+/* Animações */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .topo {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .nav__menu {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    section {
+        padding: 2rem 1.5rem;
+    }
+    section h2 {
+        font-size: 1.8rem;
+    }
+}
+
+
+.nav__menu-item img {
+    width: 24px; /* Tamanho do ícone */
+    height: 24px;
+    vertical-align: middle;
+    margin-right: 5px; /* Espaçamento entre o ícone e o texto, se houver */
+}
+
+.nav__menu-item a[href="#carrinho"] {
+    padding: 0.7rem 1rem; /* Ajuste de padding para o botão do carrinho */
+}
+
+.nav__menu-item a[href="#carrinho"]:hover {
+    background: var(--accent);
+    color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+

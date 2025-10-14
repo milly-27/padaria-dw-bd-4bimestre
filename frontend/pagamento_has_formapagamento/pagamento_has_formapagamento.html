@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUD - Pagamento_has_Formapagamento</title>
+    <link rel="stylesheet" href="/pagamento_has_formapagamento/pagamento_has_formapagamento.css">
+</head>
+
+<body>
+    <header>
+        <h1>CRUD Pagamento_has_Formapagamento</h1>
+    </header>
+
+    <main>
+        <section class="form-section">
+            <h2>Cadastro de Pagamento_has_Formapagamento</h2>
+
+            <form id="pagamento_has_formapagamentoForm">
+                <div class="search-container">
+                    <label for="searchId">Buscar por ID:</label>
+                    <div class="search-input-group">
+                        <input type="number" id="searchId" placeholder="Digite o ID para buscar">
+                        <button type="button" id="btnBuscar">🔍 Buscar</button>
+
+                        <button type="button" id="btnIncluir" class="btn-primary">Incluir</button>
+                        <button type="button" id="btnAlterar" class="btn-secondary"
+                            style="display: none;">Alterar</button>
+                        <button type="button" id="btnExcluir" class="btn-danger" style="display: none;">Excluir</button>
+                        <button type="button" id="btnSalvar" class="btn-save" style="display: none;">Salvar</button>
+                        <button type="button" id="btnCancelar" class="btn-cancel">Cancelar</button>
+                    </div>
+                </div>
+
+                <fieldset id="formFields">
+                    <legend>Dados do Pagamento_has_Formapagamento</legend>
+
+                    <div class="form-group">
+                        <label for="id_pagamento">ID Pagamento:</label>
+                        <input type="number" id="id_pagamento" name="id_pagamento" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id_forma_pagamento">ID Forma Pagamento:</label>
+                        <input type="number" id="id_forma_pagamento" name="id_forma_pagamento" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="valor_pago">Valor Pago:</label>
+                        <input type="number" step="0.01" id="valor_pago" name="valor_pago" required>
+                    </div>
+                </fieldset>
+            </form>
+        </section>
+
+        <section class="list-section">
+            <div class="table-container">
+                <table id="pagamento_has_formapagamentosTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>ID Pagamento</th>
+                            <th>ID Forma Pagamento</th>
+                            <th>Valor Pago</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pagamento_has_formapagamentosTableBody">
+                        <!-- Dados serão carregados dinamicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 CRUD Pagamento_has_Formapagamento</p>
+    </footer>
+
+    <div id="messageContainer" class="message-container"></div>
+
+    <script src="/pagamento_has_formapagamento/pagamento_has_formapagamento.js" defer></script>
+
+</body>
+
+</html>

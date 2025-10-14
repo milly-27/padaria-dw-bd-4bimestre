@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cardápio - Padaria</title>
+    <link rel="stylesheet" href="/cardapio/cardapio.css">
+</head>
+
+<body>
+    <header>
+        <div class="header-content">
+            <div class="header-text">
+                <h1>Cardápio da Padaria</h1>
+                <p>Confira nossos deliciosos produtos</p>
+            </div>
+            <div class="header-actions">
+                <button onclick="window.location.href='../carrinho/carrinho.html'" class="btn-carrinho">
+                    🛒 Carrinho (<span id="carrinhoCount">0</span>)
+                </button>
+                <button onclick="window.location.href='../menu.html'" class="btn-menu">
+                    🏠 Menu
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="filter-section">
+            <h2>Filtrar por Categoria</h2>
+            <div class="filter-container">
+                <select id="filtroCategoria">
+                    <option value="todas">Todas as Categorias</option>
+                </select>
+                <button id="btnFiltrar" class="btn-filter">Filtrar</button>
+            </div>
+        </section>
+
+        <section class="produtos-section">
+            <div id="produtosContainer" class="produtos-grid">
+                <!-- Produtos serão carregados dinamicamente -->
+            </div>
+            <div id="loadingMessage" class="loading-message" style="display: none;">
+                Carregando produtos...
+            </div>
+            <div id="emptyMessage" class="empty-message" style="display: none;">
+                Nenhum produto encontrado para esta categoria.
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Padaria - Cardápio Digital</p>
+    </footer>
+
+    <div id="messageContainer" class="message-container"></div>
+
+    <script src="/cardapio/cardapio.js" defer></script>
+
+</body>
+
+</html>
+

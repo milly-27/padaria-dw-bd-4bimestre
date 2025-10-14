@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu Principal</title>
+    <link rel="stylesheet" href="menu.css">
+</head>
+<body>
+    <header>
+        <div class="topo">
+            <h3>Menu Principal</h3>
+            <div class="user-section">
+                <button id="btnLogin" onclick="redirecionarLogin()">Login</button>
+                <div id="userInfo" class="user-info hidden" onclick="logout()">
+                    <span id="userName"></span>
+                    <span class="logout-tooltip">Clique para deslogar</span>
+                </div>
+            </div>
+        </div>
+        <nav class="nav">
+            <ul class="nav__menu">
+                <li class="nav__menu-item"><a href="#">Home</a></li>
+                <li class="nav__menu-item">
+                    <a href="#">Cadastros</a>
+                    <ul class="nav__submenu">
+                        <li class="nav__submenu-item"><a href="http://localhost:3001/pessoas/abrirCrudPessoa">Pessoa</a></li>
+                        <li class="nav__submenu-item"><a href="http://localhost:3001/cargos/abrirCrudCargo">Cargo</a></li>
+                        <li class="nav__submenu-item"><a href="http://localhost:3001/produtos/abrirCrudProduto">Produto</a></li>
+                        <li class="nav__submenu-item"><a href="http://localhost:3001/categorias/abrirCrudCategoria">Categoria</a></li>
+                        <li class="nav__submenu-item"><a href="http://localhost:3001/pedido/abrirCrudPedido">Pedido</a></li>                        <li class="nav__submenu-item"><a href="http://localhost:3001/pagamento/abrirCrudPagamento">Pagamento</a></li>
+                        <li class="nav__submenu-item"><a href="http://localhost:3001/forma_pagamentos/abrirCrudForma_pagamento">Formas de Pagamento</a></li>
+                        <li class="nav__submenu-item"><a href="http://localhost:3001/pagamento_has_formapagamentos/abrirCrudpagamento_has_formapagamento">Pagamento e Formas de Pagamento</a></li>
+                    </ul>
+                </li>
+                <li class="nav__menu-item"><a href="http://localhost:3001/cardapio/abrirCardapio">Cardápio</a></li>
+                <li class="nav__menu-item"><a href="./blog/blog.html">Blog</a></li>
+                <li class="nav__menu-item"><a href="./contato/contato.html">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section>
+            <h2>Bem-vindo ao Sistema AVAP</h2>
+            <p>Sistema de Gerenciamento integrado. Use o menu acima para navegar pelas funcionalidades disponíveis.</p>
+            <div id="loginMessage" class="hidden">
+                <p><strong>Você está logado!</strong> Utilize o menu de navegação para acessar as funcionalidades do sistema.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 - Sistema AVAP</p>
+    </footer>
+
+    <script src="menu.js"></script>
+</body>
+</html>

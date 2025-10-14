@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PARDARIA - Login</title>
+    <link rel="stylesheet" href="login.css">
+</head>
+<body>
+    <div class="container">
+        <div class="login-card">
+            <div class="logo">
+                <h1>🍞 PARDARIA</h1>
+                <p>Padaria Artesanal</p>
+            </div>
+            
+            <!-- Login -->
+            <div id="login-tab" class="tab-content active">
+                <h2>Login</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="loginEmail">Email:</label>
+                        <input type="email" id="loginEmail" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginSenha">Senha:</label>
+                        <input type="password" id="loginSenha" name="senha" maxlength="20" required>
+                    </div>
+                    <button type="submit" class="btn-login">Entrar</button>
+                </form>
+                <p class="register-link">
+                    Não tem conta? <a href="#" onclick="showRegister()">Cadastre-se aqui</a>
+                </p>
+            </div>
+
+            <!-- Cadastro -->
+            <div id="register-tab" class="tab-content">
+                <h2>Cadastro</h2>
+                <form id="cadastroForm">
+                    <div class="form-group">
+                        <label for="regCpf">CPF:</label>
+                        <input type="text" id="regCpf" name="cpf" maxlength="11" placeholder="Apenas números" required>
+                        <small>Digite apenas os 11 números do CPF</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="regNome">Nome Completo:</label>
+                        <input type="text" id="regNome" name="nome" maxlength="100" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regEmail">Email:</label>
+                        <input type="email" id="regEmail" name="email" maxlength="100" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regSenha">Senha:</label>
+                        <input type="password" id="regSenha" name="senha" maxlength="20" required>
+                        <small>Máximo 20 caracteres</small>
+                    </div>
+                    <button type="submit" class="btn-register">Cadastrar</button>
+                </form>
+                <p class="login-link">
+                    Já tem conta? <a href="#" onclick="showLogin()">Faça login aqui</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="login.js"></script>
+</body>
+</html>
