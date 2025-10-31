@@ -21,14 +21,15 @@
         <nav class="nav">
             <ul class="nav__menu">
                 <li class="nav__menu-item"><a href="#">Home</a></li>
-                <li class="nav__menu-item">
+                <li class="nav__menu-item" id="menuCadastros" style="display: none;">
                     <a href="#">Cadastros</a>
                     <ul class="nav__submenu">
                         <li class="nav__submenu-item"><a href="http://localhost:3001/pessoas/abrirCrudPessoa">Pessoa</a></li>
                         <li class="nav__submenu-item"><a href="http://localhost:3001/cargos/abrirCrudCargo">Cargo</a></li>
                         <li class="nav__submenu-item"><a href="http://localhost:3001/produtos/abrirCrudProduto">Produto</a></li>
                         <li class="nav__submenu-item"><a href="http://localhost:3001/categorias/abrirCrudCategoria">Categoria</a></li>
-                        <li class="nav__submenu-item"><a href="http://localhost:3001/pedido/abrirCrudPedido">Pedido</a></li>                        <li class="nav__submenu-item"><a href="http://localhost:3001/pagamento/abrirCrudPagamento">Pagamento</a></li>
+                        <li class="nav__submenu-item"><a href="http://localhost:3001/pedido/abrirCrudPedido">Pedido</a></li>
+                        <li class="nav__submenu-item"><a href="http://localhost:3001/pagamento/abrirCrudPagamento">Pagamento</a></li>
                         <li class="nav__submenu-item"><a href="http://localhost:3001/forma_pagamentos/abrirCrudForma_pagamento">Formas de Pagamento</a></li>
                         <li class="nav__submenu-item"><a href="http://localhost:3001/pagamento_has_formapagamentos/abrirCrudpagamento_has_formapagamento">Pagamento e Formas de Pagamento</a></li>
                     </ul>
@@ -54,6 +55,12 @@
         <p>&copy; 2025 - Sistema AVAP</p>
     </footer>
 
+    <script>
+        console.log('🚀 Carregando menu.js...');
+    </script>
     <script src="menu.js"></script>
+    <script>
+        console.log('✅ menu.js carregado');
+    </script>
 </body>
 </html>

@@ -96,6 +96,13 @@ header {
     to { width: 80%; }
 }
 
+/* Seção do usuário */
+.user-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
 /* Botão de login */
 #btnLogin {
     padding: 0.7rem 1.5rem;
@@ -134,6 +141,55 @@ header {
     box-shadow: var(--shadow-md);
 }
 
+/* Informações do usuário logado */
+.user-info {
+    background: var(--accent);
+    padding: 0.7rem 1.5rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    font-weight: 500;
+}
+
+.user-info:hover {
+    background: var(--primary);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.logout-tooltip {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    background: var(--text-dark);
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: var(--transition);
+    pointer-events: none;
+    z-index: 10;
+}
+
+.user-info:hover .logout-tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Classe para esconder elementos */
+.hidden {
+    display: none !important;
+}
+
 /* Menu */
 .nav {
     background: rgba(255, 255, 255, 0.7);
@@ -152,6 +208,10 @@ header {
     flex-wrap: wrap;
 }
 
+.nav__menu-item {
+    position: relative;
+}
+
 .nav__menu-item > a {
     color: var(--text-dark);
     text-decoration: none;
@@ -160,9 +220,30 @@ header {
     border-radius: var(--radius-md);
     transition: var(--transition);
     position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .nav__menu-item > a:hover {
+    background: var(--accent);
+    color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Ícones nos itens do menu */
+.nav__menu-item img {
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+}
+
+.nav__menu-item a[href="#carrinho"] {
+    padding: 0.7rem 1rem;
+}
+
+.nav__menu-item a[href="#carrinho"]:hover {
     background: var(--accent);
     color: var(--primary);
     transform: translateY(-2px);
@@ -188,11 +269,17 @@ header {
     z-index: 100;
 }
 
+.nav__submenu-item {
+    list-style: none;
+}
+
 .nav__submenu-item a {
     color: var(--text-dark);
     padding: 0.6rem 1rem;
     display: block;
     transition: var(--transition);
+    text-decoration: none;
+    font-weight: 400;
 }
 
 .nav__submenu-item a:hover {
@@ -233,6 +320,20 @@ section h2 {
 section p {
     font-size: 1.15rem;
     color: var(--text-light);
+    margin-bottom: 1rem;
+}
+
+#loginMessage {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: var(--accent);
+    border-radius: var(--radius-md);
+    border-left: 4px solid var(--secondary);
+}
+
+#loginMessage p {
+    color: var(--text-dark);
+    font-weight: 500;
 }
 
 /* Rodapé */
@@ -259,36 +360,95 @@ footer {
     .topo {
         flex-direction: column;
         gap: 1rem;
+        text-align: center;
     }
+    
+    .topo h3 {
+        font-size: 1.5rem;
+    }
+    
+    .user-section {
+        width: 100%;
+        justify-content: center;
+    }
+    
     .nav__menu {
         flex-direction: column;
         gap: 1rem;
+        align-items: center;
     }
+    
+    .nav__menu-item {
+        width: 100%;
+        max-width: 300px;
+    }
+    
+    .nav__menu-item > a {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .nav__submenu {
+        position: static;
+        transform: none;
+        margin-top: 0.5rem;
+        width: 100%;
+    }
+    
+    .nav__menu-item:hover .nav__submenu {
+        transform: none;
+    }
+    
     section {
         padding: 2rem 1.5rem;
     }
+    
     section h2 {
         font-size: 1.8rem;
     }
+    
+    section p {
+        font-size: 1rem;
+    }
 }
 
-
-.nav__menu-item img {
-    width: 24px; /* Tamanho do ícone */
-    height: 24px;
-    vertical-align: middle;
-    margin-right: 5px; /* Espaçamento entre o ícone e o texto, se houver */
+@media (max-width: 480px) {
+    header {
+        padding: 1rem;
+    }
+    
+    .topo h3 {
+        font-size: 1.3rem;
+    }
+    
+    #btnLogin,
+    .user-info {
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .nav {
+        padding: 0.5rem 0;
+    }
+    
+    .nav__menu {
+        gap: 0.5rem;
+    }
+    
+    .nav__menu-item > a {
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    main {
+        padding: 2rem 1rem;
+    }
+    
+    section {
+        padding: 1.5rem 1rem;
+    }
+    
+    section h2 {
+        font-size: 1.5rem;
+    }
 }
-
-.nav__menu-item a[href="#carrinho"] {
-    padding: 0.7rem 1rem; /* Ajuste de padding para o botão do carrinho */
-}
-
-.nav__menu-item a[href="#carrinho"]:hover {
-    background: var(--accent);
-    color: var(--primary);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
-}
-
-

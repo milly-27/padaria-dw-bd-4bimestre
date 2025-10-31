@@ -1,97 +1,73 @@
 const express = require('express');
 const app = express();
 const path = require('path');
-
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 
 // Importar a configuração do banco PostgreSQL
-const db = require('./database'); // Ajuste o caminho conforme necessário
+const db = require('./database');
 
-// Configurações do servidor - quando em produção, você deve substituir o IP e a porta pelo do seu servidor remoto
-//const HOST = '192.168.1.100'; // Substitua pelo IP do seu servidor remoto
-const HOST = 'localhost'; // Para desenvolvimento local
-const PORT_FIXA = 3001; // Porta fixa
+// Configurações do servidor
+const HOST = 'localhost';
+const PORT_FIXA = 3001;
 
-// serve a pasta frontend como arquivos estáticos
+// ============================================
+// MIDDLEWARES - ORDEM CORRETA É CRUCIAL!
+// ============================================
 
-// serve a pasta frontend como arquivos estáticos
-
+// 1. PRIMEIRO: Arquivos estáticos
 const caminhoFrontend = path.join(__dirname, '../frontend');
 console.log('Caminho frontend:', caminhoFrontend);
-
 app.use(express.static(caminhoFrontend));
-
-// Servir arquivos de upload como estáticos
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-
-
+// 2. SEGUNDO: Cookie parser ANTES do CORS
 app.use(cookieParser());
 
-// Middleware para permitir CORS (Cross-Origin Resource Sharing)
-// Isso é útil se você estiver fazendo requisições de um frontend que está rodando em um domínio diferente
-// ou porta do backend.
-// Em produção, você deve restringir isso para domínios específicos por segurança.
-// Aqui, estamos permitindo qualquer origem, o que é útil para desenvolvimento, mas deve ser ajustado em produção.
-//app.use((req, res, next) => {
- // const allowedOrigins = ['http://127.0.0.1:5500','http://localhost:5500', 'http://127.0.0.1:5501', 'http://localhost:3000', 'http://localhost:3001'];
-  //const origin = req.headers.origin;
- // if (allowedOrigins.includes(origin)) {
- //   res.header('Access-Control-Allow-Origin', origin);
- // }
- // res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-//  res.header('Access-Control-Allow-Headers', 'Content-Type');
- // res.header('Access-Control-Allow-Credentials', 'true');
+// 3. TERCEIRO: JSON parser
+app.use(express.json());
 
- // if (req.method === 'OPTIONS') {
- //   return res.sendStatus(200); // <-- responde ao preflight
- // }
-
- // next();
-//});
-// Middleware CORS — mais seguro e limpo
-// Middleware CORS — corrigido
+// 4. QUARTO: CORS configurado corretamente
 const allowedOrigins = [
   'http://127.0.0.1:5500',
   'http://localhost:5500',
   'http://127.0.0.1:5501',
   'http://localhost:3000',
   'http://localhost:3001',
-  'http://127.0.0.1:3002', // ✅ adicionada
-  'http://localhost:3002'  // ✅ por segurança, caso mude a origem
+  'http://127.0.0.1:3002',
+  'http://localhost:3002'
 ];
-
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permite chamadas sem origem (como Postman)
-    if (!origin) return callback(null, true);
+    // Permite requisições sem origem (mesma origem, Postman, etc)
+    if (!origin) {
+      console.log('✅ Requisição da mesma origem permitida');
+      return callback(null, true);
+    }
 
-    // Verifica se a origem é permitida
+    // Verifica se a origem está na lista permitida
     if (allowedOrigins.includes(origin)) {
+      console.log('✅ Origem permitida:', origin);
       callback(null, true);
     } else {
-      console.warn('⚠️ Origem não permitida pelo CORS:', origin);
-      callback(null, false); // não lança erro, só bloqueia
+      console.warn('⚠️ Origem bloqueada:', origin);
+      callback(null, false);
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  credentials: true, // ESSENCIAL para cookies funcionarem
+  optionsSuccessStatus: 200
 }));
 
-
-// Middleware para adicionar a instância do banco de dados às requisições
+// 5. QUINTO: Middleware do banco
 app.use((req, res, next) => {
   req.db = db;
   next();
 });
 
-// Middlewares
-app.use(express.json());
-
-// Middleware de tratamento de erros JSON malformado
+// 6. SEXTO: Middleware de erro JSON
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
     return res.status(400).json({
@@ -102,36 +78,27 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
-// só mexa nessa parte
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Importando as rotas
-//const loginRoutes = require('./routes/loginRoutes');
-//app.use('/login', loginRoutes);
+// 7. SÉTIMO: Middleware de log de cookies (para debug)
+app.use((req, res, next) => {
+  console.log(`\n📍 ${req.method} ${req.path}`);
+  console.log('🍪 Cookies recebidos:', req.cookies);
+  
+  // Intercepta res.cookie para logar quando cookies são definidos
+  const originalCookie = res.cookie.bind(res);
+  res.cookie = function(name, value, options) {
+    console.log(`🍪 Definindo cookie: ${name} = ${value}`);
+    return originalCookie(name, value, options);
+  };
+  
+  next();
+});
+
+// ============================================
+// ROTAS
+// ============================================
 
 const menuRoutes = require('./routes/menuRoutes');
 app.use('/menu', menuRoutes);
-
-//const pessoaRoutes = require('./routes/pessoaRoutes');
-//app.use('/pessoas', pessoaRoutes);
-
-//const questaoRoutes = require('./routes/questaoRoutes');
-//app.use('/questao', questaoRoutes);
-
-//const professorRoutes = require('./routes/professorRoutes');
-//app.use('/professor', professorRoutes);
-
-//const avaliadorRoutes = require('./routes/avaliadorRoutes');
-//app.use('/avaliador', avaliadorRoutes);
-
-//const avaliadoRoutes = require('./routes/avaliadoRoutes');
-//app.use('/avaliado', avaliadoRoutes);
-
-
-//const avaliacaoRoutes = require('./routes/avaliacaoRoutes');
-//app.use('/avaliacao', avaliacaoRoutes);
-
-//const avaliacaoHasQuestaoRoutes = require('./routes/avaliacaoHasQuestaoRoutes');
-//app.use('/avaliacaoHasQuestao', avaliacaoHasQuestaoRoutes);
 
 const cargoRoutes = require('./routes/cargoRoutes');
 app.use('/cargos', cargoRoutes);
@@ -157,10 +124,6 @@ app.use('/clientes', clienteRoutes);
 const cardapioRoutes = require('./routes/cardapioRoutes');
 app.use('/cardapio', cardapioRoutes);
 
-//const authRoutes = require('./routes/authRoutes');
-//app.use('/auth', authRoutes);
-
-// No seu arquivo principal (app.js ou server.js)
 const pedidoRoutes = require('./routes/pedidoRoutes');
 app.use('/pedido', pedidoRoutes);
 
@@ -168,7 +131,7 @@ const pedidoprodutoRoutes = require('./routes/pedidoprodutoRoutes');
 app.use('/pedidoproduto', pedidoprodutoRoutes);
 
 const pagamentoRoutes = require('./routes/pagamentoRoutes');
-app.use('/pagamento', pagamentoRoutes); 
+app.use('/pagamento', pagamentoRoutes);
 
 const forma_pagamentoRoutes = require('./routes/forma_pagamentoRoutes');
 app.use('/forma_pagamentos', forma_pagamentoRoutes);
@@ -176,9 +139,9 @@ app.use('/forma_pagamentos', forma_pagamentoRoutes);
 const pagamento_has_formapagamentoRoutes = require('./routes/pagamento_has_formapagamentoRoutes');
 app.use('/pagamento_has_formapagamentos', pagamento_has_formapagamentoRoutes);
 
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ============================================
+// ROTAS PADRÃO
+// ============================================
 
 // Rota padrão
 app.get('/', (req, res) => {
@@ -188,7 +151,6 @@ app.get('/', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
-
 
 // Rota para testar a conexão com o banco
 app.get('/health', async (req, res) => {
@@ -221,6 +183,10 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// ============================================
+// MIDDLEWARES DE ERRO (DEVEM SER OS ÚLTIMOS)
+// ============================================
+
 // Middleware global de tratamento de erros
 app.use((err, req, res, next) => {
   console.error('Erro não tratado:', err);
@@ -241,18 +207,18 @@ app.use((req, res) => {
   });
 });
 
+// ============================================
+// INICIALIZAÇÃO DO SERVIDOR
+// ============================================
 
-// Inicialização do servidor
 const startServer = async () => {
   try {
-    // Testar conexão com o banco antes de iniciar o servidor
     console.log(caminhoFrontend);
     console.log('Testando conexão com PostgreSQL...');
     const connectionTest = await db.testConnection();
 
     if (connectionTest === 'mock') {
       console.log('🔄 Usando dados mockados para desenvolvimento');
-      // Importar dados mockados
       const mockData = require('./mockData');
       global.useMockData = true;
       global.mockDatabase = mockData;
@@ -278,7 +244,10 @@ const startServer = async () => {
   }
 };
 
-// Tratamento de sinais para encerramento graceful
+// ============================================
+// TRATAMENTO DE SINAIS
+// ============================================
+
 process.on('SIGINT', async () => {
   console.log('\n🔄 Encerrando servidor...');
 

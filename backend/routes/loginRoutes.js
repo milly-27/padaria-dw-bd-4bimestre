@@ -4,6 +4,7 @@ const loginController = require('../controllers/loginController');
 
 // Rotas de autenticação
 router.get('/verificaSePessoaEstaLogada', loginController.verificaSePessoaEstaLogada);
+router.post('/verificaSePessoaEstaLogada', loginController.verificaSePessoaEstaLogada);
 router.post('/loginCliente', loginController.loginCliente);
 router.post('/loginFuncionario', loginController.loginFuncionario);
 router.post('/cadastrarCliente', loginController.cadastrarCliente);

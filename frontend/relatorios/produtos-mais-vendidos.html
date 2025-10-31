@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Produtos Mais Vendidos</title>
+    <link rel="stylesheet" href="../menu.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .report-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .chart-container {
+            margin: 30px 0;
+            position: relative;
+            height: 500px;
+        }
+        .filters {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .filters select, .filters input, .filters button {
+            padding: 8px 15px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .filters button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .filters button:hover {
+            background-color: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .product-image {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="topo">
+            <h3>Relatório de Produtos Mais Vendidos</h3>
+            <div class="user-section">
+                <button id="btnLogin" onclick="redirecionarLogin()" class="hidden">Login</button>
+                <div id="userInfo" class="user-info hidden" onclick="logout()">
+                    <span id="userName"></span>
+                    <span class="logout-tooltip">Clique para deslogar</span>
+                </div>
+                <button id="btnImprimir" class="print-button" onclick="window.print()">
+                    <i class="fas fa-print"></i> Imprimir
+                </button>
+            </div>
+        </div>
+        <nav class="nav">
+            <ul class="nav__menu">
+                <li class="nav__menu-item"><a href="../menu.html">Voltar ao Menu</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="report-container">
+        <h1>Relatório de Produtos Mais Vendidos</h1>
+        <div id="loading" class="loading">Carregando dados do relatório...</div>
+        
+        <div class="filters">
+            <div>
+                <label for="startDate">Data Inicial:</label>
+                <input type="date" id="startDate">
+                
+                <label for="endDate">Data Final:</label>
+                <input type="date" id="endDate">
+                
+                <label for="limit">Top N:</label>
+                <select id="limit">
+                    <option value="5">Top 5</option>
+                    <option value="10" selected>Top 10</option>
+                    <option value="20">Top 20</option>
+                    <option value="50">Top 50</option>
+                    <option value="0">Todos</option>
+                </select>
+                
+                <button id="btnGerarRelatorio">Gerar Relatório</button>
+                <button id="btnExportarPDF" style="background-color: #f44336;">Exportar PDF</button>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="productsChart"></canvas>
+        </div>
+
+        <div id="tabelaProdutos">
+            <h3>Detalhamento dos Produtos</h3>
+            <div style="max-height: 500px; overflow-y: auto;">
+                <table id="tabelaDados">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Imagem</th>
+                            <th>Produto</th>
+                            <th>Categoria</th>
+                            <th>Quantidade Vendida</th>
+                            <th>Total Arrecadado (R$)</th>
+                            <th>Média de Venda (R$)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaCorpo">
+                        <!-- Os dados serão preenchidos via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        @media print {
+            .topo, .nav, .filters, .print-hide {
+                display: none !important;
+            }
+            body {
+                padding: 20px;
+                font-size: 12px;
+            }
+            .report-container {
+                max-width: 100%;
+                box-shadow: none;
+                padding: 0;
+                margin: 0;
+            }
+            .chart-container {
+                page-break-inside: avoid;
+                height: 300px !important;
+            }
+            table {
+                width: 100%;
+                font-size: 10px;
+            }
+            th, td {
+                padding: 4px 8px !important;
+            }
+            h1, h2, h3 {
+                margin: 10px 0 !important;
+            }
+            .product-image {
+                width: 30px !important;
+                height: 30px !important;
+            }
+        }
+        .print-button {
+            background-color: #4a6fa5;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .print-button:hover {
+            background-color: #3a5a80;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+    <script src="../menu.js"></script>
+    <script>
+        // Verifica se o menu.js foi carregado
+        if (typeof verificarSeUsuarioEstaLogadoBackend === 'function') {
+            verificarSeUsuarioEstaLogadoBackend();
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            // Define as datas padrão (últimos 30 dias)
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setMonth(startDate.getMonth() - 1);
+            
+            document.getElementById('startDate').valueAsDate = startDate;
+            document.getElementById('endDate').valueAsDate = endDate;
+            
+            // Inicializa o gráfico vazio
+            const ctx = document.getElementById('productsChart').getContext('2d');
+            let productsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Quantidade Vendida',
+                        data: [],
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y'
+                    }, {
+                        label: 'Total Arrecadado (R$)',
+                        data: [],
+                        type: 'line',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Quantidade'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: {
+                                drawOnChartArea: false
+                            },
+                            title: {
+                                display: true,
+                                text: 'Valor (R$)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Produtos'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label.includes('R$')) {
+                                        label += ': ' + context.parsed.y.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+                                    } else {
+                                        label += ': ' + context.parsed.y;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Função para formatar a data para YYYY-MM-DD
+            function formatDate(date) {
+                const d = new Date(date);
+                let month = '' + (d.getMonth() + 1);
+                let day = '' + d.getDate();
+                const year = d.getFullYear();
+
+                if (month.length < 2) month = '0' + month;
+                if (day.length < 2) day = '0' + day;
+
+                return [year, month, day].join('-');
+            }
+
+            // Mostrar/ocultar indicador de carregamento
+            function mostrarCarregamento(mostrar) {
+                const loadingElement = document.getElementById('loading');
+                if (mostrar) {
+                    loadingElement.style.display = 'block';
+                } else {
+                    loadingElement.style.display = 'none';
+                }
+            }
+
+            // Função para carregar os dados do relatório
+            async function carregarDadosRelatorio(dataInicio, dataFim, limite) {
+                try {
+                    mostrarCarregamento(true);
+                    const response = await fetch(`http://localhost:3001/api/relatorios/produtos-mais-vendidos?dataInicio=${dataInicio}&dataFim=${dataFim}&limite=${limite}`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`Erro na requisição: ${response.status} ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (!Array.isArray(data)) {
+                        throw new Error('Dados recebidos não estão no formato esperado');
+                    }
+                    
+                    // Atualiza o gráfico
+                    productsChart.data.labels = data.map(item => item.nomeProduto);
+                    productsChart.data.datasets[0].data = data.map(item => item.quantidadeVendida);
+                    productsChart.data.datasets[1].data = data.map(item => item.totalArrecadado);
+                    productsChart.update();
+                    
+                    // Preenche a tabela
+                    const tabelaCorpo = document.getElementById('tabelaCorpo');
+                    tabelaCorpo.innerHTML = '';
+                    
+                    data.forEach((item, index) => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${index + 1}</td>
+                            <td><img src="${item.imagem || '../images/placeholder-produto.jpg'}" alt="${item.nomeProduto}" class="product-image" onerror="this.src='../images/placeholder-produto.jpg'"></td>
+                            <td>${item.nomeProduto}</td>
+                            <td>${item.categoria || 'N/A'}</td>
+                            <td>${item.quantidadeVendida.toLocaleString('pt-BR')}</td>
+                            <td>R$ ${item.totalArrecadado.toFixed(2).replace('.', ',')}</td>
+                            <td>R$ ${item.mediaVenda.toFixed(2).replace('.', ',')}</td>
+                        `;
+                        tabelaCorpo.appendChild(row);
+                    });
+                    
+                } catch (error) {
+                    console.error('Erro ao carregar dados do relatório:', error);
+                    alert('Erro ao carregar dados do relatório: ' + error.message);
+                } finally {
+                    mostrarCarregamento(false);
+                }
+            }
+            
+            // Evento do botão Gerar Relatório
+            document.getElementById('btnGerarRelatorio').addEventListener('click', function() {
+                const dataInicio = document.getElementById('startDate').value;
+                const dataFim = document.getElementById('endDate').value;
+                const limite = document.getElementById('limit').value;
+                
+                if (!dataInicio || !dataFim) {
+                    alert('Por favor, selecione as datas de início e fim.');
+                    return;
+                }
+                
+                if (new Date(dataInicio) > new Date(dataFim)) {
+                    alert('A data inicial não pode ser maior que a data final.');
+                    return;
+                }
+                
+                carregarDadosRelatorio(dataInicio, dataFim, limite);
+            });
+            
+            // Evento do botão Exportar PDF
+            document.getElementById('btnExportarPDF').addEventListener('click', function() {
+                alert('Funcionalidade de exportação para PDF será implementada em breve.');
+                // Implementar lógica de exportação para PDF aqui
+            });
+            
+            // Carrega os dados iniciais
+            carregarDadosRelatorio(
+                formatDate(startDate), 
+                formatDate(endDate), 
+                document.getElementById('limit').value
+            );
+        });
+    </script>
+</body>
+</html>
