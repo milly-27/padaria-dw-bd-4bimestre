@@ -1,284 +1,621 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relatório de Vendas Mensais</title>
-    <link rel="stylesheet" href="../menu.css">
+    <title>Relatório de Vendas Mensais | Sistema AVAP</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/frontend/relatorios/css/relatorios.css">
+    
     <style>
-        .report-container {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
+        /* Estilos adicionais específicos para esta página */
         .chart-container {
-            margin: 30px 0;
             position: relative;
             height: 400px;
+            margin-bottom: 2rem;
         }
-        .filters {
-            margin: 20px 0;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 5px;
+        
+        .summary-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-        .filters select, .filters button {
-            padding: 8px 15px;
-            margin-right: 10px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
+        
+        .summary-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
         }
-        .filters button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-        .filters button:hover {
-            background-color: #45a049;
+        
+        .spinner {
+            animation: spin 1s linear infinite;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
+        
+        /* Estilos para impressão */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            
+            .chart-container {
+                height: 300px !important;
+            }
+            
+            .summary-cards {
+                display: grid !important;
+                grid-template-columns: repeat(4, 1fr) !important;
+                gap: 1rem !important;
+            }
+            
+            .summary-card {
+                break-inside: avoid;
+            }
         }
     </style>
 </head>
 <body>
-    <header>
-        <div class="topo">
-            <h3>Relatório de Vendas Mensais</h3>
-            <div class="user-section">
-                <button id="btnLogin" onclick="redirecionarLogin()" class="hidden">Login</button>
-                <div id="userInfo" class="user-info hidden" onclick="logout()">
-                    <span id="userName"></span>
-                    <span class="logout-tooltip">Clique para deslogar</span>
-                </div>
-                <button id="btnImprimir" class="print-button" onclick="window.print()">
-                    <i class="fas fa-print"></i> Imprimir
+    <div class="report-container">
+        <!-- Cabeçalho do Relatório -->
+        <header class="report-header">
+            <div>
+                <h1 class="report-title">Relatório de Vendas Mensais</h1>
+                <p class="report-subtitle">Análise de desempenho de vendas por mês</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button id="btnPrint" class="btn btn-print no-print">
+                    <i class="bi bi-printer"></i> Imprimir
+                </button>
+                <button id="btnExport" class="btn btn-export no-print">
+                    <i class="bi bi-download"></i> Exportar
                 </button>
             </div>
-        </div>
-        <nav class="nav">
-            <ul class="nav__menu">
-                <li class="nav__menu-item"><a href="../menu.html">Voltar ao Menu</a></li>
-            </ul>
-        </nav>
-    </header>
-
-    <div class="report-container">
-        <h1>Relatório de Vendas Mensais</h1>
-        <div id="loading" class="loading">Carregando dados do relatório...</div>
+        </header>
         
-        <div class="filters">
-            <label for="year">Ano:</label>
-            <select id="year">
-                <option value="2023">2023</option>
-                <option value="2024" selected>2024</option>
-                <option value="2025">2025</option>
-            </select>
-            
-            <button id="btnGerarRelatorio">Gerar Relatório</button>
-            <button id="btnExportarPDF" style="background-color: #f44336;">Exportar PDF</button>
-        </div>
-
-        <div class="chart-container">
-            <canvas id="salesChart"></canvas>
-        </div>
-
-        <div id="tabelaVendas">
-            <h3>Detalhamento das Vendas</h3>
-            <table id="tabelaDados">
-                <thead>
-                    <tr>
-                        <th>Mês</th>
-                        <th>Total de Vendas (R$)</th>
-                        <th>Quantidade de Pedidos</th>
-                        <th>Ticket Médio (R$)</th>
-                    </tr>
-                </thead>
-                <tbody id="tabelaCorpo">
-                    <!-- Os dados serão preenchidos via JavaScript -->
-                </tbody>
-            </table>
-        </div>
+        <!-- Filtros -->
+        <section class="filters no-print">
+            <div class="filter-group">
+                <label for="ano">Ano</label>
+                <select id="ano" class="form-select">
+                    <!-- Os anos serão preenchidos via JavaScript -->
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="ordenar">Ordenar por</label>
+                <select id="ordenar" class="form-select">
+                    <option value="mes">Mês</option>
+                    <option value="valor">Valor Total</option>
+                    <option value="quantidade">Quantidade de Vendas</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="direcao">Ordem</label>
+                <select id="direcao" class="form-select">
+                    <option value="asc">Crescente</option>
+                    <option value="desc" selected>Decrescente</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <button id="btnFiltrar" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel"></i> Filtrar
+                </button>
+            </div>
+        </section>
+        
+        <!-- Cards de Resumo -->
+        <section class="summary-cards" id="summaryCards">
+            <!-- Os cards serão preenchidos via JavaScript -->
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+                <p class="mt-2">Carregando dados...</p>
+            </div>
+        </section>
+        
+        <!-- Gráfico de Vendas Mensais -->
+        <section class="chart-container bg-white p-4 rounded shadow-sm mb-4">
+            <div class="chart-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
+                <h2 class="chart-title h5 mb-3 mb-md-0">Vendas por Mês</h2>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-primary active" data-metric="valor">
+                        <i class="bi bi-currency-dollar"></i> Valor
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-metric="quantidade">
+                        <i class="bi bi-box-seam"></i> Quantidade
+                    </button>
+                </div>
+            </div>
+            <div class="chart-wrapper" style="position: relative; height: 400px;">
+                <canvas id="salesChart"></canvas>
+            </div>
+        </section>
+        
+        <!-- Tabela de Detalhes -->
+        <section class="table-responsive bg-white rounded shadow-sm overflow-hidden">
+            <div class="p-3 border-bottom d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                <h2 class="h5 mb-3 mb-md-0">Detalhamento por Mês</h2>
+                <div class="btn-group" role="group">
+                    <button id="exportExcel" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Exportar para Excel">
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </button>
+                    <button id="exportPdf" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Exportar para PDF">
+                        <i class="bi bi-file-earmark-pdf"></i> PDF
+                    </button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Mês</th>
+                            <th class="text-end">Vendas Realizadas</th>
+                            <th class="text-end">Valor Total</th>
+                            <th class="text-end">Ticket Médio</th>
+                            <th class="text-end">Crescimento</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salesTableBody">
+                        <tr>
+                            <td colspan="5" class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Carregando...</span>
+                                </div>
+                                <p class="mt-2 mb-0">Carregando dados...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot id="salesTableFooter" class="table-light fw-bold">
+                        <!-- O rodapé será preenchido via JavaScript -->
+                    </tfoot>
+                </table>
+            </div>
+        </section>
+        
+        <!-- Rodapé -->
+        <footer class="text-center text-muted mt-4 mb-5">
+            <p class="mb-0">Relatório gerado em <span id="reportDate"></span> | Sistema AVAP</p>
+            <p class="small">© 2025 Todos os direitos reservados</p>
+        </footer>
     </div>
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        @media print {
-            .topo, .nav, .filters, .print-hide {
-                display: none !important;
-            }
-            body {
-                padding: 20px;
-                font-size: 12px;
-            }
-            .report-container {
-                max-width: 100%;
-                box-shadow: none;
-                padding: 0;
-                margin: 0;
-            }
-            .chart-container {
-                page-break-inside: avoid;
-                height: 300px !important;
-            }
-            table {
-                width: 100%;
-                font-size: 10px;
-            }
-            th, td {
-                padding: 4px 8px !important;
-            }
-            h1, h2, h3 {
-                margin: 10px 0 !important;
-            }
-        }
-        .print-button {
-            background-color: #4a6fa5;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-left: 10px;
-        }
-        .print-button:hover {
-            background-color: #3a5a80;
-        }
-        .loading {
-            text-align: center;
-            padding: 20px;
-            font-style: italic;
-            color: #666;
-        }
-    </style>
-    <script src="../menu.js"></script>
-    <script>
-        // Verifica se o menu.js foi carregado
-        if (typeof verificarSeUsuarioEstaLogadoBackend === 'function') {
-            verificarSeUsuarioEstaLogadoBackend();
-        }
+    
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Utilitários -->
+    <script type="module">
+        // Importa as funções do arquivo utils.js
+        import { 
+            formatCurrency, 
+            formatDate, 
+            getMonthName, 
+            showLoading, 
+            hideLoading, 
+            showError, 
+            fetchData,
+            formatNumber
+        } from '/frontend/relatorios/js/utils.js';
+        
+        // Variáveis globais
+        let salesData = [];
+        let salesChart = null;
+        
+        // Inicialização da página
         document.addEventListener('DOMContentLoaded', function() {
-            // Inicializa o gráfico vazio
+            // Configura a data atual no rodapé
+            document.getElementById('reportDate').textContent = new Date().toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            // Preenche o seletor de anos
+            populateYearSelect();
+            
+            // Configura os eventos
+            setupEventListeners();
+            
+            // Carrega os dados iniciais
+            loadSalesData();
+        });
+        
+        // Preenche o seletor de anos
+        function populateYearSelect() {
+            const yearSelect = document.getElementById('ano');
+            const currentYear = new Date().getFullYear();
+            
+            // Adiciona 5 anos para trás e 1 ano para frente
+            for (let year = currentYear - 5; year <= currentYear + 1; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                
+                // Seleciona o ano atual por padrão
+                if (year === currentYear) {
+                    option.selected = true;
+                }
+                
+                yearSelect.appendChild(option);
+            }
+        }
+        
+        // Configura os eventos da página
+        function setupEventListeners() {
+            // Botão de filtrar
+            document.getElementById('btnFiltrar').addEventListener('click', loadSalesData);
+            
+            // Botão de imprimir
+            document.getElementById('btnPrint').addEventListener('click', printReport);
+            
+            // Botão de exportar
+            document.getElementById('btnExport').addEventListener('click', exportReport);
+            
+            // Botões de alternar entre valor e quantidade no gráfico
+            document.querySelectorAll('[data-metric]').forEach(button => {
+                button.addEventListener('click', function() {
+                    // Atualiza os botões ativos
+                    document.querySelectorAll('[data-metric]').forEach(btn => 
+                        btn.classList.remove('active')
+                    );
+                    this.classList.add('active');
+                    
+                    // Atualiza o gráfico
+                    updateChart(this.dataset.metric);
+                });
+            });
+        }
+        
+        // Carrega os dados de vendas
+        async function loadSalesData() {
+            try {
+                showLoading('Buscando dados de vendas...');
+                
+                const ano = document.getElementById('ano').value;
+                const ordenar = document.getElementById('ordenar').value;
+                const direcao = document.getElementById('direcao').value;
+                
+                console.log('🔍 Fazendo requisição para API...');
+                console.log('Parâmetros:', { ano, ordenar, direcao });
+                
+                // Faz a requisição à API
+                const response = await fetchData(`relatorios/vendas-mensais?ano=${ano}&ordenar=${ordenar}&direcao=${direcao}`);
+                
+                console.log('📥 Resposta da API:', response);
+                
+                // Verifica se a resposta tem a estrutura esperada
+                if (!response) {
+                    throw new Error('Resposta vazia da API');
+                }
+                
+                // Ajusta para lidar com diferentes formatos de resposta
+                let dados = [];
+                if (Array.isArray(response)) {
+                    dados = response;
+                } else if (response.data && Array.isArray(response.data)) {
+                    dados = response.data;
+                } else if (response.data) {
+                    // Se for um único objeto, coloca em um array
+                    dados = [response.data];
+                }
+                
+                console.log('📊 Dados processados:', dados);
+                
+                // Armazena os dados
+                salesData = dados;
+                
+                // Atualiza a interface
+                updateSummaryCards();
+                updateChart('valor');
+                updateSalesTable();
+                
+                hideLoading();
+            } catch (error) {
+                console.error('Erro ao carregar dados de vendas:', error);
+                showError('Erro ao carregar os dados de vendas. Tente novamente mais tarde.');
+            }
+        }
+        
+        // Atualiza os cards de resumo
+        function updateSummaryCards() {
+            if (!salesData || salesData.length === 0) {
+                document.getElementById('summaryCards').innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-warning mb-0">
+                            Nenhum dado disponível para o período selecionado.
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Calcula totais
+            const totalVendas = salesData.reduce((sum, item) => sum + (item.totalVendas || 0), 0);
+            const totalPedidos = salesData.reduce((sum, item) => sum + (item.quantidadePedidos || 0), 0);
+            const ticketMedio = totalPedidos > 0 ? totalVendas / totalPedidos : 0;
+            
+            // Encontra o mês com maior venda
+            const melhorMes = [...salesData].sort((a, b) => (b.totalVendas || 0) - (a.totalVendas || 0))[0];
+            
+            // Calcula a variação em relação ao mês anterior
+            let variacao = 0;
+            if (salesData.length > 1) {
+                const mesAtual = salesData[salesData.length - 1].totalVendas || 0;
+                const mesAnterior = salesData[salesData.length - 2].totalVendas || 0;
+                variacao = mesAnterior > 0 ? ((mesAtual - mesAnterior) / mesAnterior) * 100 : 0;
+            }
+            
+            // Atualiza os cards
+            document.getElementById('summaryCards').innerHTML = `
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h3 class="h6 text-muted mb-0">Total em Vendas</h3>
+                                <div class="bg-primary bg-opacity-10 p-2 rounded">
+                                    <i class="bi bi-currency-dollar text-primary"></i>
+                                </div>
+                            </div>
+                            <h2 class="h4 mb-2">${formatCurrency(totalVendas)}</h2>
+                            <p class="text-muted small mb-0">
+                                <span class="${variacao >= 0 ? 'text-success' : 'text-danger'}">
+                                    <i class="bi ${variacao >= 0 ? 'bi-arrow-up' : 'bi-arrow-down'}"></i> ${Math.abs(variacao).toFixed(1)}%
+                                </span> vs mês anterior
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h3 class="h6 text-muted mb-0">Total de Pedidos</h3>
+                                <div class="bg-success bg-opacity-10 p-2 rounded">
+                                    <i class="bi bi-cart-check text-success"></i>
+                                </div>
+                            </div>
+                            <h2 class="h4 mb-2">${totalPedidos}</h2>
+                            <p class="text-muted small mb-0">Média de ${Math.round(totalPedidos / salesData.length)} por mês</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h3 class="h6 text-muted mb-0">Ticket Médio</h3>
+                                <div class="bg-warning bg-opacity-10 p-2 rounded">
+                                    <i class="bi bi-receipt text-warning"></i>
+                                </div>
+                            </div>
+                            <h2 class="h4 mb-2">${formatCurrency(ticketMedio)}</h2>
+                            <p class="text-muted small mb-0">Valor médio por pedido</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h3 class="h6 text-muted mb-0">Melhor Mês</h3>
+                                <div class="bg-info bg-opacity-10 p-2 rounded">
+                                    <i class="bi bi-trophy text-info"></i>
+                                </div>
+                            </div>
+                            <h2 class="h4 mb-2">${melhorMes ? getMonthName(melhorMes.mes_numero) : 'N/A'}</h2>
+                            <p class="text-muted small mb-0">
+                                ${melhorMes ? formatCurrency(melhorMes.valor_total) : 'N/A'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Atualiza o gráfico de vendas
+        function updateChart(metric = 'valor') {
             const ctx = document.getElementById('salesChart').getContext('2d');
-            let salesChart = new Chart(ctx, {
-                type: 'bar', // ou 'line' para gráfico de linhas
+            
+            // Destrói o gráfico anterior se existir
+            if (salesChart) {
+                salesChart.destroy();
+            }
+            
+            if (!salesData || salesData.length === 0) {
+                return;
+            }
+            
+            // Ordena os dados por mês
+            const sortedData = [...salesData].sort((a, b) => a.mes_numero - b.mes_numero);
+            
+            // Prepara os dados para o gráfico
+            const labels = sortedData.map(item => getMonthName(item.mes_numero));
+            const data = sortedData.map(item => 
+                metric === 'valor' ? (item.totalVendas || 0) : (item.quantidadePedidos || 0)
+            );
+            
+            console.log('Dados do gráfico:', { labels, data });
+            
+            // Cores para o gráfico
+            const backgroundColor = metric === 'valor' ? 
+                'rgba(54, 162, 235, 0.2)' : 'rgba(75, 192, 192, 0.2)';
+            const borderColor = metric === 'valor' ? 
+                'rgba(54, 162, 235, 1)' : 'rgba(75, 192, 192, 1)';
+            
+            // Cria o gráfico
+            salesChart = new Chart(ctx, {
+                type: 'bar',
                 data: {
-                    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+                    labels: labels,
                     datasets: [{
-                        label: 'Vendas Mensais (R$)',
-                        data: [],
-                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
+                        label: metric === 'valor' ? 'Valor Total (R$)' : 'Quantidade de Pedidos',
+                        data: data,
+                        backgroundColor: backgroundColor,
+                        borderColor: borderColor,
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        maxBarThickness: 60
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += metric === 'valor' ? 
+                                            formatCurrency(context.parsed.y) : 
+                                            `${context.parsed.y} pedidos`;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Valor em R$'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Meses'
+                            ticks: {
+                                callback: function(value) {
+                                    return metric === 'valor' ? 
+                                        `R$ ${value.toLocaleString('pt-BR')}` : 
+                                        value.toLocaleString('pt-BR');
+                                }
                             }
                         }
                     }
                 }
             });
-
-            // Mostrar/ocultar indicador de carregamento
-            function mostrarCarregamento(mostrar) {
-                const loadingElement = document.getElementById('loading');
-                if (mostrar) {
-                    loadingElement.style.display = 'block';
-                } else {
-                    loadingElement.style.display = 'none';
-                }
-            }
-
-            // Função para carregar os dados do relatório
-            async function carregarDadosRelatorio(ano) {
-                try {
-                    mostrarCarregamento(true);
-                    const response = await fetch(`http://localhost:3001/api/relatorios/vendas-mensais?ano=${ano}`);
-                    
-                    if (!response.ok) {
-                        throw new Error(`Erro na requisição: ${response.status} ${response.statusText}`);
-                    }
-                    
-                    const data = await response.json();
-                    
-                    if (!Array.isArray(data)) {
-                        throw new Error('Dados recebidos não estão no formato esperado');
-                    }
-                    
-                    // Atualiza o gráfico
-                    salesChart.data.datasets[0].data = data.map(item => item.totalVendas);
-                    salesChart.update();
-                    
-                    // Preenche a tabela
-                    const tabelaCorpo = document.getElementById('tabelaCorpo');
-                    tabelaCorpo.innerHTML = '';
-                    
-                    data.forEach((item, index) => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${item.mes}</td>
-                            <td>R$ ${item.totalVendas.toFixed(2).replace('.', ',')}</td>
-                            <td>${item.quantidadePedidos}</td>
-                            <td>R$ ${item.ticketMedio.toFixed(2).replace('.', ',')}</td>
-                        `;
-                        tabelaCorpo.appendChild(row);
-                    });
-                    
-                } catch (error) {
-                    console.error('Erro ao carregar dados do relatório:', error);
-                    alert('Erro ao carregar dados do relatório: ' + error.message);
-                } finally {
-                    mostrarCarregamento(false);
-                }
+        }
+        
+        // Atualiza a tabela de vendas
+        function updateSalesTable() {
+            const tbody = document.getElementById('salesTableBody');
+            const tfoot = document.getElementById('salesTableFooter');
+            
+            if (!salesData || salesData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            Nenhum dado disponível para o período selecionado.
+                        </td>
+                    </tr>
+                `;
+                tfoot.innerHTML = '';
+                return;
             }
             
-            // Evento do botão Gerar Relatório
-            document.getElementById('btnGerarRelatorio').addEventListener('click', function() {
-                const ano = document.getElementById('year').value;
-                carregarDadosRelatorio(ano);
+            // Ordena os dados conforme selecionado
+            const ordenar = document.getElementById('ordenar').value;
+            const direcao = document.getElementById('direcao').value;
+            
+            const sortedData = [...salesData].sort((a, b) => {
+                let valueA, valueB;
+                
+                switch (ordenar) {
+                    case 'mes':
+                        valueA = a.mes_numero;
+                        valueB = b.mes_numero;
+                        break;
+                    case 'quantidade':
+                        valueA = a.quantidadePedidos || 0;
+                        valueB = b.quantidadePedidos || 0;
+                        break;
+                    case 'valor':
+                    default:
+                        valueA = a.totalVendas || 0;
+                        valueB = b.totalVendas || 0;
+                }
+                
+                return direcao === 'asc' ? valueA - valueB : valueB - valueA;
             });
             
-            // Evento do botão Exportar PDF
-            document.getElementById('btnExportarPDF').addEventListener('click', function() {
-                alert('Funcionalidade de exportação para PDF será implementada em breve.');
-                // Implementar lógica de exportação para PDF aqui
+            // Preenche a tabela
+            let tableRows = '';
+            let totalVendas = 0;
+            let totalPedidos = 0;
+            
+            sortedData.forEach((item, index) => {
+                const quantidadePedidos = item.quantidadePedidos || 0;
+                const totalVendasMes = item.totalVendas || 0;
+                const ticketMedio = quantidadePedidos > 0 ? 
+                    totalVendasMes / quantidadePedidos : 0;
+                
+                // Calcula a variação em relação ao mês anterior
+                let variacao = 0;
+                if (index > 0) {
+                    const valorAnterior = sortedData[index - 1].totalVendas || 0;
+                    if (valorAnterior > 0) {
+                        variacao = ((totalVendasMes - valorAnterior) / valorAnterior) * 100;
+                    }
+                }
+                
+                totalVendas += totalVendasMes;
+                totalPedidos += quantidadePedidos;
+                
+                tableRows += `
+                    <tr>
+                        <td>${getMonthName(item.mes_numero)}</td>
+                        <td class="text-end">${quantidadePedidos.toLocaleString('pt-BR')}</td>
+                        <td class="text-end">${formatCurrency(totalVendasMes)}</td>
+                        <td class="text-end">${formatCurrency(ticketMedio)}</td>
+                        <td class="text-end ${variacao >= 0 ? 'text-success' : 'text-danger'}">
+                            ${index > 0 ? 
+                                `${variacao >= 0 ? '+' : ''}${variacao.toFixed(1)}%` : 
+                                '-'}
+                        </td>
+                    </tr>
+                `;
             });
             
-            // Carrega os dados iniciais
-            carregarDadosRelatorio(document.getElementById('year').value);
-        });
+            // Atualiza o corpo da tabela
+            tbody.innerHTML = tableRows;
+            
+            // Atualiza o rodapé da tabela
+            const ticketMedioTotal = totalPedidos > 0 ? totalVendas / totalPedidos : 0;
+            
+            tfoot.innerHTML = `
+                <tr>
+                    <th>Total</th>
+                    <th class="text-end">${totalPedidos}</th>
+                    <th class="text-end">${formatCurrency(totalVendas)}</th>
+                    <th class="text-end">${formatCurrency(ticketMedioTotal)}</th>
+                    <th></th>
+                </tr>
+            `;
+        }
+        
+        // Imprime o relatório
+        function printReport() {
+            window.print();
+        }
+        
+        // Exporta o relatório
+        function exportReport() {
+            // Aqui você pode implementar a lógica para exportar para Excel, PDF, etc.
+            alert('Funcionalidade de exportação será implementada em breve!');
+        }
     </script>
 </body>
 </html>

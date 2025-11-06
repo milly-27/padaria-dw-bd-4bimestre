@@ -129,7 +129,7 @@ function limparFormularios() {
 }
 
 // ========================================
-// LOGIN - PRIORIDADE: FUNCIONÁRIO → CLIENTE
+// LOGIN - USANDO APENAS /auth/login
 // ========================================
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('loginForm');
@@ -146,14 +146,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const formData = new FormData(e.target);
         const data = {
-            email_pessoa: formData.get('email'),
-            senha_pessoa: formData.get('senha')
+            email: formData.get('email'),
+            senha: formData.get('senha')
         };
         
-        console.log('📧 Email:', data.email_pessoa);
+        console.log('📧 Email:', data.email);
         console.log('══════════════════════════════════════');
         
-        if (!data.email_pessoa || !data.senha_pessoa) {
+        if (!data.email || !data.senha) {
             showAlert('Por favor, preencha email e senha!', 'error');
             return;
         }
@@ -161,95 +161,56 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             showLoading(true);
             
-            // ✅ 1️⃣ PRIORIDADE: Tenta login como FUNCIONÁRIO primeiro
-            console.log('🔍 PASSO 1: Verificando se é FUNCIONÁRIO...');
-            let response = await fetch(`${API_BASE_URL}/login/loginFuncionario`, {
+            console.log('🔐 Fazendo login via /auth/login...');
+            const response = await fetch(`${API_BASE_URL}/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                credentials: 'include',
+                credentials: 'include', // CRUCIAL para cookies
                 body: JSON.stringify(data)
             });
             
-            let result = await response.json();
-            console.log('📨 Resposta login funcionário:', result);
+            const result = await response.json();
+            console.log('📨 Resposta do servidor:', result);
             
-            // Se for funcionário válido (qualquer cargo), aceita
-            if (result.status === 'ok') {
-                console.log('✅ Login como FUNCIONÁRIO realizado com sucesso!');
-                console.log('👤 Nome:', result.nome);
-                console.log('📧 Email:', result.email);
-                console.log('🔑 Tipo:', result.tipo);
-                console.log('🎯 Cargo:', result.cargo);
+            if (result.status === 'ok' && result.usuario) {
+                const { usuario } = result;
+                console.log('✅ Login realizado com sucesso!');
+                console.log('👤 Nome:', usuario.nome);
+                console.log('📧 Email:', usuario.email);
+                console.log('🔑 Tipo:', usuario.tipo);
+                console.log('🎯 Cargo:', usuario.cargo || 'Cliente');
+                console.log('🔰 É gerente?', usuario.isGerente ? 'Sim' : 'Não');
                 console.log('══════════════════════════════════════');
                 
+                // Salvar no sessionStorage
                 sessionStorage.setItem('usuarioLogado', JSON.stringify({
-                    nome: result.nome,
-                    email: result.email,
-                    tipo: result.tipo,
-                    cargo: result.cargo
+                    id: usuario.id,
+                    nome: usuario.nome,
+                    email: usuario.email,
+                    tipo: usuario.tipo,
+                    cargo: usuario.cargo || '',
+                    isGerente: usuario.isGerente || false
                 }));
                 
                 showAlert('Login realizado com sucesso!', 'success');
                 
+                // Aguardar um pouco e redirecionar
                 setTimeout(() => {
-                    console.log('🔄 Redirecionando para menu...');
+                    console.log('🔄 Redirecionando para o menu...');
                     window.location.href = '../menu.html';
                 }, 1000);
-                return; // IMPORTANTE: Sai da função
-            }
-            
-            // ✅ 2️⃣ Se não for funcionário, tenta como CLIENTE
-            console.log('ℹ️ Não é funcionário, verificando se é CLIENTE...');
-            console.log('🔍 PASSO 2: Verificando se é CLIENTE...');
-            
-            response = await fetch(`${API_BASE_URL}/login/loginCliente`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify(data)
-            });
-            
-            result = await response.json();
-            console.log('📨 Resposta login cliente:', result);
-            
-            if (result.status === 'ok') {
-                console.log('✅ Login como CLIENTE realizado com sucesso!');
-                console.log('👤 Nome:', result.nome);
-                console.log('📧 Email:', result.email);
-                console.log('🔑 Tipo:', result.tipo);
-                console.log('══════════════════════════════════════');
                 
-                sessionStorage.setItem('usuarioLogado', JSON.stringify({
-                    nome: result.nome,
-                    email: result.email,
-                    tipo: result.tipo,
-                    cargo: ''
-                }));
-                
-                showAlert('Login realizado com sucesso!', 'success');
-                
-                setTimeout(() => {
-                    console.log('🔄 Redirecionando para menu...');
-                    window.location.href = '../menu.html';
-                }, 1000);
             } else {
-                console.log('❌ Credenciais incorretas');
-                console.log('══════════════════════════════════════');
-                showAlert('Email ou senha incorretos!', 'error');
-                
-                // ✅ Limpa os campos em caso de erro
+                console.log('❌ Falha no login:', result.error || 'Credenciais incorretas');
+                showAlert(result.error || 'Email ou senha incorretos!', 'error');
                 e.target.reset();
             }
+            
         } catch (error) {
             console.error('❌ Erro no login:', error);
-            console.log('══════════════════════════════════════');
             showAlert('Erro ao fazer login. Verifique sua conexão e tente novamente.', 'error');
-            
-            // ✅ Limpa os campos em caso de erro
             e.target.reset();
         } finally {
             showLoading(false);
@@ -354,78 +315,79 @@ async function logout() {
         return;
     }
     
-    console.log('🚪 Fazendo logout...');
+    console.log('🚪 Iniciando processo de logout...');
     console.log('══════════════════════════════════════');
     
     try {
         showLoading(true);
         
-        const response = await fetch(`${API_BASE_URL}/login/logout`, {
+        // 1. Primeiro, tenta fazer logout no servidor
+        console.log('🔒 Solicitando logout no servidor...');
+        const response = await fetch(`${API_BASE_URL}/auth/logout`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            credentials: 'include'
+            credentials: 'include' // Importante para enviar os cookies
         });
         
         const result = await response.json();
-        console.log('📨 Resposta logout:', result);
+        console.log('📨 Resposta do servidor:', result);
         
-        // ✅ Verificar 'deslogado' ao invés de 'ok'
+        // 2. Limpar dados locais independentemente da resposta do servidor
+        console.log('🧹 Limpando dados locais...');
+        
+        // Limpar sessionStorage
+        sessionStorage.removeItem('usuarioLogado');
+        sessionStorage.clear();
+        console.log('✅ SessionStorage limpo');
+        
+        // Limpar localStorage
+        localStorage.removeItem('usuarioLogado');
+        localStorage.clear();
+        console.log('✅ LocalStorage limpo');
+        
+        // Limpar cookies
+        limparCookies();
+        
+        // Limpar formulários
+        limparFormularios();
+        
+        console.log('══════════════════════════════════════');
+        
+        // 3. Mostrar mensagem de sucesso
         if (result.status === 'deslogado') {
-            console.log('✅ Logout realizado com sucesso no servidor!');
-            console.log('🧹 Iniciando limpeza local...');
-            
-            // 1. Limpar sessionStorage
-            sessionStorage.removeItem('usuarioLogado');
-            sessionStorage.clear();
-            console.log('✅ SessionStorage limpo');
-            
-            // 2. Limpar localStorage
-            localStorage.removeItem('usuarioLogado');
-            localStorage.clear();
-            console.log('✅ LocalStorage limpo');
-            
-            // 3. Limpar cookies
-            limparCookies();
-            
-            // 4. Limpar formulários
-            limparFormularios();
-            
-            console.log('══════════════════════════════════════');
-            console.log('✅ Logout completo! Redirecionando...');
-            
-            // 5. Redirecionar para página de login
-            setTimeout(() => {
-                window.location.href = 'login/login.html';
-            }, 500);
+            console.log('✅ Logout realizado com sucesso!');
+            showAlert('Você foi desconectado com sucesso!', 'success');
         } else {
-            console.log('❌ Erro ao fazer logout no servidor');
-            console.log('🧹 Limpando dados locais mesmo assim...');
-            
-            // Mesmo com erro, limpar tudo localmente
-            sessionStorage.clear();
-            localStorage.clear();
-            limparCookies();
-            limparFormularios();
-            
-            console.log('══════════════════════════════════════');
-            alert('Erro ao fazer logout no servidor, mas dados locais foram limpos.');
-            window.location.href = 'login/login.html';
+            console.log('⚠️ O servidor pode não ter processado o logout corretamente, mas os dados locais foram limpos.');
+            showAlert('Sessão encerrada localmente.', 'info');
         }
-    } catch (error) {
-        console.error('❌ Erro no logout:', error);
-        console.log('🧹 Limpando dados locais mesmo assim...');
         
-        // Limpar tudo mesmo com erro
+        // 4. Redirecionar para a página de login após um curto atraso
+        setTimeout(() => {
+            console.log('🔄 Redirecionando para a página de login...');
+            window.location.href = '/login/login.html';
+        }, 1000);
+        
+    } catch (error) {
+        console.error('❌ Erro durante o logout:', error);
+        
+        // Mesmo com erro, limpar tudo localmente
         sessionStorage.clear();
         localStorage.clear();
         limparCookies();
         limparFormularios();
         
+        console.log('⚠️ Ocorreu um erro, mas os dados locais foram limpos.');
         console.log('══════════════════════════════════════');
-        alert('Erro ao fazer logout. Dados locais foram limpos.');
-        window.location.href = 'login/login.html';
+        
+        showAlert('Você foi desconectado, mas pode ter ocorrido um erro no servidor.', 'warning');
+        
+        // Redirecionar mesmo com erro
+        setTimeout(() => {
+            window.location.href = '/login/login.html';
+        }, 1500);
     } finally {
         showLoading(false);
     }
@@ -479,7 +441,7 @@ window.addEventListener('beforeunload', async (e) => {
         console.log('🚪 Saindo da página, fazendo logout automático...');
         
         try {
-            await fetch(`${API_BASE_URL}/login/logout`, {
+            await fetch(`${API_BASE_URL}/auth/logout`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

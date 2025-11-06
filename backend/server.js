@@ -15,87 +15,69 @@ const PORT_FIXA = 3001;
 // MIDDLEWARES - ORDEM CORRETA É CRUCIAL!
 // ============================================
 
-// 1. PRIMEIRO: Arquivos estáticos
+// 1. Cookie parser PRIMEIRO
+app.use(cookieParser());
+
+// 2. JSON e URL encoded parser
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// 3. CORS - CONFIGURAÇÃO SIMPLIFICADA E PERMISSIVA
+app.use(cors({
+  origin: true, // Aceita qualquer origem em desenvolvimento
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Set-Cookie'],
+  maxAge: 86400, // 24 horas de cache para preflight
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+}));
+
+// 4. Headers CORS adicionais para garantir
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Responder imediatamente para OPTIONS
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  
+  next();
+});
+
+// 5. Arquivos estáticos
 const caminhoFrontend = path.join(__dirname, '../frontend');
 console.log('Caminho frontend:', caminhoFrontend);
 app.use(express.static(caminhoFrontend));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// 2. SEGUNDO: Cookie parser ANTES do CORS
-app.use(cookieParser());
-
-// 3. TERCEIRO: JSON parser
-app.use(express.json());
-
-// 4. QUARTO: CORS configurado corretamente
-const allowedOrigins = [
-  'http://127.0.0.1:5500',
-  'http://localhost:5500',
-  'http://127.0.0.1:5501',
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://127.0.0.1:3002',
-  'http://localhost:3002'
-];
-
-app.use(cors({
-  origin: function (origin, callback) {
-    // Permite requisições sem origem (mesma origem, Postman, etc)
-    if (!origin) {
-      console.log('✅ Requisição da mesma origem permitida');
-      return callback(null, true);
-    }
-
-    // Verifica se a origem está na lista permitida
-    if (allowedOrigins.includes(origin)) {
-      console.log('✅ Origem permitida:', origin);
-      callback(null, true);
-    } else {
-      console.warn('⚠️ Origem bloqueada:', origin);
-      callback(null, false);
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true, // ESSENCIAL para cookies funcionarem
-  optionsSuccessStatus: 200
-}));
-
-// 5. QUINTO: Middleware do banco
+// 6. Middleware do banco
 app.use((req, res, next) => {
   req.db = db;
   next();
 });
 
-// 6. SEXTO: Middleware de erro JSON
-app.use((err, req, res, next) => {
-  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-    return res.status(400).json({
-      error: 'JSON malformado',
-      message: 'Verifique a sintaxe do JSON enviado'
-    });
-  }
-  next(err);
-});
-
-// 7. SÉTIMO: Middleware de log de cookies (para debug)
+// 7. Middleware de log
 app.use((req, res, next) => {
   console.log(`\n📍 ${req.method} ${req.path}`);
-  console.log('🍪 Cookies recebidos:', req.cookies);
-  
-  // Intercepta res.cookie para logar quando cookies são definidos
-  const originalCookie = res.cookie.bind(res);
-  res.cookie = function(name, value, options) {
-    console.log(`🍪 Definindo cookie: ${name} = ${value}`);
-    return originalCookie(name, value, options);
-  };
-  
+  console.log('🍪 Cookies:', req.cookies);
+  console.log('🌐 Origin:', req.headers.origin);
   next();
 });
 
 // ============================================
-// ROTAS
+// ROTAS - authRoutes PRIMEIRO
 // ============================================
+
+const authRoutes = require('./routes/authRoutes');
+app.use('/auth', authRoutes);
+
+const loginRoutes = require('./routes/loginRoutes');
+app.use('/login', loginRoutes);
 
 const menuRoutes = require('./routes/menuRoutes');
 app.use('/menu', menuRoutes);
@@ -112,14 +94,15 @@ app.use('/pessoas', pessoaRoutes);
 const produtoRoutes = require('./routes/produtoRoutes');
 app.use('/produtos', produtoRoutes);
 
-const loginRoutes = require('./routes/loginRoutes');
-app.use('/login', loginRoutes);
-
 const funcionarioRoutes = require('./routes/funcionarioRoutes');
 app.use('/funcionarios', funcionarioRoutes);
 
 const clienteRoutes = require('./routes/clienteRoutes');
 app.use('/clientes', clienteRoutes);
+
+// Rotas de relatórios
+const relatorioRoutes = require('./routes/relatorioRoutes');
+app.use('/api/relatorios', relatorioRoutes);
 
 const cardapioRoutes = require('./routes/cardapioRoutes');
 app.use('/cardapio', cardapioRoutes);
@@ -143,7 +126,6 @@ app.use('/pagamento_has_formapagamentos', pagamento_has_formapagamentoRoutes);
 // ROTAS PADRÃO
 // ============================================
 
-// Rota padrão
 app.get('/', (req, res) => {
   res.json({
     message: 'O server está funcionando - essa é a rota raiz!',
@@ -152,7 +134,6 @@ app.get('/', (req, res) => {
   });
 });
 
-// Rota para testar a conexão com o banco
 app.get('/health', async (req, res) => {
   try {
     const connectionTest = await db.testConnection();
@@ -187,10 +168,8 @@ app.get('/health', async (req, res) => {
 // MIDDLEWARES DE ERRO (DEVEM SER OS ÚLTIMOS)
 // ============================================
 
-// Middleware global de tratamento de erros
 app.use((err, req, res, next) => {
   console.error('Erro não tratado:', err);
-
   res.status(500).json({
     error: 'Erro interno do servidor',
     message: process.env.NODE_ENV === 'development' ? err.message : 'Algo deu errado',
@@ -198,7 +177,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Middleware para rotas não encontradas (404)
 app.use((req, res) => {
   res.status(404).json({
     error: 'Rota não encontrada',
@@ -213,7 +191,6 @@ app.use((req, res) => {
 
 const startServer = async () => {
   try {
-    console.log(caminhoFrontend);
     console.log('Testando conexão com PostgreSQL...');
     const connectionTest = await db.testConnection();
 
@@ -236,6 +213,7 @@ const startServer = async () => {
       console.log(`📊 Health check disponível em http://${HOST}:${PORT}/health`);
       console.log(`🗄️ Banco de dados: PostgreSQL`);
       console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`✅ CORS configurado para aceitar todas as origens (desenvolvimento)`);
     });
 
   } catch (error) {
@@ -250,7 +228,6 @@ const startServer = async () => {
 
 process.on('SIGINT', async () => {
   console.log('\n🔄 Encerrando servidor...');
-
   try {
     await db.pool.end();
     console.log('✅ Conexões com PostgreSQL encerradas');
@@ -263,7 +240,6 @@ process.on('SIGINT', async () => {
 
 process.on('SIGTERM', async () => {
   console.log('\n🔄 SIGTERM recebido, encerrando servidor...');
-
   try {
     await db.pool.end();
     console.log('✅ Conexões com PostgreSQL encerradas');
@@ -274,5 +250,4 @@ process.on('SIGTERM', async () => {
   }
 });
 
-// Iniciar o servidor
 startServer();

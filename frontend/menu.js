@@ -68,18 +68,20 @@ const injetarEstilos = () => {
 // ========================================
 // CONTROLE DO MENU DE CADASTROS
 // ========================================
-const controlarMenuCadastros = (mostrar = false) => {
-    const menuCadastros = document.getElementById('menuCadastros');
+function controlarMenuCadastros(mostrar = true) {
+    // Sempre mostra o menu de cadastros
+    const menuCadastros = document.querySelector('.nav__menu-item:has(a[href="#"])');
     if (menuCadastros) {
-        menuCadastros.style.display = mostrar ? 'block' : 'none';
-        console.log(`📋 Menu de cadastros: ${mostrar ? 'VISÍVEL' : 'OCULTO'}`);
+        menuCadastros.style.display = 'block';
     }
-};
+}
 
 // ========================================
 // GERENCIAMENTO DE UI
 // ========================================
 const atualizarInterfaceUsuario = (userData = null) => {
+    console.log('🔄 Atualizando interface do usuário:', userData);
+    
     const btnLogin = document.getElementById('btnLogin');
     const userInfo = document.getElementById('userInfo');
     const userName = document.getElementById('userName');
@@ -91,8 +93,11 @@ const atualizarInterfaceUsuario = (userData = null) => {
         return;
     }
     
-    if (userData) {
+    if (userData && userData.nome) {
         // Usuário está logado
+        console.log('👤 Usuário logado:', userData.nome);
+        
+        // Atualizar visibilidade dos elementos
         btnLogin.classList.add('hidden');
         userInfo.classList.remove('hidden');
         if (loginMessage) loginMessage.classList.remove('hidden');
@@ -118,126 +123,70 @@ const atualizarInterfaceUsuario = (userData = null) => {
         
         userName.appendChild(tipoUsuarioSpan);
         
-        // ✅ GARANTIR QUE userInfo PODE SER CLICADO
+        // Garantir que userInfo pode ser clicado
         userInfo.style.cursor = 'pointer';
         userInfo.title = 'Clique para fazer logout';
         
-        // Controlar menu de cadastros - APENAS FUNCIONÁRIOS
-        const temPermissao = userData.tipo === 'funcionario';
-        controlarMenuCadastros(temPermissao);
-        
-        console.log(`✅ Interface atualizada para: ${userData.nome} - ${userData.tipo}${userData.cargo ? ' - ' + userData.cargo : ''}`);
-        console.log(temPermissao ? '✅ Menu de cadastros LIBERADO' : '❌ Menu de cadastros BLOQUEADO');
     } else {
         // Usuário não está logado
+        console.log('👤 Nenhum usuário logado');
+        
         btnLogin.classList.remove('hidden');
         userInfo.classList.add('hidden');
         if (loginMessage) loginMessage.classList.add('hidden');
-        userName.textContent = '';
+        if (userName) userName.textContent = '';
         
-        // Esconder menu de cadastros
-        controlarMenuCadastros(false);
-        
-        console.log('❌ Interface resetada - usuário não logado');
+        // Garantir que o menu de cadastros esteja visível
+        controlarMenuCadastros();
     }
 };
 
 // ========================================
-// VERIFICAÇÃO DE LOGIN - CORRIGIDA COM LOGS DETALHADOS
+// VERIFICAÇÃO DE LOGIN - ATUALIZADA
 // ========================================
 const verificarSeUsuarioEstaLogadoBackend = async () => {
-    console.log('🔍 Verificando login no backend...');
+    console.log('🔍 Verificando autenticação no backend...');
     console.log('══════════════════════════════════════');
     
     try {
-        // Primeiro tenta verificar se está logado
+        // Verifica autenticação e carrega dados do usuário
         const response = await fetch(`${API_BASE_URL}/login/verificaSePessoaEstaLogada`, {
             method: 'GET',
-            credentials: 'include',
+            credentials: 'include', // Importante para enviar cookies
             headers: {
-                'Content-Type': 'application/json'
-            }
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            },
+            cache: 'no-store' // Garante que não usará cache
         });
         
+        console.log('📡 Status da resposta:', response.status);
+        
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`Erro HTTP: ${response.status}`);
         }
         
         const data = await response.json();
-        console.log('📨 Resposta inicial do backend:', data);
-
-        if (data.status === 'ok' && data.nome) {
-            let userData = { 
-                nome: data.nome,
-                tipo: data.tipo || 'cliente',
-                cargo: data.cargo || ''
+        console.log('📨 Resposta do servidor:', data);
+        
+        if (data.status === 'ok' && data.usuario) {
+            const userData = {
+                id: data.usuario.id,
+                nome: data.usuario.nome,
+                email: data.usuario.email,
+                tipo: data.usuario.tipo || 'cliente',
+                cargo: (data.usuario.cargo || '').toLowerCase(),
+                isGerente: data.usuario.isGerente || (data.usuario.tipo === 'funcionario' && data.usuario.cargo && data.usuario.cargo.toLowerCase() === 'gerente')
             };
             
-            console.log('🔍 Dados recebidos:');
-            console.log('   - tipo:', userData.tipo);
-            console.log('   - cargo:', userData.cargo);
-            
-            // ✅ SEMPRE verificar se é funcionário, independente do tipo que veio
-            console.log('🔍 Buscando na lista de funcionários...');
-            
-            try {
-                // Tenta buscar dados como funcionário
-                const funcResponse = await fetch(`${API_BASE_URL}/funcionario/listar`, {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                console.log('📡 Status da requisição funcionários:', funcResponse.status);
-                
-                if (funcResponse.ok) {
-                    const funcData = await funcResponse.json();
-                    console.log('📨 Resposta funcionários completa:', funcData);
-                    
-                    // Procura o usuário atual na lista de funcionários
-                    if (funcData.funcionarios && Array.isArray(funcData.funcionarios)) {
-                        console.log(`📋 Total de funcionários na lista: ${funcData.funcionarios.length}`);
-                        
-                        // Listar todos os nomes para debug
-                        funcData.funcionarios.forEach((f, index) => {
-                            console.log(`   ${index + 1}. ${f.nome_pessoa} - Cargo: ${f.cargo_funcionario}`);
-                        });
-                        
-                        const funcionario = funcData.funcionarios.find(f => 
-                            f.nome_pessoa && f.nome_pessoa.toLowerCase().trim() === userData.nome.toLowerCase().trim()
-                        );
-                        
-                        console.log(`🔍 Procurando por: "${userData.nome}"`);
-                        console.log('🔍 Resultado da busca:', funcionario);
-                        
-                        if (funcionario) {
-                            console.log('✅ ENCONTRADO COMO FUNCIONÁRIO!');
-                            console.log('   - Nome completo:', funcionario.nome_pessoa);
-                            console.log('   - Cargo:', funcionario.cargo_funcionario);
-                            
-                            userData.tipo = 'funcionario';
-                            userData.cargo = funcionario.cargo_funcionario || '';
-                        } else {
-                            console.log('❌ NÃO encontrado na lista de funcionários');
-                        }
-                    } else {
-                        console.log('⚠️ Lista de funcionários vazia ou inválida');
-                    }
-                } else {
-                    console.log('❌ Erro ao buscar funcionários, status:', funcResponse.status);
-                }
-            } catch (funcError) {
-                console.error('❌ Erro ao buscar funcionários:', funcError);
-            }
-            
-            console.log('══════════════════════════════════════');
-            console.log('👤 USUÁRIO FINAL IDENTIFICADO:');
-            console.log('   Nome:', userData.nome);
-            console.log('   Tipo:', userData.tipo);
-            console.log('   Cargo:', userData.cargo || '(sem cargo)');
-            console.log('══════════════════════════════════════');
+            console.log('👤 Dados do usuário:');
+            console.log('   - ID:', userData.id);
+            console.log('   - Nome:', userData.nome);
+            console.log('   - Tipo:', userData.tipo);
+            console.log('   - Cargo:', userData.cargo || '(não especificado)');
+            console.log(`   - É gerente? ${userData.isGerente ? '✅ Sim' : '❌ Não'}`);
             
             // Salvar no sessionStorage
             sessionStorage.setItem('usuarioLogado', JSON.stringify(userData));
@@ -246,20 +195,20 @@ const verificarSeUsuarioEstaLogadoBackend = async () => {
             atualizarInterfaceUsuario(userData);
             
             return userData;
-        } else {
-            console.log('❌ Usuário não está logado');
-            console.log('══════════════════════════════════════');
-            
-            // Limpar sessionStorage
-            sessionStorage.removeItem('usuarioLogado');
-            
-            // Atualizar interface
-            atualizarInterfaceUsuario(null);
-            
-            return null;
         }
+        
+        // Se chegou aqui, o usuário não está autenticado
+        console.log('❌ Usuário não autenticado ou sessão expirada');
+        
+        // Limpar dados de sessão
+        sessionStorage.removeItem('usuarioLogado');
+        
+        // Atualizar interface
+        atualizarInterfaceUsuario(null);
+        
+        return null;
     } catch (error) {
-        console.error('❌ Erro ao verificar login no backend:', error);
+        console.error('❌ Erro ao verificar autenticação:', error);
         console.log('══════════════════════════════════════');
         
         // Em caso de erro, limpar estado
@@ -299,7 +248,7 @@ const limparCookies = () => {
 // ========================================
 // LOGOUT - CORRIGIDO E MELHORADO
 // ========================================
-const logout = async () => {
+window.logout = async () => {
     if (!confirm('Deseja realmente sair do sistema?')) {
         return;
     }
@@ -367,7 +316,8 @@ const logout = async () => {
 // ========================================
 // FUNÇÕES AUXILIARES
 // ========================================
-const redirecionarLogin = () => {
+// Tornando a função disponível no escopo global
+window.redirecionarLogin = () => {
     console.log('🔄 Redirecionando para login...');
     window.location.href = 'login/login.html';
 };
@@ -438,10 +388,7 @@ const inicializarMenu = () => {
     // Injetar estilos
     injetarEstilos();
     
-    // Esconder menu de cadastros por padrão
-    controlarMenuCadastros(false);
-    
-    // Verificar login no backend
+    // Verificar login no backend (mas manter menus visíveis)
     verificarSeUsuarioEstaLogadoBackend();
     
     // ✅ ADICIONAR EVENT LISTENER PARA O BOTÃO DE LOGIN (se existir)

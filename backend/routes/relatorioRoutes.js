@@ -1,10 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const relatorioController = require('../controllers/relatorioController');
-const { verificarAutenticacao } = require('../middleware/authMiddleware');
 
-// Aplica o middleware de autenticação em todas as rotas de relatórios
-router.use(verificarAutenticacao);
+// Rotas de relatórios acessíveis sem autenticação
 
 /**
  * @swagger
@@ -42,7 +40,14 @@ router.use(verificarAutenticacao);
  *                       ticketMedio:
  *                         type: number
  */
-router.get('/vendas-mensais', relatorioController.getVendasMensais);
+// Rota de vendas mensais
+router.get('/vendas-mensais', (req, res, next) => {
+    console.log('📍 GET /api/relatorios/vendas-mensais');
+    console.log('🍪 Cookies:', req.cookies);
+    console.log('🌐 Origin:', req.headers.origin);
+    console.log('🔑 Headers:', req.headers);
+    next();
+}, relatorioController.getVendasMensais);
 
 /**
  * @swagger

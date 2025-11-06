@@ -1,394 +1,517 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relatório de Produtos Mais Vendidos</title>
-    <link rel="stylesheet" href="../menu.css">
+    <title>Produtos Mais Vendidos - Padaria DW</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/frontend/css/styles.css">
+    <link rel="stylesheet" href="/frontend/relatorios/css/relatorios.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <style>
-        .report-container {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
+        /* Estilos específicos para este relatório */
         .chart-container {
-            margin: 30px 0;
-            position: relative;
-            height: 500px;
+            margin-top: 2.5rem;
+            margin-bottom: 3rem;
         }
-        .filters {
-            margin: 20px 0;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 5px;
+        
+        .table-responsive {
+            margin-top: 1.5rem;
         }
-        .filters select, .filters input, .filters button {
-            padding: 8px 15px;
-            margin-right: 10px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
+        
+        .product-name {
+            font-weight: 500;
+            color: var(--dark-color);
         }
-        .filters button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        .filters button:hover {
-            background-color: #45a049;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-            position: sticky;
-            top: 0;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        .product-image {
-            width: 50px;
-            height: 50px;
-            object-fit: cover;
-            border-radius: 4px;
+        
+        .product-category {
+            font-size: 0.85rem;
+            color: var(--secondary-color);
+            margin-top: 0.2rem;
         }
     </style>
 </head>
 <body>
-    <header>
-        <div class="topo">
-            <h3>Relatório de Produtos Mais Vendidos</h3>
-            <div class="user-section">
-                <button id="btnLogin" onclick="redirecionarLogin()" class="hidden">Login</button>
-                <div id="userInfo" class="user-info hidden" onclick="logout()">
-                    <span id="userName"></span>
-                    <span class="logout-tooltip">Clique para deslogar</span>
-                </div>
-                <button id="btnImprimir" class="print-button" onclick="window.print()">
-                    <i class="fas fa-print"></i> Imprimir
-                </button>
+    <div class="container fade-in-up">
+        <header class="report-header">
+            <h1><i class="fas fa-chart-pie"></i> Relatório de Produtos Mais Vendidos</h1>
+            <div class="actions">
+                <button id="printBtn" class="btn btn-print"><i class="fas fa-print"></i> Imprimir</button>
+                <button id="exportPdfBtn" class="btn btn-export"><i class="far fa-file-pdf"></i> PDF</button>
+                <button id="exportExcelBtn" class="btn btn-export"><i class="far fa-file-excel"></i> Excel</button>
             </div>
-        </div>
-        <nav class="nav">
-            <ul class="nav__menu">
-                <li class="nav__menu-item"><a href="../menu.html">Voltar ao Menu</a></li>
-            </ul>
-        </nav>
-    </header>
+        </header>
 
-    <div class="report-container">
-        <h1>Relatório de Produtos Mais Vendidos</h1>
-        <div id="loading" class="loading">Carregando dados do relatório...</div>
-        
-        <div class="filters">
-            <div>
-                <label for="startDate">Data Inicial:</label>
-                <input type="date" id="startDate">
-                
-                <label for="endDate">Data Final:</label>
-                <input type="date" id="endDate">
-                
-                <label for="limit">Top N:</label>
-                <select id="limit">
+        <div class="filters fade-in-up" style="animation-delay: 0.1s">
+            <div class="filter-group">
+                <label for="dataInicio"><i class="far fa-calendar-alt"></i> Data Inicial</label>
+                <input type="date" id="dataInicio" class="form-control">
+            </div>
+            <div class="filter-group">
+                <label for="dataFim"><i class="far fa-calendar-alt"></i> Data Final</label>
+                <input type="date" id="dataFim" class="form-control">
+            </div>
+            <div class="filter-group">
+                <label for="limite"><i class="fas fa-list-ol"></i> Limite de Resultados</label>
+                <select id="limite" class="form-control">
                     <option value="5">Top 5</option>
                     <option value="10" selected>Top 10</option>
                     <option value="20">Top 20</option>
                     <option value="50">Top 50</option>
-                    <option value="0">Todos</option>
+                    <option value="100">Top 100</option>
                 </select>
-                
-                <button id="btnGerarRelatorio">Gerar Relatório</button>
-                <button id="btnExportarPDF" style="background-color: #f44336;">Exportar PDF</button>
+            </div>
+            <button id="filtrarBtn" class="btn btn-primary"><i class="fas fa-filter"></i> Aplicar Filtros</button>
+        </div>
+
+        <div class="summary-cards fade-in-up" style="animation-delay: 0.2s">
+            <div class="summary-card">
+                <div class="card-icon">
+                    <i class="fas fa-boxes"></i>
+                </div>
+                <div class="card-content">
+                    <h3>Total de Produtos</h3>
+                    <p id="totalProdutos">0</p>
+                    <div class="change"><i class="fas fa-chart-line"></i> <span>Análise de desempenho</span></div>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="card-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <div class="card-content">
+                    <h3>Itens Vendidos</h3>
+                    <p id="totalItensVendidos">0</p>
+                    <div class="change"><i class="fas fa-exchange-alt"></i> <span>Comparar períodos</span></div>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="card-icon">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="card-content">
+                    <h3>Faturamento Total</h3>
+                    <p id="faturamentoTotal">R$ 0,00</p>
+                    <div class="change"><i class="fas fa-percentage"></i> <span>Margem de lucro</span></div>
+                </div>
             </div>
         </div>
 
-        <div class="chart-container">
-            <canvas id="productsChart"></canvas>
+        <div class="chart-container fade-in-up" style="animation-delay: 0.3s">
+            <div class="chart-header">
+                <h2><i class="fas fa-chart-bar"></i> Desempenho dos Produtos</h2>
+                <div class="chart-actions">
+                    <button class="btn btn-sm" id="toggleChartType"><i class="fas fa-exchange-alt"></i> Alternar Visualização</button>
+                </div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="produtosChart"></canvas>
+            </div>
+            <div class="chart-footer">
+                <small class="text-muted">* Dados atualizados em tempo real</small>
+            </div>
         </div>
 
-        <div id="tabelaProdutos">
-            <h3>Detalhamento dos Produtos</h3>
-            <div style="max-height: 500px; overflow-y: auto;">
-                <table id="tabelaDados">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Imagem</th>
-                            <th>Produto</th>
-                            <th>Categoria</th>
-                            <th>Quantidade Vendida</th>
-                            <th>Total Arrecadado (R$)</th>
-                            <th>Média de Venda (R$)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabelaCorpo">
-                        <!-- Os dados serão preenchidos via JavaScript -->
-                    </tbody>
-                </table>
+        <div class="table-responsive fade-in-up" style="animation-delay: 0.4s">
+            <div class="table-header">
+                <h2><i class="fas fa-table"></i> Detalhamento dos Produtos</h2>
+                <div class="table-actions">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchTable" placeholder="Pesquisar produtos..." class="form-control">
+                    </div>
+                </div>
             </div>
+            <table id="tabelaProdutos" class="table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Produto</th>
+                        <th class="text-center">Quantidade</th>
+                        <th class="text-right">Valor Total</th>
+                        <th class="text-right">Preço Médio</th>
+                        <th class="text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaProdutosBody">
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <div class="empty-state">
+                                <i class="fas fa-box-open fa-3x mb-3 text-muted"></i>
+                                <p class="mb-0">Nenhum dado disponível. Aplique os filtros para visualizar os produtos.</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="6" class="text-right">
+                            <div class="table-footer">
+                                <span id="tableInfo" class="text-muted">Exibindo 0 de 0 itens</span>
+                                <div class="pagination">
+                                    <button class="btn btn-sm" id="prevPage" disabled><i class="fas fa-chevron-left"></i></button>
+                                    <span class="page-info">Página 1</span>
+                                    <button class="btn btn-sm" id="nextPage" disabled><i class="fas fa-chevron-right"></i></button>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
     </div>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        @media print {
-            .topo, .nav, .filters, .print-hide {
-                display: none !important;
-            }
-            body {
-                padding: 20px;
-                font-size: 12px;
-            }
-            .report-container {
-                max-width: 100%;
-                box-shadow: none;
-                padding: 0;
-                margin: 0;
-            }
-            .chart-container {
-                page-break-inside: avoid;
-                height: 300px !important;
-            }
-            table {
-                width: 100%;
-                font-size: 10px;
-            }
-            th, td {
-                padding: 4px 8px !important;
-            }
-            h1, h2, h3 {
-                margin: 10px 0 !important;
-            }
-            .product-image {
-                width: 30px !important;
-                height: 30px !important;
-            }
-        }
-        .print-button {
-            background-color: #4a6fa5;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-left: 10px;
-        }
-        .print-button:hover {
-            background-color: #3a5a80;
-        }
-        .loading {
-            text-align: center;
-            padding: 20px;
-            font-style: italic;
-            color: #666;
-        }
-    </style>
-    <script src="../menu.js"></script>
-    <script>
-        // Verifica se o menu.js foi carregado
-        if (typeof verificarSeUsuarioEstaLogadoBackend === 'function') {
-            verificarSeUsuarioEstaLogadoBackend();
-        }
+    <div id="loading" class="loading-overlay">
+        <div class="spinner"></div>
+        <h3>Processando seu relatório</h3>
+        <p class="text-muted">Isso pode levar alguns instantes...</p>
+        <div class="progress">
+            <div class="progress-bar" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Importa as funções necessárias do utils.js
+        import { 
+            formatCurrency, 
+            formatDate, 
+            getMonthName, 
+            showLoading, 
+            hideLoading, 
+            showError, 
+            fetchData,
+            formatNumber
+        } from '/frontend/relatorios/js/utils.js';
+        
+        // Expõe as funções para o escopo global (para compatibilidade com o código existente)
+        window.formatCurrency = formatCurrency;
+        window.formatDate = formatDate;
+        window.getMonthName = getMonthName;
+        window.showLoading = showLoading;
+        window.hideLoading = hideLoading;
+        window.showError = showError;
+        window.fetchData = fetchData;
+        window.formatNumber = formatNumber;
+        let produtosChart = null;
+        const API_BASE_URL = 'http://localhost:3001/api/relatorios';
+        
+        // Inicialização
         document.addEventListener('DOMContentLoaded', function() {
-            // Define as datas padrão (últimos 30 dias)
-            const endDate = new Date();
-            const startDate = new Date();
-            startDate.setMonth(startDate.getMonth() - 1);
+            carregarDados();
             
-            document.getElementById('startDate').valueAsDate = startDate;
-            document.getElementById('endDate').valueAsDate = endDate;
+            // Configurar eventos
+            document.getElementById('filtrarBtn').addEventListener('click', carregarDados);
+            document.getElementById('printBtn').addEventListener('click', imprimirRelatorio);
+            document.getElementById('exportPdfBtn').addEventListener('click', exportarParaPDF);
+            document.getElementById('exportExcelBtn').addEventListener('click', exportarParaExcel);
             
-            // Inicializa o gráfico vazio
-            const ctx = document.getElementById('productsChart').getContext('2d');
-            let productsChart = new Chart(ctx, {
+            // Configurar datas padrão (últimos 30 dias)
+            const hoje = new Date();
+            const trintaDiasAtras = new Date();
+            trintaDiasAtras.setDate(hoje.getDate() - 30);
+            
+            document.getElementById('dataFim').value = hoje.toISOString().split('T')[0];
+            document.getElementById('dataInicio').value = trintaDiasAtras.toISOString().split('T')[0];
+        });
+        
+        async function carregarDados() {
+            try {
+                showLoading('Carregando dados dos produtos...');
+                console.log('🔍 Iniciando carregamento de dados de produtos...');
+                
+                const dataInicio = document.getElementById('dataInicio').value;
+                const dataFim = document.getElementById('dataFim').value;
+                const limite = document.getElementById('limite').value || 10;
+                
+                // Validar datas
+                if (dataInicio && dataFim && new Date(dataInicio) > new Date(dataFim)) {
+                    throw new Error('A data inicial não pode ser maior que a data final');
+                }
+                
+                // Construir URL da API
+                const params = new URLSearchParams();
+                if (dataInicio) params.append('dataInicio', dataInicio);
+                if (dataFim) params.append('dataFim', dataFim);
+                params.append('limite', limite);
+                
+                console.log('📊 Parâmetros da requisição:', Object.fromEntries(params.entries()));
+                
+                // Fazer a requisição para a API
+                const url = `relatorios/produtos-mais-vendidos?${params.toString()}`;
+                console.log('🌐 URL da requisição:', url);
+                
+                const response = await fetchData(url);
+                console.log('📥 Resposta da API:', response);
+                
+                // Verifica se a resposta tem a estrutura esperada
+                if (!response) {
+                    throw new Error('Resposta vazia da API');
+                }
+                
+                // Ajusta para lidar com diferentes formatos de resposta
+                let dados = [];
+                if (Array.isArray(response)) {
+                    dados = response;
+                } else if (response.data && Array.isArray(response.data)) {
+                    dados = response.data;
+                } else if (response.data) {
+                    // Se for um único objeto, coloca em um array
+                    dados = [response.data];
+                }
+                
+                console.log('📊 Dados processados:', dados);
+                
+                if (!Array.isArray(dados) || dados.length === 0) {
+                    console.warn('⚠️ Nenhum dado retornado da API ou formato inválido');
+                    showInfo('Nenhum dado encontrado para os filtros selecionados.');
+                    atualizarTabela([]);
+                    if (produtosChart) {
+                        produtosChart.destroy();
+                        produtosChart = null;
+                    }
+                    return;
+                }
+                
+                // Atualizar totais
+                const totalItens = dados.reduce((acc, item) => acc + (parseInt(item.quantidade_vendida) || 0), 0);
+                const totalFaturamento = dados.reduce((acc, item) => acc + (parseFloat(item.valor_total_vendido) || 0), 0);
+                
+                document.getElementById('totalProdutos').textContent = dados.length;
+                document.getElementById('totalItensVendidos').textContent = formatNumber(totalItens);
+                document.getElementById('faturamentoTotal').textContent = formatCurrency(totalFaturamento);
+                
+                // Atualizar tabela
+                atualizarTabela(dados);
+                
+                // Atualizar gráfico
+                atualizarGrafico(dados);
+                
+            } catch (error) {
+                console.error('Erro ao carregar dados:', error);
+                showError('Erro ao carregar dados do relatório. Verifique o console para mais detalhes.');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function atualizarTabela(dados) {
+            const tbody = document.getElementById('tabelaProdutosBody');
+            tbody.innerHTML = '';
+            
+            if (!Array.isArray(dados) || dados.length === 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = '<td colspan="5" class="text-center">Nenhum dado disponível</td>';
+                tbody.appendChild(tr);
+                return;
+            }
+            
+            dados.forEach((item, index) => {
+                const quantidade = parseInt(item.quantidade_vendida) || 0;
+                const valorTotal = parseFloat(item.valor_total_vendido) || 0;
+                const precoMedio = quantidade > 0 ? valorTotal / quantidade : 0;
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="text-center">${index + 1}</td>
+                    <td>${item.nome_produto || 'Produto não identificado'}</td>
+                    <td class="text-end">${formatNumber(quantidade)}</td>
+                    <td class="text-end">${formatCurrency(valorTotal)}</td>
+                    <td class="text-end">${formatCurrency(precoMedio)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        function atualizarGrafico(dados) {
+            const ctx = document.getElementById('produtosChart').getContext('2d');
+            
+            // Destruir gráfico anterior se existir
+            if (produtosChart) {
+                produtosChart.destroy();
+                produtosChart = null;
+            }
+            
+            // Se não houver dados, limpar o canvas
+            if (!Array.isArray(dados) || dados.length === 0) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                ctx.font = '16px Arial';
+                ctx.fillStyle = '#666';
+                ctx.textAlign = 'center';
+                ctx.fillText('Nenhum dado disponível para exibir o gráfico', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
+            
+            // Limitar a 10 itens para melhor visualização
+            const dadosLimitados = dados.slice(0, 10);
+            
+            // Preparar dados para o gráfico
+            const labels = dadosLimitados.map(item => item.nome_produto || 'Produto sem nome');
+            const valores = dadosLimitados.map(item => parseFloat(item.valor_total_vendido) || 0);
+            
+            // Cores para as barras
+            const backgroundColors = [
+                'rgba(54, 162, 235, 0.7)',
+                'rgba(255, 99, 132, 0.7)',
+                'rgba(75, 192, 192, 0.7)',
+                'rgba(255, 159, 64, 0.7)',
+                'rgba(153, 102, 255, 0.7)',
+                'rgba(255, 205, 86, 0.7)',
+                'rgba(201, 203, 207, 0.7)',
+                'rgba(54, 162, 235, 0.7)',
+                'rgba(255, 99, 132, 0.7)',
+                'rgba(75, 192, 192, 0.7)'
+            ];
+            
+            // Criar o gráfico
+            produtosChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: [],
+                    labels: labels,
                     datasets: [{
-                        label: 'Quantidade Vendida',
-                        data: [],
-                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1,
-                        yAxisID: 'y'
-                    }, {
-                        label: 'Total Arrecadado (R$)',
-                        data: [],
-                        type: 'line',
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                        borderWidth: 2,
-                        pointBackgroundColor: 'rgba(255, 99, 132, 1)',
-                        yAxisID: 'y1'
+                        label: 'Valor Total em Vendas (R$)',
+                        data: valores,
+                        backgroundColor: backgroundColors,
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            type: 'linear',
-                            display: true,
-                            position: 'left',
-                            title: {
-                                display: true,
-                                text: 'Quantidade'
-                            }
+                    plugins: {
+                        legend: {
+                            position: 'top',
                         },
-                        y1: {
-                            type: 'linear',
+                        title: {
                             display: true,
-                            position: 'right',
-                            grid: {
-                                drawOnChartArea: false
-                            },
-                            title: {
-                                display: true,
-                                text: 'Valor (R$)'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Produtos'
-                            }
+                            text: 'Produtos Mais Vendidos (por Valor Total)'
                         }
                     },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label.includes('R$')) {
-                                        label += ': ' + context.parsed.y.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-                                    } else {
-                                        label += ': ' + context.parsed.y;
-                                    }
-                                    return label;
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'R$ ' + value.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
                                 }
                             }
                         }
                     }
                 }
             });
-
-            // Função para formatar a data para YYYY-MM-DD
-            function formatDate(date) {
-                const d = new Date(date);
-                let month = '' + (d.getMonth() + 1);
-                let day = '' + d.getDate();
-                const year = d.getFullYear();
-
-                if (month.length < 2) month = '0' + month;
-                if (day.length < 2) day = '0' + day;
-
-                return [year, month, day].join('-');
-            }
-
-            // Mostrar/ocultar indicador de carregamento
-            function mostrarCarregamento(mostrar) {
-                const loadingElement = document.getElementById('loading');
-                if (mostrar) {
-                    loadingElement.style.display = 'block';
-                } else {
-                    loadingElement.style.display = 'none';
-                }
-            }
-
-            // Função para carregar os dados do relatório
-            async function carregarDadosRelatorio(dataInicio, dataFim, limite) {
-                try {
-                    mostrarCarregamento(true);
-                    const response = await fetch(`http://localhost:3001/api/relatorios/produtos-mais-vendidos?dataInicio=${dataInicio}&dataFim=${dataFim}&limite=${limite}`);
-                    
-                    if (!response.ok) {
-                        throw new Error(`Erro na requisição: ${response.status} ${response.statusText}`);
-                    }
-                    
-                    const data = await response.json();
-                    
-                    if (!Array.isArray(data)) {
-                        throw new Error('Dados recebidos não estão no formato esperado');
-                    }
-                    
-                    // Atualiza o gráfico
-                    productsChart.data.labels = data.map(item => item.nomeProduto);
-                    productsChart.data.datasets[0].data = data.map(item => item.quantidadeVendida);
-                    productsChart.data.datasets[1].data = data.map(item => item.totalArrecadado);
-                    productsChart.update();
-                    
-                    // Preenche a tabela
-                    const tabelaCorpo = document.getElementById('tabelaCorpo');
-                    tabelaCorpo.innerHTML = '';
-                    
-                    data.forEach((item, index) => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${index + 1}</td>
-                            <td><img src="${item.imagem || '../images/placeholder-produto.jpg'}" alt="${item.nomeProduto}" class="product-image" onerror="this.src='../images/placeholder-produto.jpg'"></td>
-                            <td>${item.nomeProduto}</td>
-                            <td>${item.categoria || 'N/A'}</td>
-                            <td>${item.quantidadeVendida.toLocaleString('pt-BR')}</td>
-                            <td>R$ ${item.totalArrecadado.toFixed(2).replace('.', ',')}</td>
-                            <td>R$ ${item.mediaVenda.toFixed(2).replace('.', ',')}</td>
-                        `;
-                        tabelaCorpo.appendChild(row);
-                    });
-                    
-                } catch (error) {
-                    console.error('Erro ao carregar dados do relatório:', error);
-                    alert('Erro ao carregar dados do relatório: ' + error.message);
-                } finally {
-                    mostrarCarregamento(false);
-                }
-            }
+        }
+        
+        function imprimirRelatorio() {
+            window.print();
+        }
+        
+        function exportarParaPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
             
-            // Evento do botão Gerar Relatório
-            document.getElementById('btnGerarRelatorio').addEventListener('click', function() {
-                const dataInicio = document.getElementById('startDate').value;
-                const dataFim = document.getElementById('endDate').value;
-                const limite = document.getElementById('limit').value;
-                
-                if (!dataInicio || !dataFim) {
-                    alert('Por favor, selecione as datas de início e fim.');
-                    return;
-                }
-                
-                if (new Date(dataInicio) > new Date(dataFim)) {
-                    alert('A data inicial não pode ser maior que a data final.');
-                    return;
-                }
-                
-                carregarDadosRelatorio(dataInicio, dataFim, limite);
+            // Título
+            doc.setFontSize(18);
+            doc.text('Relatório de Produtos Mais Vendidos', 14, 15);
+            
+            // Data de emissão
+            doc.setFontSize(10);
+            doc.text(`Emitido em: ${new Date().toLocaleString('pt-BR')}`, 14, 25);
+            
+            // Filtros aplicados
+            const dataInicio = document.getElementById('dataInicio').value;
+            const dataFim = document.getElementById('dataFim').value;
+            const limite = document.getElementById('limite').value;
+            
+            let filtros = [];
+            if (dataInicio) filtros.push(`De: ${formatDate(dataInicio)}`);
+            if (dataFim) filtros.push(filtros.length > 0 ? `Até: ${formatDate(dataFim)}` : `Até: ${formatDate(dataFim)}`);
+            filtros.push(`Limite: Top ${limite}`);
+            
+            doc.setFontSize(10);
+            doc.text(`Filtros: ${filtros.join(' | ')}`, 14, 35);
+            
+            // Tabela de dados
+            const headers = [['#', 'Produto', 'Quantidade', 'Valor Total', 'Preço Médio']];
+            const rows = [];
+            
+            document.querySelectorAll('#tabelaProdutos tbody tr').forEach((row, index) => {
+                const cols = row.querySelectorAll('td');
+                rows.push([
+                    (index + 1).toString(),
+                    cols[1].textContent,
+                    cols[2].textContent,
+                    cols[3].textContent,
+                    cols[4].textContent
+                ]);
             });
             
-            // Evento do botão Exportar PDF
-            document.getElementById('btnExportarPDF').addEventListener('click', function() {
-                alert('Funcionalidade de exportação para PDF será implementada em breve.');
-                // Implementar lógica de exportação para PDF aqui
+            doc.autoTable({
+                head: headers,
+                body: rows,
+                startY: 45,
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [54, 162, 235] },
+                columnStyles: {
+                    0: { cellWidth: 10 },
+                    1: { cellWidth: 60 },
+                    2: { cellWidth: 30 },
+                    3: { cellWidth: 30 },
+                    4: { cellWidth: 30 }
+                }
             });
             
-            // Carrega os dados iniciais
-            carregarDadosRelatorio(
-                formatDate(startDate), 
-                formatDate(endDate), 
-                document.getElementById('limit').value
+            // Adicionar totais
+            const finalY = doc.lastAutoTable.finalY + 10;
+            doc.setFontSize(10);
+            doc.text(`Total de Produtos: ${document.getElementById('totalProdutos').textContent}`, 14, finalY);
+            doc.text(`Total de Itens Vendidos: ${document.getElementById('totalItensVendidos').textContent}`, 14, finalY + 5);
+            doc.text(`Faturamento Total: ${document.getElementById('faturamentoTotal').textContent}`, 14, finalY + 10);
+            
+            // Salvar o PDF
+            doc.save(`relatorio-produtos-${new Date().toISOString().split('T')[0]}.pdf`);
+        }
+        
+        function exportarParaExcel() {
+            // Criar uma nova planilha
+            const wb = XLSX.utils.book_new();
+            
+            // Preparar os dados
+            const headers = ['#', 'Produto', 'Quantidade Vendida', 'Valor Total (R$)', 'Preço Médio (R$)'];
+            const rows = [];
+            
+            document.querySelectorAll('#tabelaProdutos tbody tr').forEach((row, index) => {
+                const cols = row.querySelectorAll('td');
+                rows.push([
+                    index + 1,
+                    cols[1].textContent,
+                    parseInt(cols[2].textContent.replace(/\./g, '')),
+                    parseFloat(cols[3].textContent.replace(/[^0-9,]/g, '').replace(',', '.')),
+                    parseFloat(cols[4].textContent.replace(/[^0-9,]/g, '').replace(',', '.'))
+                ]);
+            });
+            
+            // Adicionar totais
+            rows.push(
+                [],
+                ['Total de Produtos:', document.getElementById('totalProdutos').textContent],
+                ['Total de Itens Vendidos:', document.getElementById('totalItensVendidos').textContent],
+                ['Faturamento Total:', document.getElementById('faturamentoTotal').textContent]
             );
-        });
+            
+            // Criar a planilha
+            const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+            
+            // Adicionar a planilha ao livro
+            XLSX.utils.book_append_sheet(wb, ws, 'Produtos Mais Vendidos');
+            
+            // Gerar o arquivo Excel
+            XLSX.writeFile(wb, `relatorio-produtos-${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
     </script>
 </body>
 </html>
