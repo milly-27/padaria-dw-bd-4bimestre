@@ -243,10 +243,10 @@
                 console.log('📊 Parâmetros da requisição:', Object.fromEntries(params.entries()));
                 
                 // Fazer a requisição para a API
-                const url = `relatorios/produtos-mais-vendidos?${params.toString()}`;
-                console.log('🌐 URL da requisição:', url);
+                const apiUrl = `${API_BASE_URL}/produtos-mais-vendidos?${params.toString()}`;
+                console.log('🌐 URL da requisição:', apiUrl);
                 
-                const response = await fetchData(url);
+                const response = await fetchData(apiUrl);
                 console.log('📥 Resposta da API:', response);
                 
                 // Verifica se a resposta tem a estrutura esperada
@@ -256,13 +256,15 @@
                 
                 // Ajusta para lidar com diferentes formatos de resposta
                 let dados = [];
-                if (Array.isArray(response)) {
+                if (response && response.data) {
+                    if (Array.isArray(response.data)) {
+                        dados = response.data;
+                    } else {
+                        // Se for um único objeto, coloca em um array
+                        dados = [response.data];
+                    }
+                } else if (Array.isArray(response)) {
                     dados = response;
-                } else if (response.data && Array.isArray(response.data)) {
-                    dados = response.data;
-                } else if (response.data) {
-                    // Se for um único objeto, coloca em um array
-                    dados = [response.data];
                 }
                 
                 console.log('📊 Dados processados:', dados);

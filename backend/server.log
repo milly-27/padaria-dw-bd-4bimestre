@@ -1,0 +1,25 @@
+Caminho frontend: /home/user/Área de trabalho/dw1/padaria-dw-bd-4bimestre/frontend
+Testando conexão com PostgreSQL...
+Conectado ao PostgreSQL com sucesso!
+✅ PostgreSQL conectado com sucesso
+🚀 Servidor rodando em http://localhost:3001
+📊 Health check disponível em http://localhost:3001/health
+🗄️ Banco de dados: PostgreSQL
+🌍 Ambiente: development
+✅ CORS configurado para aceitar todas as origens (desenvolvimento)
+
+📍 GET /api/relatorios/vendas-mensais
+🍪 Cookies: [Object: null prototype] {}
+🌐 Origin: undefined
+📍 GET /api/relatorios/vendas-mensais
+🍪 Cookies: [Object: null prototype] {}
+🌐 Origin: undefined
+🔑 Headers: { host: 'localhost:3001', 'user-agent': 'curl/8.5.0', accept: '*/*' }
+🔍 Iniciando getVendasMensais
+✅ Conexão com o banco de dados estabelecida
+🔍 Executando consulta para o ano 2025...
+📊 Resultado da consulta para o ano 2025: 12 meses encontrados
+🔒 Conexão com o banco de dados liberada
+
+🔄 SIGTERM recebido, encerrando servidor...
+✅ Conexões com PostgreSQL encerradas

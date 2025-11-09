@@ -99,6 +99,14 @@ function showError(message) {
 }
 
 /**
+ * Exibe uma mensagem informativa
+ * @param {string} message - Mensagem a ser exibida
+ */
+function showInfo(message) {
+    showMessage(message, 'info');
+}
+
+/**
  * Exibe uma mensagem
  * @param {string} message - Mensagem a ser exibida
  * @param {string} type - Tipo da mensagem (success, error, warning, info)
@@ -125,14 +133,19 @@ function showMessage(message, type = 'info') {
     }
     
     messageDiv.innerHTML = `${icon} ${message}`;
-    document.querySelector('.report-container').prepend(messageDiv);
     
-    // Remove a mensagem após 5 segundos
-    if (type !== 'error') {
-        setTimeout(() => {
-            messageDiv.style.opacity = '0';
-            setTimeout(() => messageDiv.remove(), 300);
-        }, 5000);
+    // Adiciona a mensagem ao contêiner
+    const messagesContainer = document.getElementById('messages-container');
+    if (messagesContainer) {
+        messagesContainer.appendChild(messageDiv);
+        
+        // Remove a mensagem após 5 segundos (exceto para erros)
+        if (type !== 'error') {
+            setTimeout(() => {
+                messageDiv.style.opacity = '0';
+                setTimeout(() => messageDiv.remove(), 300);
+            }, 5000);
+        }
     }
 }
 
@@ -249,10 +262,11 @@ export {
     hideLoading,
     showSuccess,
     showError,
+    showInfo,
     showMessage,
     hideMessages,
     fetchData,
-    initTooltips,
     formatNumber,
+    initTooltips,
     initBootstrapTooltips
 };

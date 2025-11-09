@@ -16,6 +16,18 @@ const relatorioController = require('../controllers/relatorioController');
  *         schema:
  *           type: integer
  *         description: Ano para filtrar as vendas (opcional, padrão é o ano atual)
+ *       - in: query
+ *         name: ordenar
+ *         schema:
+ *           type: string
+ *           enum: [mes_numero, totalVendas, quantidadePedidos, ticketMedio]
+ *         description: Campo para ordenação (opcional, padrão é 'mes_numero')
+ *       - in: query
+ *         name: direcao
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *         description: Direção da ordenação (ascendente ou descendente, opcional, padrão é 'asc')
  *     responses:
  *       200:
  *         description: Lista de vendas mensais
@@ -79,34 +91,5 @@ router.get('/vendas-mensais', (req, res, next) => {
  */
 router.get('/produtos-mais-vendidos', relatorioController.getProdutosMaisVendidos);
 
-/**
- * @swagger
- * /api/relatorios/clientes-mais-compraram:
- *   get:
- *     summary: Retorna os clientes que mais compraram
- *     tags: [Relatórios]
- *     parameters:
- *       - in: query
- *         name: dataInicio
- *         schema:
- *           type: string
- *           format: date
- *         description: Data de início para filtrar as compras (YYYY-MM-DD)
- *       - in: query
- *         name: dataFim
- *         schema:
- *           type: string
- *           format: date
- *         description: Data de fim para filtrar as compras (YYYY-MM-DD)
- *       - in: query
- *         name: limite
- *         schema:
- *           type: integer
- *         description: Número máximo de clientes a retornar (opcional, padrão é 10)
- *     responses:
- *       200:
- *         description: Lista de clientes que mais compraram
- */
-router.get('/clientes-mais-compraram', relatorioController.getClientesMaisCompraram);
 
 module.exports = router;

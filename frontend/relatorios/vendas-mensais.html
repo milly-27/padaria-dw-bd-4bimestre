@@ -91,9 +91,10 @@
             <div class="filter-group">
                 <label for="ordenar">Ordenar por</label>
                 <select id="ordenar" class="form-select">
-                    <option value="mes">Mês</option>
-                    <option value="valor">Valor Total</option>
-                    <option value="quantidade">Quantidade de Vendas</option>
+                    <option value="mes_numero">Mês</option>
+                    <option value="totalVendas">Valor Total</option>
+                    <option value="quantidadePedidos">Quantidade de Vendas</option>
+                    <option value="ticketMedio">Ticket Médio</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -199,10 +200,11 @@
             getMonthName, 
             showLoading, 
             hideLoading, 
-            showError, 
+            showError,
+            showInfo,
             fetchData,
             formatNumber
-        } from '/frontend/relatorios/js/utils.js';
+        } from './js/utils.js';
         
         // Variáveis globais
         let salesData = [];
@@ -284,144 +286,200 @@
                 const ordenar = document.getElementById('ordenar').value;
                 const direcao = document.getElementById('direcao').value;
                 
-                console.log('🔍 Fazendo requisição para API...');
-                console.log('Parâmetros:', { ano, ordenar, direcao });
+                console.log('🔍 Iniciando busca de dados de vendas...');
+                console.log('📅 Filtros:', { ano, ordenar, direcao });
                 
-                // Faz a requisição à API
-                const response = await fetchData(`relatorios/vendas-mensais?ano=${ano}&ordenar=${ordenar}&direcao=${direcao}`);
+                // Construir URL da API
+                const params = new URLSearchParams();
+                if (ano) params.append('ano', ano);
+                if (ordenar) params.append('ordenar', ordenar);
+                if (direcao) params.append('direcao', direcao);
                 
-                console.log('📥 Resposta da API:', response);
+                console.log('📊 Parâmetros da requisição:', Object.fromEntries(params.entries()));
                 
-                // Verifica se a resposta tem a estrutura esperada
-                if (!response) {
-                    throw new Error('Resposta vazia da API');
+                // Fazer a requisição para a API
+                const apiUrl = `/api/relatorios/vendas-mensais?${params.toString()}`;
+                console.log('🌐 URL da requisição:', apiUrl);
+                console.log('🌍 URL completa:', window.location.origin + apiUrl);
+                
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Authorization': localStorage.getItem('token') ? `Bearer ${localStorage.getItem('token')}` : ''
+                        },
+                        credentials: 'include'
+                    });
+                    
+                    console.log('📥 Status da resposta:', response.status);
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const responseData = await response.json();
+                    console.log('📦 Dados recebidos:', responseData);
+                    
+                    // Verifica se a resposta tem a estrutura esperada
+                    if (!responseData) {
+                        throw new Error('Resposta vazia da API');
+                    }
+                    
+                    // Ajusta para lidar com diferentes formatos de resposta
+                    let dados = [];
+                    if (responseData && responseData.data) {
+                        if (Array.isArray(responseData.data)) {
+                            dados = responseData.data;
+                        } else {
+                            // Se for um único objeto, coloca em um array
+                            dados = [responseData.data];
+                        }
+                    } else if (Array.isArray(responseData)) {
+                        dados = responseData;
+                    } else {
+                        // Se for um objeto com propriedades de dados diretas
+                        dados = [responseData];
+                    }
+                    
+                    console.log('📊 Dados processados:', dados);
+                    
+                    if (!Array.isArray(dados) || dados.length === 0) {
+                        console.warn('⚠️ Nenhum dado retornado da API ou formato inválido');
+                        showInfo('Nenhum dado encontrado para os filtros selecionados.');
+                        salesData = [];
+                    } else {
+                        // Atualiza os dados e a interface
+                        salesData = dados;
+                    }
+                    
+                    // Atualiza a interface
+                    updateSummaryCards();
+                    updateChart('valor');
+                    updateSalesTable();
+                    
+                } catch (apiError) {
+                    console.error('❌ Erro na requisição à API:', apiError);
+                    throw new Error(`Falha ao buscar dados: ${apiError.message}`);
                 }
                 
-                // Ajusta para lidar com diferentes formatos de resposta
-                let dados = [];
-                if (Array.isArray(response)) {
-                    dados = response;
-                } else if (response.data && Array.isArray(response.data)) {
-                    dados = response.data;
-                } else if (response.data) {
-                    // Se for um único objeto, coloca em um array
-                    dados = [response.data];
-                }
-                
-                console.log('📊 Dados processados:', dados);
-                
-                // Armazena os dados
-                salesData = dados;
-                
-                // Atualiza a interface
-                updateSummaryCards();
-                updateChart('valor');
-                updateSalesTable();
-                
-                hideLoading();
             } catch (error) {
-                console.error('Erro ao carregar dados de vendas:', error);
-                showError('Erro ao carregar os dados de vendas. Tente novamente mais tarde.');
+                console.error('❌ Erro ao carregar dados de vendas:', error);
+                showError(`Erro ao carregar os dados: ${error.message}`);
+                
+                // Limpa os dados em caso de erro
+                salesData = [];
+                updateSummaryCards();
+                updateChart();
+                updateSalesTable();
+            } finally {
+                hideLoading();
             }
         }
         
         // Atualiza os cards de resumo
         function updateSummaryCards() {
+            const summaryCards = document.getElementById('summaryCards');
+            
             if (!salesData || salesData.length === 0) {
-                document.getElementById('summaryCards').innerHTML = `
+                summaryCards.innerHTML = `
                     <div class="col-12">
                         <div class="alert alert-warning mb-0">
-                            Nenhum dado disponível para o período selecionado.
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Nenhum dado disponível para exibir.
                         </div>
-                    </div>
-                `;
+                    </div>`;
                 return;
             }
             
-            // Calcula totais
-            const totalVendas = salesData.reduce((sum, item) => sum + (item.totalVendas || 0), 0);
-            const totalPedidos = salesData.reduce((sum, item) => sum + (item.quantidadePedidos || 0), 0);
-            const ticketMedio = totalPedidos > 0 ? totalVendas / totalPedidos : 0;
+            console.log(' Dados para resumo:', salesData);
             
-            // Encontra o mês com maior venda
-            const melhorMes = [...salesData].sort((a, b) => (b.totalVendas || 0) - (a.totalVendas || 0))[0];
-            
-            // Calcula a variação em relação ao mês anterior
-            let variacao = 0;
-            if (salesData.length > 1) {
-                const mesAtual = salesData[salesData.length - 1].totalVendas || 0;
-                const mesAnterior = salesData[salesData.length - 2].totalVendas || 0;
-                variacao = mesAnterior > 0 ? ((mesAtual - mesAnterior) / mesAnterior) * 100 : 0;
+            try {
+                // Calcular totais
+                const totalVendas = salesData.reduce((sum, item) => sum + (item.totalVendas || 0), 0);
+                const totalPedidos = salesData.reduce((sum, item) => sum + (item.quantidadePedidos || 0), 0);
+                const ticketMedio = totalPedidos > 0 ? totalVendas / totalPedidos : 0;
+                
+                // Encontrar o melhor mês
+                const melhorMes = [...salesData].sort((a, b) => (b.totalVendas || 0) - (a.totalVendas || 0))[0];
+                
+                console.log(' Totais calculados:', { totalVendas, totalPedidos, ticketMedio, melhorMes });
+                
+                // Atualizar os cards de resumo
+                summaryCards.innerHTML = `
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h3 class="h6 text-muted mb-0">Total de Vendas</h3>
+                                    <div class="bg-primary bg-opacity-10 p-2 rounded">
+                                        <i class="bi bi-currency-dollar text-primary"></i>
+                                    </div>
+                                </div>
+                                <h2 class="h4 mb-2">${formatCurrency(totalVendas)}</h2>
+                                <p class="text-muted small mb-0">${salesData.length} meses analisados</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h3 class="h6 text-muted mb-0">Total de Pedidos</h3>
+                                    <div class="bg-success bg-opacity-10 p-2 rounded">
+                                        <i class="bi bi-cart-check text-success"></i>
+                                    </div>
+                                </div>
+                                <h2 class="h4 mb-2">${totalPedidos}</h2>
+                                <p class="text-muted small mb-0">Média de ${Math.round(totalPedidos / salesData.length)} por mês</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h3 class="h6 text-muted mb-0">Ticket Médio</h3>
+                                    <div class="bg-warning bg-opacity-10 p-2 rounded">
+                                        <i class="bi bi-receipt text-warning"></i>
+                                    </div>
+                                </div>
+                                <h2 class="h4 mb-2">${formatCurrency(ticketMedio)}</h2>
+                                <p class="text-muted small mb-0">Valor médio por pedido</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h3 class="h6 text-muted mb-0">Melhor Mês</h3>
+                                    <div class="bg-info bg-opacity-10 p-2 rounded">
+                                        <i class="bi bi-trophy text-info"></i>
+                                    </div>
+                                </div>
+                                <h2 class="h4 mb-2">${melhorMes ? getMonthName(melhorMes.mes_numero) : 'N/A'}</h2>
+                                <p class="text-muted small mb-0">
+                                    ${melhorMes ? formatCurrency(melhorMes.totalVendas) : 'N/A'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>`;
+            } catch (error) {
+                console.error(' Erro ao atualizar cards de resumo:', error);
+                summaryCards.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-danger mb-0">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Erro ao carregar os dados de resumo.
+                        </div>
+                    </div>`;
             }
-            
-            // Atualiza os cards
-            document.getElementById('summaryCards').innerHTML = `
-                <div class="col-md-3 col-sm-6 mb-3">
-                    <div class="card h-100 border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h3 class="h6 text-muted mb-0">Total em Vendas</h3>
-                                <div class="bg-primary bg-opacity-10 p-2 rounded">
-                                    <i class="bi bi-currency-dollar text-primary"></i>
-                                </div>
-                            </div>
-                            <h2 class="h4 mb-2">${formatCurrency(totalVendas)}</h2>
-                            <p class="text-muted small mb-0">
-                                <span class="${variacao >= 0 ? 'text-success' : 'text-danger'}">
-                                    <i class="bi ${variacao >= 0 ? 'bi-arrow-up' : 'bi-arrow-down'}"></i> ${Math.abs(variacao).toFixed(1)}%
-                                </span> vs mês anterior
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-3 col-sm-6 mb-3">
-                    <div class="card h-100 border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h3 class="h6 text-muted mb-0">Total de Pedidos</h3>
-                                <div class="bg-success bg-opacity-10 p-2 rounded">
-                                    <i class="bi bi-cart-check text-success"></i>
-                                </div>
-                            </div>
-                            <h2 class="h4 mb-2">${totalPedidos}</h2>
-                            <p class="text-muted small mb-0">Média de ${Math.round(totalPedidos / salesData.length)} por mês</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-3 col-sm-6 mb-3">
-                    <div class="card h-100 border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h3 class="h6 text-muted mb-0">Ticket Médio</h3>
-                                <div class="bg-warning bg-opacity-10 p-2 rounded">
-                                    <i class="bi bi-receipt text-warning"></i>
-                                </div>
-                            </div>
-                            <h2 class="h4 mb-2">${formatCurrency(ticketMedio)}</h2>
-                            <p class="text-muted small mb-0">Valor médio por pedido</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-3 col-sm-6 mb-3">
-                    <div class="card h-100 border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h3 class="h6 text-muted mb-0">Melhor Mês</h3>
-                                <div class="bg-info bg-opacity-10 p-2 rounded">
-                                    <i class="bi bi-trophy text-info"></i>
-                                </div>
-                            </div>
-                            <h2 class="h4 mb-2">${melhorMes ? getMonthName(melhorMes.mes_numero) : 'N/A'}</h2>
-                            <p class="text-muted small mb-0">
-                                ${melhorMes ? formatCurrency(melhorMes.valor_total) : 'N/A'}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            `;
         }
         
         // Atualiza o gráfico de vendas
