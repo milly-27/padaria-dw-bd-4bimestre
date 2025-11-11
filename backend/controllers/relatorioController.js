@@ -2,8 +2,6 @@ const { pool } = require('../database');
 
 /**
  * Valida se uma string é uma data válida no formato YYYY-MM-DD
- * @param {string} dateString - Data no formato YYYY-MM-DD
- * @returns {boolean} - Retorna true se a data for válida
  */
 const isValidDate = (dateString) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return false;
@@ -24,9 +22,6 @@ const handleError = (res, error, message) => {
 
 /**
  * Relatório de Vendas Mensais
- * Retorna um relatório com as vendas agrupadas por mês
- * @param {Object} req - Requisição HTTP
- * @param {Object} res - Resposta HTTP
  */
 exports.getVendasMensais = async (req, res) => {
     console.log('🔍 Iniciando getVendasMensais');
@@ -36,7 +31,7 @@ exports.getVendasMensais = async (req, res) => {
     try {
         const { ano = new Date().getFullYear() } = req.query;
         
-        // Validar ano (entre 2000 e 2100)
+        // Validar ano
         const anoNum = parseInt(ano);
         if (isNaN(anoNum) || anoNum < 2000 || anoNum > 2100) {
             return res.status(400).json({
@@ -46,10 +41,8 @@ exports.getVendasMensais = async (req, res) => {
             });
         }
         
-        // Obter parâmetros de ordenação
         const { ordenar = 'mes_numero', direcao = 'asc' } = req.query;
         
-        // Mapear campos de ordenação para colunas do banco
         const orderByMap = {
             'mes': 'm.mes',
             'mes_numero': 'm.mes',
@@ -61,7 +54,6 @@ exports.getVendasMensais = async (req, res) => {
         const orderBy = orderByMap[ordenar] || 'm.mes';
         const orderDirection = direcao === 'desc' ? 'DESC' : 'ASC';
         
-        // Consulta otimizada para obter as vendas mensais
         const query = `
             WITH meses AS (
                 SELECT generate_series(
@@ -88,13 +80,11 @@ exports.getVendasMensais = async (req, res) => {
             GROUP BY m.mes, EXTRACT(MONTH FROM m.mes), TO_CHAR(m.mes, 'TMMonth')
             ORDER BY ${orderBy} ${orderDirection}`;
             
-        // Executar a consulta
         console.log(`🔍 Executando consulta para o ano ${anoNum}...`);
         const result = await client.query(query, [`${anoNum}-01-01`]);
         
-        console.log(`📊 Resultado da consulta para o ano ${anoNum}:`, result.rowCount, 'meses encontrados');
+        console.log(`📊 Resultado: ${result.rowCount} meses encontrados`);
         
-        // Processar os resultados
         const dados = result.rows.map(row => ({
             mes: row.mes_nome ? row.mes_nome.trim() : '',
             mes_numero: parseInt(row.mes_numero) || 0,
@@ -103,7 +93,6 @@ exports.getVendasMensais = async (req, res) => {
             ticketMedio: parseFloat(row.ticket_medio) || 0
         }));
         
-        // Garantir que todos os 12 meses estejam presentes
         const mesesCompletos = Array.from({ length: 12 }, (_, i) => {
             const mesNumero = i + 1;
             const mesExistente = dados.find(m => m.mes_numero === mesNumero);
@@ -120,22 +109,18 @@ exports.getVendasMensais = async (req, res) => {
             };
         });
         
-        // Ordenar os meses corretamente
         mesesCompletos.sort((a, b) => a.mes_numero - b.mes_numero);
         
-        // Calcular totais
         const totais = {
             quantidadePedidos: mesesCompletos.reduce((sum, mes) => sum + mes.quantidadePedidos, 0),
             totalVendas: parseFloat(mesesCompletos.reduce((sum, mes) => sum + mes.totalVendas, 0).toFixed(2)),
             ticketMedioGeral: 0
         };
         
-        // Calcular ticket médio geral
         if (totais.quantidadePedidos > 0) {
             totais.ticketMedioGeral = parseFloat((totais.totalVendas / totais.quantidadePedidos).toFixed(2));
         }
         
-        // Enviar resposta
         res.status(200).json({
             status: 'success',
             data: mesesCompletos,
@@ -151,31 +136,28 @@ exports.getVendasMensais = async (req, res) => {
         handleError(res, error, 'Erro ao processar o relatório de vendas mensais');
     } finally {
         client.release();
-        console.log('🔒 Conexão com o banco de dados liberada');
+        console.log('🔒 Conexão liberada');
     }
 };
 
 /**
- * Relatório de Produtos Mais Vendidos
- * Retorna um relatório com os produtos mais vendidos em um período
- * @param {Object} req - Requisição HTTP
- * @param {Object} res - Resposta HTTP
+ * Relatório de Produtos Mais Vendidos - CORRIGIDO COM NOMES CORRETOS DAS COLUNAS
  */
 exports.getProdutosMaisVendidos = async (req, res) => {
     console.log('🔍 Iniciando getProdutosMaisVendidos');
     const client = await pool.connect();
     
     try {
-        // Parâmetros da requisição
         const { dataInicio, dataFim, limite = 10 } = req.query;
         
-        // Validar parâmetros
-        const limiteNum = Math.min(parseInt(limite), 100) || 10; // Limitar a 100 itens
+        console.log('📥 Parâmetros recebidos:', { dataInicio, dataFim, limite });
+        
+        const limiteNum = Math.min(parseInt(limite), 100) || 10;
         const params = [];
         let paramIndex = 1;
         let whereClause = '';
         
-        // Adicionar condições de data, se fornecidas
+        // Validação de datas
         if (dataInicio) {
             if (!isValidDate(dataInicio)) {
                 return res.status(400).json({
@@ -200,52 +182,55 @@ exports.getProdutosMaisVendidos = async (req, res) => {
             params.push(dataFim);
         }
         
-        // Adicionar limite
         params.push(limiteNum);
         
-        // Construir a consulta SQL
+        // Query CORRIGIDA - usando nome_produto ao invés de nome
         const query = `
             WITH vendas_por_produto AS (
                 SELECT 
                     pr.id_produto,
-                    pr.nome as nome_produto,
-                    pr.descricao,
+                    pr.nome_produto,
                     pr.preco as preco_atual,
-                    COUNT(pp.id_pedido) as quantidade_vendida,
+                    pr.id_categoria,
+                    COUNT(DISTINCT pp.id_pedido) as quantidade_vendida,
                     SUM(pp.quantidade) as total_itens_vendidos,
                     SUM(pp.quantidade * pp.preco_unitario) as valor_total_vendido,
                     AVG(pp.preco_unitario) as preco_medio_venda,
                     MIN(p.data_pedido) as primeira_venda,
                     MAX(p.data_pedido) as ultima_venda
                 FROM produto pr
-                JOIN pedidoproduto pp ON pr.id_produto = pp.id_produto
-                JOIN pedido p ON pp.id_pedido = p.id_pedido
+                INNER JOIN pedidoproduto pp ON pr.id_produto = pp.id_produto
+                INNER JOIN pedido p ON pp.id_pedido = p.id_pedido
                 WHERE 1=1 ${whereClause}
-                GROUP BY pr.id_produto, pr.nome, pr.descricao, pr.preco
+                GROUP BY pr.id_produto, pr.nome_produto, pr.preco, pr.id_categoria
                 ORDER BY quantidade_vendida DESC, valor_total_vendido DESC
                 LIMIT $${paramIndex}
             )
             SELECT 
                 vp.*,
-                c.nome_categoria,
-                ROUND((vp.preco_medio_venda / NULLIF(pr.preco, 0) - 1) * 100, 2) as margem_media_percentual
+                COALESCE(c.nome_categoria, 'Sem categoria') as nome_categoria
             FROM vendas_por_produto vp
-            JOIN produto pr ON vp.id_produto = pr.id_produto
-            LEFT JOIN categoria c ON pr.id_categoria = c.id_categoria
+            LEFT JOIN categoria c ON vp.id_categoria = c.id_categoria
             ORDER BY vp.quantidade_vendida DESC, vp.valor_total_vendido DESC`;
         
-        console.log('🔍 Executando consulta de produtos mais vendidos com parâmetros:', params);
+        console.log('🔍 Query:', query);
+        console.log('🔍 Parâmetros:', params);
+        
         const result = await client.query(query, params);
         
+        console.log(`📊 Resultado: ${result.rowCount} produtos encontrados`);
+        
+        // Se não houver resultados
         if (!result.rows || result.rows.length === 0) {
+            console.log('⚠️ Nenhum produto encontrado');
             return res.status(200).json({
                 status: 'success',
                 data: [],
                 meta: {
                     total: 0,
                     periodo: {
-                        dataInicio: dataInicio || 'Não especificada',
-                        dataFim: dataFim || 'Não especificada',
+                        dataInicio: dataInicio || null,
+                        dataFim: dataFim || null,
                         limite: limiteNum
                     },
                     timestamp: new Date().toISOString()
@@ -254,54 +239,45 @@ exports.getProdutosMaisVendidos = async (req, res) => {
             });
         }
         
-        // Processar os resultados
+        // Processar resultados
         const produtos = result.rows.map(produto => ({
             id: produto.id_produto,
-            nome: produto.nome_produto,
-            descricao: produto.descricao || '',
+            nome: produto.nome_produto || 'Produto sem nome',
+            descricao: '', // A tabela produto não tem campo descricao
             categoria: produto.nome_categoria || 'Sem categoria',
-            precoAtual: parseFloat(produto.preco_atual) || 0,
-            precoMedioVenda: parseFloat(produto.preco_medio_venda) || 0,
-            margemMediaPercentual: parseFloat(produto.margem_media_percentual) || 0,
-            quantidadeVendida: parseInt(produto.quantidade_vendida) || 0,
-            totalItensVendidos: parseInt(produto.total_itens_vendidos) || 0,
-            valorTotalVendido: parseFloat(produto.valor_total_vendido) || 0,
-            primeiraVenda: produto.primeira_venda ? produto.primeira_venda.toISOString().split('T')[0] : null,
-            ultimaVenda: produto.ultima_venda ? produto.ultima_venda.toISOString().split('T')[0] : null
+            preco_atual: parseFloat(produto.preco_atual) || 0,
+            preco_medio_venda: parseFloat(produto.preco_medio_venda) || 0,
+            quantidade_vendida: parseInt(produto.quantidade_vendida) || 0,
+            total_itens_vendidos: parseInt(produto.total_itens_vendidos) || 0,
+            valor_total_vendido: parseFloat(produto.valor_total_vendido) || 0,
+            primeira_venda: produto.primeira_venda ? produto.primeira_venda.toISOString().split('T')[0] : null,
+            ultima_venda: produto.ultima_venda ? produto.ultima_venda.toISOString().split('T')[0] : null
         }));
         
-        // Enviar resposta
+        console.log('✅ Produtos processados:', produtos.length);
+        
         res.status(200).json({
             status: 'success',
             data: produtos,
             meta: {
                 total: produtos.length,
                 periodo: {
-                    dataInicio: dataInicio || 'Não especificada',
-                    dataFim: dataFim || 'Não especificada',
+                    dataInicio: dataInicio || null,
+                    dataFim: dataFim || null,
                     limite: limiteNum
                 },
-                paginacao: {
-                    limite: limiteNum,
-                    offset: 0
-                }
-            },
-            message: 'Dados recuperados com sucesso',
-            timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString()
+            }
         });
         
     } catch (error) {
-        console.error('❌ Erro ao buscar produtos mais vendidos:', error);
+        console.error('❌ Erro completo:', error);
+        console.error('Stack:', error.stack);
         handleError(res, error, 'Erro ao processar o relatório de produtos mais vendidos');
     } finally {
-        // Liberar o cliente de volta para o pool
         if (client) {
-            try {
-                await client.release();
-                console.log('🔒 Conexão com o banco de dados liberada');
-            } catch (releaseError) {
-                console.error('❌ Erro ao liberar conexão:', releaseError);
-            }
+            client.release();
+            console.log('🔒 Conexão liberada');
         }
     }
 };

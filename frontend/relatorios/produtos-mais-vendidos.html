@@ -8,37 +8,64 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="/frontend/css/styles.css">
-    <link rel="stylesheet" href="/frontend/relatorios/css/relatorios.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <style>
-        /* Estilos específicos para este relatório */
-        .chart-container {
-            margin-top: 2.5rem;
-            margin-bottom: 3rem;
-        }
-        
-        .table-responsive {
-            margin-top: 1.5rem;
-        }
-        
-        .product-name {
-            font-weight: 500;
-            color: var(--dark-color);
-        }
-        
-        .product-category {
-            font-size: 0.85rem;
-            color: var(--secondary-color);
-            margin-top: 0.2rem;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Roboto', sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .report-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 3px solid #3498db; padding-bottom: 20px; }
+        .report-header h1 { color: #2c3e50; font-size: 28px; }
+        .actions { display: flex; gap: 10px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: all 0.3s; }
+        .btn-print { background: #3498db; color: white; }
+        .btn-print:hover { background: #2980b9; }
+        .btn-export { background: #27ae60; color: white; }
+        .btn-export:hover { background: #229954; }
+        .btn-primary { background: #3498db; color: white; }
+        .btn-primary:hover { background: #2980b9; }
+        .filters { display: flex; gap: 15px; align-items: flex-end; margin-bottom: 30px; padding: 20px; background: #ecf0f1; border-radius: 8px; }
+        .filter-group { display: flex; flex-direction: column; gap: 5px; }
+        .filter-group label { font-size: 14px; color: #2c3e50; font-weight: 500; }
+        .form-control { padding: 8px 12px; border: 1px solid #bdc3c7; border-radius: 5px; font-size: 14px; }
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .summary-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 10px; display: flex; align-items: center; gap: 20px; }
+        .summary-card:nth-child(2) { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .summary-card:nth-child(3) { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .card-icon { font-size: 40px; }
+        .card-content h3 { font-size: 14px; margin-bottom: 10px; opacity: 0.9; }
+        .card-content p { font-size: 28px; font-weight: bold; }
+        .chart-container { margin-bottom: 30px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .chart-header { margin-bottom: 20px; }
+        .chart-header h2 { color: #2c3e50; font-size: 20px; }
+        .chart-wrapper { position: relative; height: 400px; }
+        .table-responsive { overflow-x: auto; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table thead { background: #34495e; color: white; }
+        .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #ecf0f1; }
+        .table tbody tr:hover { background: #f8f9fa; }
+        .text-center { text-align: center; }
+        .text-right, .text-end { text-align: right; }
+        .py-4 { padding: 2rem 0; }
+        .mb-3 { margin-bottom: 1rem; }
+        .text-muted { color: #7f8c8d; }
+        .product-name { font-weight: 500; color: #2c3e50; }
+        .product-category { font-size: 0.85rem; color: #7f8c8d; margin-top: 0.2rem; }
+        .empty-state { text-align: center; padding: 40px; }
+        .loading-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; color: white; }
+        .loading-overlay.active { display: flex; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @media print {
+            .filters, .btn, .actions { display: none; }
+            body { background: white; }
         }
     </style>
 </head>
 <body>
-    <div class="container fade-in-up">
+    <div class="container">
         <header class="report-header">
             <h1><i class="fas fa-chart-pie"></i> Relatório de Produtos Mais Vendidos</h1>
             <div class="actions">
@@ -48,7 +75,7 @@
             </div>
         </header>
 
-        <div class="filters fade-in-up" style="animation-delay: 0.1s">
+        <div class="filters">
             <div class="filter-group">
                 <label for="dataInicio"><i class="far fa-calendar-alt"></i> Data Inicial</label>
                 <input type="date" id="dataInicio" class="form-control">
@@ -58,7 +85,7 @@
                 <input type="date" id="dataFim" class="form-control">
             </div>
             <div class="filter-group">
-                <label for="limite"><i class="fas fa-list-ol"></i> Limite de Resultados</label>
+                <label for="limite"><i class="fas fa-list-ol"></i> Limite</label>
                 <select id="limite" class="form-control">
                     <option value="5">Top 5</option>
                     <option value="10" selected>Top 10</option>
@@ -70,73 +97,49 @@
             <button id="filtrarBtn" class="btn btn-primary"><i class="fas fa-filter"></i> Aplicar Filtros</button>
         </div>
 
-        <div class="summary-cards fade-in-up" style="animation-delay: 0.2s">
+        <div class="summary-cards">
             <div class="summary-card">
-                <div class="card-icon">
-                    <i class="fas fa-boxes"></i>
-                </div>
+                <div class="card-icon"><i class="fas fa-boxes"></i></div>
                 <div class="card-content">
                     <h3>Total de Produtos</h3>
                     <p id="totalProdutos">0</p>
-                    <div class="change"><i class="fas fa-chart-line"></i> <span>Análise de desempenho</span></div>
                 </div>
             </div>
             <div class="summary-card">
-                <div class="card-icon">
-                    <i class="fas fa-shopping-cart"></i>
-                </div>
+                <div class="card-icon"><i class="fas fa-shopping-cart"></i></div>
                 <div class="card-content">
                     <h3>Itens Vendidos</h3>
                     <p id="totalItensVendidos">0</p>
-                    <div class="change"><i class="fas fa-exchange-alt"></i> <span>Comparar períodos</span></div>
                 </div>
             </div>
             <div class="summary-card">
-                <div class="card-icon">
-                    <i class="fas fa-dollar-sign"></i>
-                </div>
+                <div class="card-icon"><i class="fas fa-dollar-sign"></i></div>
                 <div class="card-content">
                     <h3>Faturamento Total</h3>
                     <p id="faturamentoTotal">R$ 0,00</p>
-                    <div class="change"><i class="fas fa-percentage"></i> <span>Margem de lucro</span></div>
                 </div>
             </div>
         </div>
 
-        <div class="chart-container fade-in-up" style="animation-delay: 0.3s">
+        <div class="chart-container">
             <div class="chart-header">
                 <h2><i class="fas fa-chart-bar"></i> Desempenho dos Produtos</h2>
-                <div class="chart-actions">
-                    <button class="btn btn-sm" id="toggleChartType"><i class="fas fa-exchange-alt"></i> Alternar Visualização</button>
-                </div>
             </div>
             <div class="chart-wrapper">
                 <canvas id="produtosChart"></canvas>
             </div>
-            <div class="chart-footer">
-                <small class="text-muted">* Dados atualizados em tempo real</small>
-            </div>
         </div>
 
-        <div class="table-responsive fade-in-up" style="animation-delay: 0.4s">
-            <div class="table-header">
-                <h2><i class="fas fa-table"></i> Detalhamento dos Produtos</h2>
-                <div class="table-actions">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="searchTable" placeholder="Pesquisar produtos..." class="form-control">
-                    </div>
-                </div>
-            </div>
+        <div class="table-responsive">
             <table id="tabelaProdutos" class="table">
                 <thead>
                     <tr>
                         <th>#</th>
                         <th>Produto</th>
+                        <th>Categoria</th>
                         <th class="text-center">Quantidade</th>
                         <th class="text-right">Valor Total</th>
                         <th class="text-right">Preço Médio</th>
-                        <th class="text-center">Ações</th>
                     </tr>
                 </thead>
                 <tbody id="tabelaProdutosBody">
@@ -144,187 +147,217 @@
                         <td colspan="6" class="text-center py-4">
                             <div class="empty-state">
                                 <i class="fas fa-box-open fa-3x mb-3 text-muted"></i>
-                                <p class="mb-0">Nenhum dado disponível. Aplique os filtros para visualizar os produtos.</p>
+                                <p>Carregando dados...</p>
                             </div>
                         </td>
                     </tr>
                 </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="6" class="text-right">
-                            <div class="table-footer">
-                                <span id="tableInfo" class="text-muted">Exibindo 0 de 0 itens</span>
-                                <div class="pagination">
-                                    <button class="btn btn-sm" id="prevPage" disabled><i class="fas fa-chevron-left"></i></button>
-                                    <span class="page-info">Página 1</span>
-                                    <button class="btn btn-sm" id="nextPage" disabled><i class="fas fa-chevron-right"></i></button>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                </tfoot>
             </table>
         </div>
     </div>
 
     <div id="loading" class="loading-overlay">
         <div class="spinner"></div>
-        <h3>Processando seu relatório</h3>
-        <p class="text-muted">Isso pode levar alguns instantes...</p>
-        <div class="progress">
-            <div class="progress-bar" style="width: 0%"></div>
-        </div>
+        <h3>Processando seu relatório...</h3>
     </div>
 
-    <script type="module">
-        // Importa as funções necessárias do utils.js
-        import { 
-            formatCurrency, 
-            formatDate, 
-            getMonthName, 
-            showLoading, 
-            hideLoading, 
-            showError, 
-            fetchData,
-            formatNumber
-        } from '/frontend/relatorios/js/utils.js';
-        
-        // Expõe as funções para o escopo global (para compatibilidade com o código existente)
-        window.formatCurrency = formatCurrency;
-        window.formatDate = formatDate;
-        window.getMonthName = getMonthName;
-        window.showLoading = showLoading;
-        window.hideLoading = hideLoading;
-        window.showError = showError;
-        window.fetchData = fetchData;
-        window.formatNumber = formatNumber;
+    <script>
         let produtosChart = null;
-        const API_BASE_URL = 'http://localhost:3001/api/relatorios';
+        let dadosGlobais = [];
+        
+        // URL base da API (mesmo padrão do relatório de vendas mensais)
+        const API_BASE_URL = 'http://localhost:3001';
+        
+        console.log('🌐 API Base URL:', API_BASE_URL);
+        
+        // Funções auxiliares
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+        }
+        
+        function formatNumber(value) {
+            return new Intl.NumberFormat('pt-BR').format(value || 0);
+        }
+        
+        function showLoading() {
+            document.getElementById('loading').classList.add('active');
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('active');
+        }
+        
+        function showError(message) {
+            // Cria um alerta visual melhor
+            const alertDiv = document.createElement('div');
+            alertDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #e74c3c;
+                color: white;
+                padding: 15px 20px;
+                border-radius: 5px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                z-index: 10000;
+                max-width: 400px;
+            `;
+            alertDiv.innerHTML = `<strong>Erro:</strong> ${message}`;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+            
+            console.error('❌', message);
+        }
+        
+        function showSuccess(message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #27ae60;
+                color: white;
+                padding: 15px 20px;
+                border-radius: 5px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                z-index: 10000;
+                max-width: 400px;
+            `;
+            alertDiv.innerHTML = `<strong>✓</strong> ${message}`;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
         
         // Inicialização
         document.addEventListener('DOMContentLoaded', function() {
-            carregarDados();
-            
-            // Configurar eventos
-            document.getElementById('filtrarBtn').addEventListener('click', carregarDados);
-            document.getElementById('printBtn').addEventListener('click', imprimirRelatorio);
-            document.getElementById('exportPdfBtn').addEventListener('click', exportarParaPDF);
-            document.getElementById('exportExcelBtn').addEventListener('click', exportarParaExcel);
-            
-            // Configurar datas padrão (últimos 30 dias)
             const hoje = new Date();
             const trintaDiasAtras = new Date();
             trintaDiasAtras.setDate(hoje.getDate() - 30);
             
             document.getElementById('dataFim').value = hoje.toISOString().split('T')[0];
             document.getElementById('dataInicio').value = trintaDiasAtras.toISOString().split('T')[0];
+            
+            document.getElementById('filtrarBtn').addEventListener('click', carregarDados);
+            document.getElementById('printBtn').addEventListener('click', () => window.print());
+            document.getElementById('exportPdfBtn').addEventListener('click', exportarParaPDF);
+            document.getElementById('exportExcelBtn').addEventListener('click', exportarParaExcel);
+            
+            carregarDados();
         });
         
         async function carregarDados() {
             try {
-                showLoading('Carregando dados dos produtos...');
-                console.log('🔍 Iniciando carregamento de dados de produtos...');
+                showLoading();
+                console.log('🔍 Carregando dados...');
                 
                 const dataInicio = document.getElementById('dataInicio').value;
                 const dataFim = document.getElementById('dataFim').value;
                 const limite = document.getElementById('limite').value || 10;
                 
-                // Validar datas
                 if (dataInicio && dataFim && new Date(dataInicio) > new Date(dataFim)) {
                     throw new Error('A data inicial não pode ser maior que a data final');
                 }
                 
-                // Construir URL da API
                 const params = new URLSearchParams();
                 if (dataInicio) params.append('dataInicio', dataInicio);
                 if (dataFim) params.append('dataFim', dataFim);
                 params.append('limite', limite);
                 
-                console.log('📊 Parâmetros da requisição:', Object.fromEntries(params.entries()));
+                const url = `${API_BASE_URL}/api/relatorios/produtos-mais-vendidos?${params.toString()}`;
+                console.log('🌐 URL completa:', url);
                 
-                // Fazer a requisição para a API
-                const apiUrl = `${API_BASE_URL}/produtos-mais-vendidos?${params.toString()}`;
-                console.log('🌐 URL da requisição:', apiUrl);
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
                 
-                const response = await fetchData(apiUrl);
-                console.log('📥 Resposta da API:', response);
+                console.log('📥 Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('❌ Erro da API:', errorText);
+                    throw new Error(`Erro na API: ${response.status} - ${errorText}`);
+                }
+                
+                const result = await response.json();
+                console.log('✅ Dados recebidos:', result);
                 
                 // Verifica se a resposta tem a estrutura esperada
-                if (!response) {
-                    throw new Error('Resposta vazia da API');
-                }
-                
-                // Ajusta para lidar com diferentes formatos de resposta
-                let dados = [];
-                if (response && response.data) {
-                    if (Array.isArray(response.data)) {
-                        dados = response.data;
-                    } else {
-                        // Se for um único objeto, coloca em um array
-                        dados = [response.data];
+                if (result.status === 'success' && result.data) {
+                    const dados = result.data;
+                    dadosGlobais = dados;
+                    
+                    if (dados.length === 0) {
+                        console.warn('⚠️ Nenhum dado encontrado');
+                        atualizarInterface([]);
+                        showError('Nenhum dado encontrado para o período selecionado');
+                        return;
                     }
-                } else if (Array.isArray(response)) {
-                    dados = response;
+                    
+                    atualizarInterface(dados);
+                    showSuccess('Dados carregados com sucesso!');
+                } else {
+                    throw new Error('Formato de resposta inválido');
                 }
-                
-                console.log('📊 Dados processados:', dados);
-                
-                if (!Array.isArray(dados) || dados.length === 0) {
-                    console.warn('⚠️ Nenhum dado retornado da API ou formato inválido');
-                    showInfo('Nenhum dado encontrado para os filtros selecionados.');
-                    atualizarTabela([]);
-                    if (produtosChart) {
-                        produtosChart.destroy();
-                        produtosChart = null;
-                    }
-                    return;
-                }
-                
-                // Atualizar totais
-                const totalItens = dados.reduce((acc, item) => acc + (parseInt(item.quantidade_vendida) || 0), 0);
-                const totalFaturamento = dados.reduce((acc, item) => acc + (parseFloat(item.valor_total_vendido) || 0), 0);
-                
-                document.getElementById('totalProdutos').textContent = dados.length;
-                document.getElementById('totalItensVendidos').textContent = formatNumber(totalItens);
-                document.getElementById('faturamentoTotal').textContent = formatCurrency(totalFaturamento);
-                
-                // Atualizar tabela
-                atualizarTabela(dados);
-                
-                // Atualizar gráfico
-                atualizarGrafico(dados);
                 
             } catch (error) {
-                console.error('Erro ao carregar dados:', error);
-                showError('Erro ao carregar dados do relatório. Verifique o console para mais detalhes.');
+                console.error('❌ Erro:', error);
+                showError('Erro ao carregar dados: ' + error.message);
+                atualizarInterface([]);
             } finally {
                 hideLoading();
             }
+        }
+        
+        function atualizarInterface(dados) {
+            const totalItens = dados.reduce((acc, item) => acc + (parseInt(item.quantidade_vendida) || 0), 0);
+            const totalFaturamento = dados.reduce((acc, item) => acc + (parseFloat(item.valor_total_vendido) || 0), 0);
+            
+            document.getElementById('totalProdutos').textContent = dados.length;
+            document.getElementById('totalItensVendidos').textContent = formatNumber(totalItens);
+            document.getElementById('faturamentoTotal').textContent = formatCurrency(totalFaturamento);
+            
+            atualizarTabela(dados);
+            atualizarGrafico(dados);
         }
         
         function atualizarTabela(dados) {
             const tbody = document.getElementById('tabelaProdutosBody');
             tbody.innerHTML = '';
             
-            if (!Array.isArray(dados) || dados.length === 0) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = '<td colspan="5" class="text-center">Nenhum dado disponível</td>';
-                tbody.appendChild(tr);
+            if (!dados || dados.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <div class="empty-state">
+                                <i class="fas fa-box-open fa-3x mb-3 text-muted"></i>
+                                <p>Nenhum dado disponível</p>
+                            </div>
+                        </td>
+                    </tr>`;
                 return;
             }
             
             dados.forEach((item, index) => {
-                const quantidade = parseInt(item.quantidade_vendida) || 0;
-                const valorTotal = parseFloat(item.valor_total_vendido) || 0;
-                const precoMedio = quantidade > 0 ? valorTotal / quantidade : 0;
-                
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="text-center">${index + 1}</td>
-                    <td>${item.nome_produto || 'Produto não identificado'}</td>
-                    <td class="text-end">${formatNumber(quantidade)}</td>
-                    <td class="text-end">${formatCurrency(valorTotal)}</td>
-                    <td class="text-end">${formatCurrency(precoMedio)}</td>
+                    <td>
+                        <div class="product-name">${item.nome || 'Sem nome'}</div>
+                        ${item.descricao ? `<div class="product-category">${item.descricao}</div>` : ''}
+                    </td>
+                    <td>${item.categoria || 'Sem categoria'}</td>
+                    <td class="text-center">${formatNumber(item.quantidade_vendida || 0)}</td>
+                    <td class="text-right">${formatCurrency(item.valor_total_vendido || 0)}</td>
+                    <td class="text-right">${formatCurrency(item.preco_medio_venda || 0)}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -333,74 +366,45 @@
         function atualizarGrafico(dados) {
             const ctx = document.getElementById('produtosChart').getContext('2d');
             
-            // Destruir gráfico anterior se existir
             if (produtosChart) {
                 produtosChart.destroy();
-                produtosChart = null;
             }
             
-            // Se não houver dados, limpar o canvas
-            if (!Array.isArray(dados) || dados.length === 0) {
-                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-                ctx.font = '16px Arial';
-                ctx.fillStyle = '#666';
-                ctx.textAlign = 'center';
-                ctx.fillText('Nenhum dado disponível para exibir o gráfico', ctx.canvas.width / 2, ctx.canvas.height / 2);
+            if (!dados || dados.length === 0) {
                 return;
             }
             
-            // Limitar a 10 itens para melhor visualização
             const dadosLimitados = dados.slice(0, 10);
-            
-            // Preparar dados para o gráfico
-            const labels = dadosLimitados.map(item => item.nome_produto || 'Produto sem nome');
+            const labels = dadosLimitados.map(item => item.nome || 'Sem nome');
             const valores = dadosLimitados.map(item => parseFloat(item.valor_total_vendido) || 0);
             
-            // Cores para as barras
-            const backgroundColors = [
-                'rgba(54, 162, 235, 0.7)',
-                'rgba(255, 99, 132, 0.7)',
-                'rgba(75, 192, 192, 0.7)',
-                'rgba(255, 159, 64, 0.7)',
-                'rgba(153, 102, 255, 0.7)',
-                'rgba(255, 205, 86, 0.7)',
-                'rgba(201, 203, 207, 0.7)',
-                'rgba(54, 162, 235, 0.7)',
-                'rgba(255, 99, 132, 0.7)',
-                'rgba(75, 192, 192, 0.7)'
-            ];
-            
-            // Criar o gráfico
             produtosChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Valor Total em Vendas (R$)',
+                        label: 'Valor Total (R$)',
                         data: valores,
-                        backgroundColor: backgroundColors,
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
                         borderColor: 'rgba(54, 162, 235, 1)',
                         borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     plugins: {
-                        legend: {
-                            position: 'top',
-                        },
+                        legend: { position: 'top' },
                         title: {
                             display: true,
-                            text: 'Produtos Mais Vendidos (por Valor Total)'
+                            text: 'Top 10 Produtos Mais Vendidos'
                         }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
                             ticks: {
-                                callback: function(value) {
-                                    return 'R$ ' + value.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-                                }
+                                callback: value => 'R$ ' + value.toLocaleString('pt-BR')
                             }
                         }
                     }
@@ -408,111 +412,63 @@
             });
         }
         
-        function imprimirRelatorio() {
-            window.print();
-        }
-        
         function exportarParaPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            // Título
-            doc.setFontSize(18);
-            doc.text('Relatório de Produtos Mais Vendidos', 14, 15);
-            
-            // Data de emissão
-            doc.setFontSize(10);
-            doc.text(`Emitido em: ${new Date().toLocaleString('pt-BR')}`, 14, 25);
-            
-            // Filtros aplicados
-            const dataInicio = document.getElementById('dataInicio').value;
-            const dataFim = document.getElementById('dataFim').value;
-            const limite = document.getElementById('limite').value;
-            
-            let filtros = [];
-            if (dataInicio) filtros.push(`De: ${formatDate(dataInicio)}`);
-            if (dataFim) filtros.push(filtros.length > 0 ? `Até: ${formatDate(dataFim)}` : `Até: ${formatDate(dataFim)}`);
-            filtros.push(`Limite: Top ${limite}`);
-            
-            doc.setFontSize(10);
-            doc.text(`Filtros: ${filtros.join(' | ')}`, 14, 35);
-            
-            // Tabela de dados
-            const headers = [['#', 'Produto', 'Quantidade', 'Valor Total', 'Preço Médio']];
-            const rows = [];
-            
-            document.querySelectorAll('#tabelaProdutos tbody tr').forEach((row, index) => {
-                const cols = row.querySelectorAll('td');
-                rows.push([
-                    (index + 1).toString(),
-                    cols[1].textContent,
-                    cols[2].textContent,
-                    cols[3].textContent,
-                    cols[4].textContent
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                doc.setFontSize(18);
+                doc.text('Relatorio de Produtos Mais Vendidos', 14, 15);
+                
+                doc.setFontSize(10);
+                doc.text(`Emitido em: ${new Date().toLocaleString('pt-BR')}`, 14, 25);
+                
+                const headers = [['#', 'Produto', 'Categoria', 'Qtd', 'Valor Total', 'Preco Medio']];
+                const rows = dadosGlobais.map((item, i) => [
+                    (i + 1).toString(),
+                    item.nome || 'Sem nome',
+                    item.categoria || 'Sem categoria',
+                    formatNumber(item.quantidade_vendida || 0),
+                    formatCurrency(item.valor_total_vendido || 0),
+                    formatCurrency(item.preco_medio_venda || 0)
                 ]);
-            });
-            
-            doc.autoTable({
-                head: headers,
-                body: rows,
-                startY: 45,
-                styles: { fontSize: 8 },
-                headStyles: { fillColor: [54, 162, 235] },
-                columnStyles: {
-                    0: { cellWidth: 10 },
-                    1: { cellWidth: 60 },
-                    2: { cellWidth: 30 },
-                    3: { cellWidth: 30 },
-                    4: { cellWidth: 30 }
-                }
-            });
-            
-            // Adicionar totais
-            const finalY = doc.lastAutoTable.finalY + 10;
-            doc.setFontSize(10);
-            doc.text(`Total de Produtos: ${document.getElementById('totalProdutos').textContent}`, 14, finalY);
-            doc.text(`Total de Itens Vendidos: ${document.getElementById('totalItensVendidos').textContent}`, 14, finalY + 5);
-            doc.text(`Faturamento Total: ${document.getElementById('faturamentoTotal').textContent}`, 14, finalY + 10);
-            
-            // Salvar o PDF
-            doc.save(`relatorio-produtos-${new Date().toISOString().split('T')[0]}.pdf`);
+                
+                doc.autoTable({
+                    head: headers,
+                    body: rows,
+                    startY: 35,
+                    styles: { fontSize: 8 }
+                });
+                
+                doc.save(`produtos-${new Date().toISOString().split('T')[0]}.pdf`);
+                showSuccess('PDF exportado com sucesso!');
+            } catch (error) {
+                console.error('Erro PDF:', error);
+                showError('Erro ao gerar PDF: ' + error.message);
+            }
         }
         
         function exportarParaExcel() {
-            // Criar uma nova planilha
-            const wb = XLSX.utils.book_new();
-            
-            // Preparar os dados
-            const headers = ['#', 'Produto', 'Quantidade Vendida', 'Valor Total (R$)', 'Preço Médio (R$)'];
-            const rows = [];
-            
-            document.querySelectorAll('#tabelaProdutos tbody tr').forEach((row, index) => {
-                const cols = row.querySelectorAll('td');
-                rows.push([
-                    index + 1,
-                    cols[1].textContent,
-                    parseInt(cols[2].textContent.replace(/\./g, '')),
-                    parseFloat(cols[3].textContent.replace(/[^0-9,]/g, '').replace(',', '.')),
-                    parseFloat(cols[4].textContent.replace(/[^0-9,]/g, '').replace(',', '.'))
+            try {
+                const wb = XLSX.utils.book_new();
+                const headers = ['#', 'Produto', 'Categoria', 'Quantidade', 'Valor Total', 'Preco Medio'];
+                const rows = dadosGlobais.map((item, i) => [
+                    i + 1,
+                    item.nome || 'Sem nome',
+                    item.categoria || 'Sem categoria',
+                    item.quantidade_vendida || 0,
+                    item.valor_total_vendido || 0,
+                    item.preco_medio_venda || 0
                 ]);
-            });
-            
-            // Adicionar totais
-            rows.push(
-                [],
-                ['Total de Produtos:', document.getElementById('totalProdutos').textContent],
-                ['Total de Itens Vendidos:', document.getElementById('totalItensVendidos').textContent],
-                ['Faturamento Total:', document.getElementById('faturamentoTotal').textContent]
-            );
-            
-            // Criar a planilha
-            const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-            
-            // Adicionar a planilha ao livro
-            XLSX.utils.book_append_sheet(wb, ws, 'Produtos Mais Vendidos');
-            
-            // Gerar o arquivo Excel
-            XLSX.writeFile(wb, `relatorio-produtos-${new Date().toISOString().split('T')[0]}.xlsx`);
+                
+                const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+                XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
+                XLSX.writeFile(wb, `produtos-${new Date().toISOString().split('T')[0]}.xlsx`);
+                showSuccess('Excel exportado com sucesso!');
+            } catch (error) {
+                console.error('Erro Excel:', error);
+                showError('Erro ao gerar Excel: ' + error.message);
+            }
         }
     </script>
 </body>
