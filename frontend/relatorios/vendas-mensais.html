@@ -9,123 +9,252 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="/frontend/relatorios/css/relatorios.css">
     
     <style>
-        /* Estilos adicionais específicos para esta página */
-        .chart-container {
-            position: relative;
-            height: 400px;
+        body {
+            background-color: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        .report-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .report-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .report-title {
+            color: #2c3e50;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .report-subtitle {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
             margin-bottom: 2rem;
         }
         
         .summary-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
         }
         
         .summary-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
         
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .chart-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
         }
         
-        .spinner {
-            animation: spin 1s linear infinite;
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
         
-        /* Estilos para impressão */
+        .btn-action {
+            margin: 0 0.25rem;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .loading-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
         @media print {
-            .no-print {
+            .no-print,
+            .btn-action,
+            .alert-container,
+            #loadingOverlay,
+            .report-header .d-flex.gap-2 {
                 display: none !important;
             }
             
-            .chart-container {
-                height: 300px !important;
+            body {
+                background: white;
+            }
+            
+            .report-container {
+                max-width: 100%;
+                padding: 1rem;
             }
             
             .summary-cards {
-                display: grid !important;
-                grid-template-columns: repeat(4, 1fr) !important;
-                gap: 1rem !important;
+                grid-template-columns: repeat(4, 1fr);
+                page-break-inside: avoid;
             }
             
-            .summary-card {
-                break-inside: avoid;
+            .chart-container {
+                page-break-inside: avoid;
+                height: 300px !important;
+            }
+            
+            .table-container {
+                page-break-inside: avoid;
+            }
+            
+            canvas {
+                max-height: 300px !important;
             }
         }
     </style>
 </head>
 <body>
+    <!-- Container de alertas -->
+    <div id="alertContainer" class="alert-container"></div>
+    
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="spinner-border text-primary mb-3" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+            <p id="loadingMessage">Carregando dados...</p>
+        </div>
+    </div>
+    
     <div class="report-container">
         <!-- Cabeçalho do Relatório -->
         <header class="report-header">
-            <div>
-                <h1 class="report-title">Relatório de Vendas Mensais</h1>
-                <p class="report-subtitle">Análise de desempenho de vendas por mês</p>
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h1 class="report-title">Relatório de Vendas Mensais</h1>
+                    <p class="report-subtitle">Análise detalhada das vendas por mês</p>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button id="exportExcel" class="btn btn-success btn-action">
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </button>
+                    <button id="exportPdf" class="btn btn-danger btn-action">
+                        <i class="bi bi-file-pdf"></i> PDF
+                    </button>
+                    <button id="exportJson" class="btn btn-info btn-action">
+                        <i class="bi bi-download"></i> Exportar JSON
+                    </button>
+                    <button id="printReport" class="btn btn-secondary btn-action">
+                        <i class="bi bi-printer"></i> Imprimir
+                    </button>
+                </div>
             </div>
-            <div class="d-flex gap-2">
-                <button id="btnPrint" class="btn btn-print no-print">
-                    <i class="bi bi-printer"></i> Imprimir
-                </button>
-                <button id="btnExport" class="btn btn-export no-print">
-                    <i class="bi bi-download"></i> Exportar
-                </button>
+            
+            <!-- Filtros -->
+            <div class="d-flex gap-3 align-items-center">
+                <div>
+                    <label for="ano" class="form-label mb-1">Ano:</label>
+                    <select id="ano" class="form-select">
+                        <!-- Será preenchido via JavaScript -->
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="ordenar" class="form-label mb-1">Ordenar por:</label>
+                    <select id="ordenar" class="form-select">
+                        <option value="mes_numero">Mês</option>
+                        <option value="totalVendas">Valor Total</option>
+                        <option value="quantidadePedidos">Quantidade</option>
+                        <option value="ticketMedio">Ticket Médio</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="direcao" class="form-label mb-1">Direção:</label>
+                    <select id="direcao" class="form-select">
+                        <option value="asc">Crescente</option>
+                        <option value="desc">Decrescente</option>
+                    </select>
+                </div>
+                
+                <div class="align-self-end">
+                    <button id="btnAtualizar" class="btn btn-primary">
+                        <i class="bi bi-arrow-clockwise"></i> Atualizar
+                    </button>
+                </div>
             </div>
         </header>
         
-        <!-- Filtros -->
-        <section class="filters no-print">
-            <div class="filter-group">
-                <label for="ano">Ano</label>
-                <select id="ano" class="form-select">
-                    <!-- Os anos serão preenchidos via JavaScript -->
-                </select>
-            </div>
-            <div class="filter-group">
-                <label for="ordenar">Ordenar por</label>
-                <select id="ordenar" class="form-select">
-                    <option value="mes_numero">Mês</option>
-                    <option value="totalVendas">Valor Total</option>
-                    <option value="quantidadePedidos">Quantidade de Vendas</option>
-                    <option value="ticketMedio">Ticket Médio</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label for="direcao">Ordem</label>
-                <select id="direcao" class="form-select">
-                    <option value="asc">Crescente</option>
-                    <option value="desc" selected>Decrescente</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <button id="btnFiltrar" class="btn btn-primary w-100">
-                    <i class="bi bi-funnel"></i> Filtrar
-                </button>
-            </div>
-        </section>
-        
         <!-- Cards de Resumo -->
         <section class="summary-cards" id="summaryCards">
-            <!-- Os cards serão preenchidos via JavaScript -->
-            <div class="text-center p-4">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Carregando...</span>
+            <div class="summary-card">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h3 class="h6 text-muted mb-0">Total de Vendas</h3>
+                    <i class="bi bi-currency-dollar text-primary fs-4"></i>
                 </div>
-                <p class="mt-2">Carregando dados...</p>
+                <h2 class="h3 mb-1" id="totalVendas">R$ 0,00</h2>
+                <p class="text-muted small mb-0" id="mesesAnalisados">0 meses</p>
+            </div>
+            
+            <div class="summary-card">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h3 class="h6 text-muted mb-0">Total de Pedidos</h3>
+                    <i class="bi bi-cart-check text-success fs-4"></i>
+                </div>
+                <h2 class="h3 mb-1" id="totalPedidos">0</h2>
+                <p class="text-muted small mb-0" id="mediaPedidos">Média: 0/mês</p>
+            </div>
+            
+            <div class="summary-card">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h3 class="h6 text-muted mb-0">Ticket Médio</h3>
+                    <i class="bi bi-receipt text-warning fs-4"></i>
+                </div>
+                <h2 class="h3 mb-1" id="ticketMedio">R$ 0,00</h2>
+                <p class="text-muted small mb-0">Valor médio por pedido</p>
+            </div>
+            
+            <div class="summary-card">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h3 class="h6 text-muted mb-0">Melhor Mês</h3>
+                    <i class="bi bi-trophy text-info fs-4"></i>
+                </div>
+                <h2 class="h3 mb-1" id="melhorMes">-</h2>
+                <p class="text-muted small mb-0" id="valorMelhorMes">R$ 0,00</p>
             </div>
         </section>
         
-        <!-- Gráfico de Vendas Mensais -->
-        <section class="chart-container bg-white p-4 rounded shadow-sm mb-4">
-            <div class="chart-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
-                <h2 class="chart-title h5 mb-3 mb-md-0">Vendas por Mês</h2>
+        <!-- Gráfico -->
+        <section class="chart-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Vendas por Mês</h2>
                 <div class="btn-group" role="group">
                     <button type="button" class="btn btn-sm btn-outline-primary active" data-metric="valor">
                         <i class="bi bi-currency-dollar"></i> Valor
@@ -135,26 +264,18 @@
                     </button>
                 </div>
             </div>
-            <div class="chart-wrapper" style="position: relative; height: 400px;">
+            <div style="position: relative; height: 400px;">
                 <canvas id="salesChart"></canvas>
             </div>
         </section>
         
-        <!-- Tabela de Detalhes -->
-        <section class="table-responsive bg-white rounded shadow-sm overflow-hidden">
-            <div class="p-3 border-bottom d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
-                <h2 class="h5 mb-3 mb-md-0">Detalhamento por Mês</h2>
-                <div class="btn-group" role="group">
-                    <button id="exportExcel" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Exportar para Excel">
-                        <i class="bi bi-file-earmark-excel"></i> Excel
-                    </button>
-                    <button id="exportPdf" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="Exportar para PDF">
-                        <i class="bi bi-file-earmark-pdf"></i> PDF
-                    </button>
-                </div>
+        <!-- Tabela -->
+        <section class="table-container">
+            <div class="p-3 border-bottom">
+                <h2 class="h5 mb-0">Detalhamento por Mês</h2>
             </div>
             <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle">
+                <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
                             <th>Mês</th>
@@ -167,326 +288,200 @@
                     <tbody id="salesTableBody">
                         <tr>
                             <td colspan="5" class="text-center py-4">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Carregando...</span>
-                                </div>
-                                <p class="mt-2 mb-0">Carregando dados...</p>
+                                <p class="text-muted mb-0">Carregando dados...</p>
                             </td>
                         </tr>
                     </tbody>
                     <tfoot id="salesTableFooter" class="table-light fw-bold">
-                        <!-- O rodapé será preenchido via JavaScript -->
                     </tfoot>
                 </table>
             </div>
         </section>
         
         <!-- Rodapé -->
-        <footer class="text-center text-muted mt-4 mb-5">
+        <footer class="text-center text-muted mt-4">
             <p class="mb-0">Relatório gerado em <span id="reportDate"></span> | Sistema AVAP</p>
             <p class="small">© 2025 Todos os direitos reservados</p>
         </footer>
     </div>
     
-    <!-- Bootstrap Bundle with Popper -->
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     
-    <!-- Utilitários -->
-    <script type="module">
-        // Importa as funções do arquivo utils.js
-        import { 
-            formatCurrency, 
-            formatDate, 
-            getMonthName, 
-            showLoading, 
-            hideLoading, 
-            showError,
-            showInfo,
-            fetchData,
-            formatNumber
-        } from './js/utils.js';
-        
+    <script>
         // Variáveis globais
         let salesData = [];
         let salesChart = null;
+        const API_BASE_URL = 'http://localhost:3001';
         
-        // Inicialização da página
-        document.addEventListener('DOMContentLoaded', function() {
-            // Configura a data atual no rodapé
-            document.getElementById('reportDate').textContent = new Date().toLocaleDateString('pt-BR', {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            
-            // Preenche o seletor de anos
-            populateYearSelect();
-            
-            // Configura os eventos
-            setupEventListeners();
-            
-            // Carrega os dados iniciais
-            loadSalesData();
-        });
+        // Funções auxiliares
+        function showLoading(message = 'Carregando...') {
+            document.getElementById('loadingMessage').textContent = message;
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
         
-        // Preenche o seletor de anos
-        function populateYearSelect() {
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+        
+        function showAlert(message, type = 'info') {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertId = 'alert-' + Date.now();
+            const alertHtml = `
+                <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            alertContainer.insertAdjacentHTML('beforeend', alertHtml);
+            
+            setTimeout(() => {
+                const alert = document.getElementById(alertId);
+                if (alert) alert.remove();
+            }, 5000);
+        }
+        
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('pt-BR', { 
+                style: 'currency', 
+                currency: 'BRL' 
+            }).format(value || 0);
+        }
+        
+        function getMonthName(monthNumber) {
+            const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                          'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            return months[monthNumber - 1] || '';
+        }
+        
+        // Inicialização
+        function initPage() {
+            console.log('🚀 Inicializando página...');
+            
+            // Preencher seletor de ano
             const yearSelect = document.getElementById('ano');
             const currentYear = new Date().getFullYear();
             
-            // Adiciona 5 anos para trás e 1 ano para frente
             for (let year = currentYear - 5; year <= currentYear + 1; year++) {
                 const option = document.createElement('option');
                 option.value = year;
                 option.textContent = year;
-                
-                // Seleciona o ano atual por padrão
-                if (year === currentYear) {
-                    option.selected = true;
-                }
-                
+                if (year === currentYear) option.selected = true;
                 yearSelect.appendChild(option);
             }
-        }
-        
-        // Configura os eventos da página
-        function setupEventListeners() {
-            // Botão de filtrar
-            document.getElementById('btnFiltrar').addEventListener('click', loadSalesData);
             
-            // Botão de imprimir
-            document.getElementById('btnPrint').addEventListener('click', printReport);
+            // Data do relatório
+            document.getElementById('reportDate').textContent = new Date().toLocaleDateString('pt-BR');
             
-            // Botão de exportar
-            document.getElementById('btnExport').addEventListener('click', exportReport);
+            // Event listeners
+            document.getElementById('btnAtualizar').addEventListener('click', loadSalesData);
+            document.getElementById('ano').addEventListener('change', loadSalesData);
+            document.getElementById('ordenar').addEventListener('change', loadSalesData);
+            document.getElementById('direcao').addEventListener('change', loadSalesData);
             
-            // Botões de alternar entre valor e quantidade no gráfico
-            document.querySelectorAll('[data-metric]').forEach(button => {
-                button.addEventListener('click', function() {
-                    // Atualiza os botões ativos
-                    document.querySelectorAll('[data-metric]').forEach(btn => 
-                        btn.classList.remove('active')
-                    );
+            document.getElementById('exportExcel').addEventListener('click', exportToExcel);
+            document.getElementById('exportPdf').addEventListener('click', exportToPDF);
+            document.getElementById('exportJson').addEventListener('click', exportJSON);
+            document.getElementById('printReport').addEventListener('click', printReport);
+            
+            document.querySelectorAll('[data-metric]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('[data-metric]').forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
-                    
-                    // Atualiza o gráfico
-                    updateChart(this.dataset.metric);
+                    updateChart(this.getAttribute('data-metric'));
                 });
             });
+            
+            // Carregar dados iniciais
+            loadSalesData();
         }
         
-        // Carrega os dados de vendas
+        // Carregar dados da API
         async function loadSalesData() {
+            showLoading('Buscando dados...');
+            
             try {
-                showLoading('Buscando dados de vendas...');
-                
                 const ano = document.getElementById('ano').value;
                 const ordenar = document.getElementById('ordenar').value;
                 const direcao = document.getElementById('direcao').value;
                 
-                console.log('🔍 Iniciando busca de dados de vendas...');
-                console.log('📅 Filtros:', { ano, ordenar, direcao });
+                const url = `${API_BASE_URL}/api/relatorios/vendas-mensais?ano=${ano}&ordenar=${ordenar}&direcao=${direcao}`;
+                console.log('🌐 Chamando API:', url);
                 
-                // Construir URL da API
-                const params = new URLSearchParams();
-                if (ano) params.append('ano', ano);
-                if (ordenar) params.append('ordenar', ordenar);
-                if (direcao) params.append('direcao', direcao);
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
                 
-                console.log('📊 Parâmetros da requisição:', Object.fromEntries(params.entries()));
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
                 
-                // Fazer a requisição para a API
-                const apiUrl = `/api/relatorios/vendas-mensais?${params.toString()}`;
-                console.log('🌐 URL da requisição:', apiUrl);
-                console.log('🌍 URL completa:', window.location.origin + apiUrl);
+                const result = await response.json();
+                console.log('✅ Dados recebidos:', result);
                 
-                try {
-                    const response = await fetch(apiUrl, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'Authorization': localStorage.getItem('token') ? `Bearer ${localStorage.getItem('token')}` : ''
-                        },
-                        credentials: 'include'
-                    });
-                    
-                    console.log('📥 Status da resposta:', response.status);
-                    
-                    if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
-                    }
-                    
-                    const responseData = await response.json();
-                    console.log('📦 Dados recebidos:', responseData);
-                    
-                    // Verifica se a resposta tem a estrutura esperada
-                    if (!responseData) {
-                        throw new Error('Resposta vazia da API');
-                    }
-                    
-                    // Ajusta para lidar com diferentes formatos de resposta
-                    let dados = [];
-                    if (responseData && responseData.data) {
-                        if (Array.isArray(responseData.data)) {
-                            dados = responseData.data;
-                        } else {
-                            // Se for um único objeto, coloca em um array
-                            dados = [responseData.data];
-                        }
-                    } else if (Array.isArray(responseData)) {
-                        dados = responseData;
-                    } else {
-                        // Se for um objeto com propriedades de dados diretas
-                        dados = [responseData];
-                    }
-                    
-                    console.log('📊 Dados processados:', dados);
-                    
-                    if (!Array.isArray(dados) || dados.length === 0) {
-                        console.warn('⚠️ Nenhum dado retornado da API ou formato inválido');
-                        showInfo('Nenhum dado encontrado para os filtros selecionados.');
-                        salesData = [];
-                    } else {
-                        // Atualiza os dados e a interface
-                        salesData = dados;
-                    }
-                    
-                    // Atualiza a interface
-                    updateSummaryCards();
-                    updateChart('valor');
-                    updateSalesTable();
-                    
-                } catch (apiError) {
-                    console.error('❌ Erro na requisição à API:', apiError);
-                    throw new Error(`Falha ao buscar dados: ${apiError.message}`);
+                if (result.status === 'success' && result.data) {
+                    salesData = result.data;
+                    updateUI();
+                    showAlert('Dados carregados com sucesso!', 'success');
+                } else {
+                    throw new Error('Formato de resposta inválido');
                 }
                 
             } catch (error) {
-                console.error('❌ Erro ao carregar dados de vendas:', error);
-                showError(`Erro ao carregar os dados: ${error.message}`);
-                
-                // Limpa os dados em caso de erro
+                console.error('❌ Erro:', error);
+                showAlert(`Erro ao carregar dados: ${error.message}`, 'danger');
                 salesData = [];
-                updateSummaryCards();
-                updateChart();
-                updateSalesTable();
+                updateUI();
             } finally {
                 hideLoading();
             }
         }
         
-        // Atualiza os cards de resumo
+        // Atualizar interface
+        function updateUI() {
+            updateSummaryCards();
+            updateChart('valor');
+            updateTable();
+        }
+        
+        // Atualizar cards de resumo
         function updateSummaryCards() {
-            const summaryCards = document.getElementById('summaryCards');
-            
             if (!salesData || salesData.length === 0) {
-                summaryCards.innerHTML = `
-                    <div class="col-12">
-                        <div class="alert alert-warning mb-0">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            Nenhum dado disponível para exibir.
-                        </div>
-                    </div>`;
+                document.getElementById('totalVendas').textContent = 'R$ 0,00';
+                document.getElementById('totalPedidos').textContent = '0';
+                document.getElementById('ticketMedio').textContent = 'R$ 0,00';
+                document.getElementById('melhorMes').textContent = '-';
+                document.getElementById('valorMelhorMes').textContent = 'R$ 0,00';
+                document.getElementById('mesesAnalisados').textContent = '0 meses';
+                document.getElementById('mediaPedidos').textContent = 'Média: 0/mês';
                 return;
             }
             
-            console.log(' Dados para resumo:', salesData);
+            const totalVendas = salesData.reduce((sum, m) => sum + m.totalVendas, 0);
+            const totalPedidos = salesData.reduce((sum, m) => sum + m.quantidadePedidos, 0);
+            const ticketMedio = totalPedidos > 0 ? totalVendas / totalPedidos : 0;
+            const melhorMes = [...salesData].sort((a, b) => b.totalVendas - a.totalVendas)[0];
             
-            try {
-                // Calcular totais
-                const totalVendas = salesData.reduce((sum, item) => sum + (item.totalVendas || 0), 0);
-                const totalPedidos = salesData.reduce((sum, item) => sum + (item.quantidadePedidos || 0), 0);
-                const ticketMedio = totalPedidos > 0 ? totalVendas / totalPedidos : 0;
-                
-                // Encontrar o melhor mês
-                const melhorMes = [...salesData].sort((a, b) => (b.totalVendas || 0) - (a.totalVendas || 0))[0];
-                
-                console.log(' Totais calculados:', { totalVendas, totalPedidos, ticketMedio, melhorMes });
-                
-                // Atualizar os cards de resumo
-                summaryCards.innerHTML = `
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <div class="card h-100 border-0 shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h3 class="h6 text-muted mb-0">Total de Vendas</h3>
-                                    <div class="bg-primary bg-opacity-10 p-2 rounded">
-                                        <i class="bi bi-currency-dollar text-primary"></i>
-                                    </div>
-                                </div>
-                                <h2 class="h4 mb-2">${formatCurrency(totalVendas)}</h2>
-                                <p class="text-muted small mb-0">${salesData.length} meses analisados</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <div class="card h-100 border-0 shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h3 class="h6 text-muted mb-0">Total de Pedidos</h3>
-                                    <div class="bg-success bg-opacity-10 p-2 rounded">
-                                        <i class="bi bi-cart-check text-success"></i>
-                                    </div>
-                                </div>
-                                <h2 class="h4 mb-2">${totalPedidos}</h2>
-                                <p class="text-muted small mb-0">Média de ${Math.round(totalPedidos / salesData.length)} por mês</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <div class="card h-100 border-0 shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h3 class="h6 text-muted mb-0">Ticket Médio</h3>
-                                    <div class="bg-warning bg-opacity-10 p-2 rounded">
-                                        <i class="bi bi-receipt text-warning"></i>
-                                    </div>
-                                </div>
-                                <h2 class="h4 mb-2">${formatCurrency(ticketMedio)}</h2>
-                                <p class="text-muted small mb-0">Valor médio por pedido</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <div class="card h-100 border-0 shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h3 class="h6 text-muted mb-0">Melhor Mês</h3>
-                                    <div class="bg-info bg-opacity-10 p-2 rounded">
-                                        <i class="bi bi-trophy text-info"></i>
-                                    </div>
-                                </div>
-                                <h2 class="h4 mb-2">${melhorMes ? getMonthName(melhorMes.mes_numero) : 'N/A'}</h2>
-                                <p class="text-muted small mb-0">
-                                    ${melhorMes ? formatCurrency(melhorMes.totalVendas) : 'N/A'}
-                                </p>
-                            </div>
-                        </div>
-                    </div>`;
-            } catch (error) {
-                console.error(' Erro ao atualizar cards de resumo:', error);
-                summaryCards.innerHTML = `
-                    <div class="col-12">
-                        <div class="alert alert-danger mb-0">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            Erro ao carregar os dados de resumo.
-                        </div>
-                    </div>`;
-            }
+            document.getElementById('totalVendas').textContent = formatCurrency(totalVendas);
+            document.getElementById('totalPedidos').textContent = totalPedidos;
+            document.getElementById('ticketMedio').textContent = formatCurrency(ticketMedio);
+            document.getElementById('melhorMes').textContent = getMonthName(melhorMes.mes_numero);
+            document.getElementById('valorMelhorMes').textContent = formatCurrency(melhorMes.totalVendas);
+            document.getElementById('mesesAnalisados').textContent = `${salesData.length} meses`;
+            document.getElementById('mediaPedidos').textContent = `Média: ${Math.round(totalPedidos / salesData.length)}/mês`;
         }
         
-        // Atualiza o gráfico de vendas
+        // Atualizar gráfico
         function updateChart(metric = 'valor') {
-            const ctx = document.getElementById('salesChart').getContext('2d');
+            const ctx = document.getElementById('salesChart');
             
-            // Destrói o gráfico anterior se existir
             if (salesChart) {
                 salesChart.destroy();
             }
@@ -495,58 +490,35 @@
                 return;
             }
             
-            // Ordena os dados por mês
             const sortedData = [...salesData].sort((a, b) => a.mes_numero - b.mes_numero);
+            const labels = sortedData.map(m => getMonthName(m.mes_numero));
+            const data = sortedData.map(m => metric === 'valor' ? m.totalVendas : m.quantidadePedidos);
             
-            // Prepara os dados para o gráfico
-            const labels = sortedData.map(item => getMonthName(item.mes_numero));
-            const data = sortedData.map(item => 
-                metric === 'valor' ? (item.totalVendas || 0) : (item.quantidadePedidos || 0)
-            );
-            
-            console.log('Dados do gráfico:', { labels, data });
-            
-            // Cores para o gráfico
-            const backgroundColor = metric === 'valor' ? 
-                'rgba(54, 162, 235, 0.2)' : 'rgba(75, 192, 192, 0.2)';
-            const borderColor = metric === 'valor' ? 
-                'rgba(54, 162, 235, 1)' : 'rgba(75, 192, 192, 1)';
-            
-            // Cria o gráfico
             salesChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: metric === 'valor' ? 'Valor Total (R$)' : 'Quantidade de Pedidos',
+                        label: metric === 'valor' ? 'Valor Total' : 'Quantidade de Pedidos',
                         data: data,
-                        backgroundColor: backgroundColor,
-                        borderColor: borderColor,
-                        borderWidth: 1,
-                        borderRadius: 4,
-                        maxBarThickness: 60
+                        backgroundColor: metric === 'valor' ? 
+                            'rgba(54, 162, 235, 0.5)' : 'rgba(75, 192, 192, 0.5)',
+                        borderColor: metric === 'valor' ? 
+                            'rgba(54, 162, 235, 1)' : 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: {
-                            display: false
-                        },
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    if (context.parsed.y !== null) {
-                                        label += metric === 'valor' ? 
-                                            formatCurrency(context.parsed.y) : 
-                                            `${context.parsed.y} pedidos`;
-                                    }
-                                    return label;
+                                label: (context) => {
+                                    return metric === 'valor' ? 
+                                        formatCurrency(context.parsed.y) : 
+                                        `${context.parsed.y} pedidos`;
                                 }
                             }
                         }
@@ -555,11 +527,9 @@
                         y: {
                             beginAtZero: true,
                             ticks: {
-                                callback: function(value) {
-                                    return metric === 'valor' ? 
-                                        `R$ ${value.toLocaleString('pt-BR')}` : 
-                                        value.toLocaleString('pt-BR');
-                                }
+                                callback: (value) => metric === 'valor' ? 
+                                    `R$ ${value.toLocaleString('pt-BR')}` : 
+                                    value
                             }
                         }
                     }
@@ -567,92 +537,44 @@
             });
         }
         
-        // Atualiza a tabela de vendas
-        function updateSalesTable() {
+        // Atualizar tabela
+        function updateTable() {
             const tbody = document.getElementById('salesTableBody');
             const tfoot = document.getElementById('salesTableFooter');
             
             if (!salesData || salesData.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="text-center py-4">
-                            Nenhum dado disponível para o período selecionado.
-                        </td>
-                    </tr>
-                `;
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Nenhum dado disponível</td></tr>';
                 tfoot.innerHTML = '';
                 return;
             }
             
-            // Ordena os dados conforme selecionado
-            const ordenar = document.getElementById('ordenar').value;
-            const direcao = document.getElementById('direcao').value;
-            
-            const sortedData = [...salesData].sort((a, b) => {
-                let valueA, valueB;
-                
-                switch (ordenar) {
-                    case 'mes':
-                        valueA = a.mes_numero;
-                        valueB = b.mes_numero;
-                        break;
-                    case 'quantidade':
-                        valueA = a.quantidadePedidos || 0;
-                        valueB = b.quantidadePedidos || 0;
-                        break;
-                    case 'valor':
-                    default:
-                        valueA = a.totalVendas || 0;
-                        valueB = b.totalVendas || 0;
-                }
-                
-                return direcao === 'asc' ? valueA - valueB : valueB - valueA;
-            });
-            
-            // Preenche a tabela
-            let tableRows = '';
+            let html = '';
             let totalVendas = 0;
             let totalPedidos = 0;
             
-            sortedData.forEach((item, index) => {
-                const quantidadePedidos = item.quantidadePedidos || 0;
-                const totalVendasMes = item.totalVendas || 0;
-                const ticketMedio = quantidadePedidos > 0 ? 
-                    totalVendasMes / quantidadePedidos : 0;
+            salesData.forEach((mes, index) => {
+                const variacao = index > 0 && salesData[index - 1].totalVendas > 0 ?
+                    ((mes.totalVendas - salesData[index - 1].totalVendas) / salesData[index - 1].totalVendas * 100) : 0;
                 
-                // Calcula a variação em relação ao mês anterior
-                let variacao = 0;
-                if (index > 0) {
-                    const valorAnterior = sortedData[index - 1].totalVendas || 0;
-                    if (valorAnterior > 0) {
-                        variacao = ((totalVendasMes - valorAnterior) / valorAnterior) * 100;
-                    }
-                }
+                totalVendas += mes.totalVendas;
+                totalPedidos += mes.quantidadePedidos;
                 
-                totalVendas += totalVendasMes;
-                totalPedidos += quantidadePedidos;
-                
-                tableRows += `
+                html += `
                     <tr>
-                        <td>${getMonthName(item.mes_numero)}</td>
-                        <td class="text-end">${quantidadePedidos.toLocaleString('pt-BR')}</td>
-                        <td class="text-end">${formatCurrency(totalVendasMes)}</td>
-                        <td class="text-end">${formatCurrency(ticketMedio)}</td>
+                        <td>${getMonthName(mes.mes_numero)}</td>
+                        <td class="text-end">${mes.quantidadePedidos}</td>
+                        <td class="text-end">${formatCurrency(mes.totalVendas)}</td>
+                        <td class="text-end">${formatCurrency(mes.ticketMedio)}</td>
                         <td class="text-end ${variacao >= 0 ? 'text-success' : 'text-danger'}">
-                            ${index > 0 ? 
-                                `${variacao >= 0 ? '+' : ''}${variacao.toFixed(1)}%` : 
-                                '-'}
+                            ${index > 0 ? `${variacao >= 0 ? '+' : ''}${variacao.toFixed(1)}%` : '-'}
                         </td>
                     </tr>
                 `;
             });
             
-            // Atualiza o corpo da tabela
-            tbody.innerHTML = tableRows;
+            tbody.innerHTML = html;
             
-            // Atualiza o rodapé da tabela
             const ticketMedioTotal = totalPedidos > 0 ? totalVendas / totalPedidos : 0;
-            
             tfoot.innerHTML = `
                 <tr>
                     <th>Total</th>
@@ -664,15 +586,306 @@
             `;
         }
         
-        // Imprime o relatório
-        function printReport() {
-            window.print();
+        // Exportar para Excel
+        function exportToExcel() {
+            if (!salesData || salesData.length === 0) {
+                showAlert('Nenhum dado para exportar', 'warning');
+                return;
+            }
+            
+            showLoading('Gerando Excel...');
+            
+            try {
+                // Ordenar dados por mês
+                const sortedData = [...salesData].sort((a, b) => a.mes_numero - b.mes_numero);
+                
+                // Calcular totais
+                const totalVendas = sortedData.reduce((sum, m) => sum + m.totalVendas, 0);
+                const totalPedidos = sortedData.reduce((sum, m) => sum + m.quantidadePedidos, 0);
+                const ticketMedioGeral = totalPedidos > 0 ? totalVendas / totalPedidos : 0;
+                
+                // Criar dados para a planilha
+                const worksheetData = [
+                    ['RELATÓRIO DE VENDAS MENSAIS'],
+                    [`Ano: ${document.getElementById('ano').value}`],
+                    [`Data de Geração: ${new Date().toLocaleDateString('pt-BR')}`],
+                    [],
+                    ['RESUMO GERAL'],
+                    ['Total de Vendas:', totalVendas],
+                    ['Total de Pedidos:', totalPedidos],
+                    ['Ticket Médio Geral:', ticketMedioGeral],
+                    [],
+                    ['Mês', 'Quantidade de Pedidos', 'Valor Total (R$)', 'Ticket Médio (R$)', 'Crescimento (%)']
+                ];
+                
+                // Adicionar dados mensais
+                sortedData.forEach((m, index) => {
+                    const variacao = index > 0 && sortedData[index - 1].totalVendas > 0 ?
+                        ((m.totalVendas - sortedData[index - 1].totalVendas) / sortedData[index - 1].totalVendas * 100) : null;
+                    
+                    worksheetData.push([
+                        getMonthName(m.mes_numero),
+                        m.quantidadePedidos,
+                        m.totalVendas,
+                        m.ticketMedio,
+                        variacao !== null ? variacao.toFixed(2) : '-'
+                    ]);
+                });
+                
+                // Adicionar totais
+                worksheetData.push([
+                    'TOTAL',
+                    totalPedidos,
+                    totalVendas,
+                    ticketMedioGeral,
+                    ''
+                ]);
+                
+                // Criar workbook e worksheet
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+                
+                // Configurar largura das colunas
+                ws['!cols'] = [
+                    { wch: 20 },  // Mês
+                    { wch: 22 },  // Quantidade
+                    { wch: 20 },  // Valor Total
+                    { wch: 20 },  // Ticket Médio
+                    { wch: 18 }   // Crescimento
+                ];
+                
+                // Mesclar células do título
+                ws['!merges'] = [
+                    { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } },  // Título
+                    { s: { r: 4, c: 0 }, e: { r: 4, c: 1 } }   // Resumo Geral
+                ];
+                
+                // Adicionar worksheet ao workbook
+                XLSX.utils.book_append_sheet(wb, ws, 'Vendas Mensais');
+                
+                // Gerar arquivo
+                XLSX.writeFile(wb, `vendas-mensais-${new Date().toISOString().split('T')[0]}.xlsx`);
+                
+                showAlert('Excel exportado com sucesso!', 'success');
+                
+            } catch (error) {
+                console.error('❌ Erro ao gerar Excel:', error);
+                showAlert('Erro ao gerar Excel: ' + error.message, 'danger');
+            } finally {
+                hideLoading();
+            }
         }
         
-        // Exporta o relatório
-        function exportReport() {
-            // Aqui você pode implementar a lógica para exportar para Excel, PDF, etc.
-            alert('Funcionalidade de exportação será implementada em breve!');
+        // Exportar para PDF
+        function exportToPDF() {
+            if (!salesData || salesData.length === 0) {
+                showAlert('Nenhum dado para exportar', 'warning');
+                return;
+            }
+            
+            showLoading('Gerando PDF...');
+            
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Título
+                doc.setFontSize(18);
+                doc.setFont(undefined, 'bold');
+                doc.text('Relatório de Vendas Mensais', 14, 20);
+                
+                // Informações do relatório
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'normal');
+                doc.text(`Ano: ${document.getElementById('ano').value}`, 14, 30);
+                doc.text(`Data de geração: ${new Date().toLocaleDateString('pt-BR')}`, 14, 36);
+                
+                // Calcular totais
+                const totalVendas = salesData.reduce((sum, m) => sum + m.totalVendas, 0);
+                const totalPedidos = salesData.reduce((sum, m) => sum + m.quantidadePedidos, 0);
+                const ticketMedioGeral = totalPedidos > 0 ? totalVendas / totalPedidos : 0;
+                
+                // Cards de resumo
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'bold');
+                doc.text('Resumo Geral', 14, 46);
+                
+                doc.setFontSize(9);
+                doc.setFont(undefined, 'normal');
+                let yPos = 52;
+                doc.text(`Total de Vendas: ${formatCurrency(totalVendas)}`, 14, yPos);
+                doc.text(`Total de Pedidos: ${totalPedidos}`, 14, yPos + 6);
+                doc.text(`Ticket Médio: ${formatCurrency(ticketMedioGeral)}`, 14, yPos + 12);
+                
+                // Ordenar dados por mês
+                const sortedData = [...salesData].sort((a, b) => a.mes_numero - b.mes_numero);
+                
+                // Preparar dados da tabela
+                const tableData = sortedData.map((m, index) => {
+                    const variacao = index > 0 && sortedData[index - 1].totalVendas > 0 ?
+                        ((m.totalVendas - sortedData[index - 1].totalVendas) / sortedData[index - 1].totalVendas * 100) : 0;
+                    
+                    return [
+                        getMonthName(m.mes_numero),
+                        m.quantidadePedidos.toString(),
+                        formatCurrency(m.totalVendas),
+                        formatCurrency(m.ticketMedio),
+                        index > 0 ? `${variacao >= 0 ? '+' : ''}${variacao.toFixed(1)}%` : '-'
+                    ];
+                });
+                
+                // Adicionar linha de totais
+                tableData.push([
+                    'TOTAL',
+                    totalPedidos.toString(),
+                    formatCurrency(totalVendas),
+                    formatCurrency(ticketMedioGeral),
+                    ''
+                ]);
+                
+                // Criar tabela
+                doc.autoTable({
+                    head: [['Mês', 'Qtd. Pedidos', 'Valor Total', 'Ticket Médio', 'Crescimento']],
+                    body: tableData,
+                    startY: yPos + 20,
+                    theme: 'grid',
+                    headStyles: {
+                        fillColor: [54, 162, 235],
+                        textColor: 255,
+                        fontStyle: 'bold',
+                        halign: 'center'
+                    },
+                    bodyStyles: {
+                        halign: 'center'
+                    },
+                    columnStyles: {
+                        0: { halign: 'left' },
+                        1: { halign: 'right' },
+                        2: { halign: 'right' },
+                        3: { halign: 'right' },
+                        4: { halign: 'right' }
+                    },
+                    footStyles: {
+                        fillColor: [240, 240, 240],
+                        textColor: 0,
+                        fontStyle: 'bold'
+                    },
+                    didParseCell: function(data) {
+                        // Destacar linha de totais
+                        if (data.row.index === tableData.length - 1) {
+                            data.cell.styles.fillColor = [240, 240, 240];
+                            data.cell.styles.fontStyle = 'bold';
+                        }
+                    }
+                });
+                
+                // Rodapé
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setTextColor(128);
+                    doc.text(
+                        `Sistema AVAP - Página ${i} de ${pageCount}`,
+                        doc.internal.pageSize.width / 2,
+                        doc.internal.pageSize.height - 10,
+                        { align: 'center' }
+                    );
+                }
+                
+                // Salvar PDF
+                doc.save(`vendas-mensais-${new Date().toISOString().split('T')[0]}.pdf`);
+                showAlert('PDF exportado com sucesso!', 'success');
+                
+            } catch (error) {
+                console.error('❌ Erro ao gerar PDF:', error);
+                showAlert('Erro ao gerar PDF: ' + error.message, 'danger');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Exportar dados em JSON
+        function exportJSON() {
+            if (!salesData || salesData.length === 0) {
+                showAlert('Nenhum dado para exportar', 'warning');
+                return;
+            }
+            
+            try {
+                // Ordenar por mês
+                const sortedData = [...salesData].sort((a, b) => a.mes_numero - b.mes_numero);
+                
+                // Calcular totais
+                const totalVendas = sortedData.reduce((sum, m) => sum + m.totalVendas, 0);
+                const totalPedidos = sortedData.reduce((sum, m) => sum + m.quantidadePedidos, 0);
+                const ticketMedioGeral = totalPedidos > 0 ? totalVendas / totalPedidos : 0;
+                
+                // Criar objeto de exportação
+                const exportData = {
+                    titulo: 'Relatório de Vendas Mensais',
+                    ano: document.getElementById('ano').value,
+                    dataGeracao: new Date().toISOString(),
+                    resumo: {
+                        totalVendas: totalVendas,
+                        totalPedidos: totalPedidos,
+                        ticketMedioGeral: ticketMedioGeral,
+                        mesesAnalisados: sortedData.length
+                    },
+                    dados: sortedData.map(m => ({
+                        mes: getMonthName(m.mes_numero),
+                        mes_numero: m.mes_numero,
+                        quantidadePedidos: m.quantidadePedidos,
+                        totalVendas: m.totalVendas,
+                        ticketMedio: m.ticketMedio
+                    }))
+                };
+                
+                // Criar blob e fazer download
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
+                    type: 'application/json' 
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `vendas-mensais-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showAlert('Dados exportados com sucesso!', 'success');
+                
+            } catch (error) {
+                console.error('❌ Erro ao exportar JSON:', error);
+                showAlert('Erro ao exportar dados: ' + error.message, 'danger');
+            }
+        }
+        
+        // Função de impressão
+        function printReport() {
+            // Ocultar elementos que não devem ser impressos
+            const noprint = document.querySelectorAll('.btn-action, .alert-container');
+            noprint.forEach(el => el.style.display = 'none');
+            
+            // Adicionar classe de impressão
+            document.body.classList.add('printing');
+            
+            // Imprimir
+            window.print();
+            
+            // Restaurar elementos após impressão
+            setTimeout(() => {
+                noprint.forEach(el => el.style.display = '');
+                document.body.classList.remove('printing');
+            }, 1000);
+        }
+        
+        // Iniciar quando a página carregar
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initPage);
+        } else {
+            initPage();
         }
     </script>
 </body>

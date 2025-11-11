@@ -52,17 +52,125 @@ body {
 .report-header {
     background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
     color: white;
-    padding: 2rem;
+    padding: 1.5rem 2rem;
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
-    margin-bottom: 2.5rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Container do cabeçalho */
+.header-content {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     flex-wrap: wrap;
     gap: 1.5rem;
     position: relative;
-    overflow: hidden;
+    z-index: 2;
+    width: 100%;
+}
+
+/* Título do relatório */
+.header-titles {
+    flex: 1;
+    min-width: 250px;
+}
+
+/* Container dos botões de ação */
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-end;
+    margin-left: auto;
+}
+
+/* Grupo de botões */
+.button-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+/* Estilo dos botões */
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-width: 100px;
+    text-transform: none;
+    letter-spacing: 0.3px;
+}
+
+.btn-action i {
+    margin-right: 6px;
+    font-size: 1rem;
+}
+
+/* Cores específicas dos botões */
+.btn-excel {
+    background-color: #1d6f42;
+    border-color: #1d6f42;
+    color: white;
+}
+
+.btn-excel:hover {
+    background-color: #166534;
+    border-color: #166534;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-pdf {
+    background-color: #b91c1c;
+    border-color: #b91c1c;
+    color: white;
+}
+
+.btn-pdf:hover {
+    background-color: #991b1b;
+    border-color: #991b1b;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-print {
+    background-color: #1d4ed8;
+    border-color: #1d4ed8;
+    color: white;
+}
+
+.btn-print:hover {
+    background-color: #1e40af;
+    border-color: #1e40af;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-export {
+    background-color: #475569;
+    border-color: #475569;
+    color: white;
+}
+
+.btn-export:hover {
+    background-color: #334155;
+    border-color: #334155;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
 .report-header::before {
@@ -485,6 +593,126 @@ tbody tr:hover {
 .table th {
     background-color: #f8f9fa;
     color: var(--text-color);
+}
+
+/* Estilos para os botões de ação */
+.btn-action-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.btn-action-group .btn {
+    min-width: 100px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-action-group .btn i {
+    margin-right: 5px;
+    font-size: 0.9rem;
+}
+
+/* Estilos específicos para cada botão */
+.btn-success {
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+/* Efeito hover para os botões */
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilos para a tabela de relatórios */
+.table-responsive {
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--box-shadow);
+    margin-top: 1.5rem;
+}
+
+.table thead th {
+    background-color: var(--primary-color);
+    color: white;
+    border-bottom: none;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    padding: 1rem;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.table td {
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Estilos para o seletor de ano */
+.year-selector {
+    max-width: 120px;
+    display: inline-block;
+    margin-right: 1rem;
+}
+
+/* Estilos para impressão */
+@media print {
+    .no-print, .no-print * {
+        display: none !important;
+    }
+    
+    body {
+        padding: 0;
+        font-size: 11px;
+        background-color: white;
+    }
+    
+    .table {
+        font-size: 10px;
+    }
+    
+    .report-header {
+        margin-bottom: 10px;
+    }
+    
+    .table thead th {
+        background-color: #f8f9fa !important;
+        color: var(--text-color) !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    @page {
+        margin: 1cm;
+    }
+}
+
+.table thead th {
     font-weight: 600;
     text-align: left;
     padding: 1.2rem 1.5rem;

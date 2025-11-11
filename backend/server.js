@@ -22,17 +22,41 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 3. CORS - CONFIGURAÇÃO SIMPLIFICADA E PERMISSIVA
-app.use(cors({
-  origin: '*', // Permite todas as origens
+// 3. Configuração do CORS
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Lista de origens permitidas
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
+      'http://127.0.0.1:5500'
+    ];
+    
+    // Em desenvolvimento, permitir qualquer origem
+    if (process.env.NODE_ENV === 'development' || !origin) {
+      return callback(null, true);
+    }
+    
+    // Verificar se a origem está na lista de permitidas
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-Access-Token', 'x-access-token'],
-  exposedHeaders: ['Set-Cookie', 'Content-Range', 'X-Content-Range'],
-  maxAge: 86400, // 24 horas de cache para preflight
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400,
   preflightContinue: false,
   optionsSuccessStatus: 204
-}));
+};
+
+// Aplicar o CORS
+app.use(cors(corsOptions));
 
 // 4. Middleware para configurar os cabeçalhos CORS manualmente
 app.use((req, res, next) => {
@@ -42,24 +66,15 @@ app.use((req, res, next) => {
   console.log('🔍 Método:', req.method);
   
   // Configurar cabeçalhos CORS
-  const allowedOrigins = ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:5500', 'http://127.0.0.1:3001'];
   const origin = req.headers.origin;
   
-  if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  } else {
-    res.header('Access-Control-Allow-Origin', '*');
-  }
-  
+  // Definir cabeçalhos CORS
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Access-Token, x-access-token');
   res.header('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range');
   res.header('Access-Control-Allow-Credentials', 'true');
   
-  // Adicionar cabeçalhos de depuração
-  res.header('X-Debug-Request-Headers', JSON.stringify(req.headers));
-  
-  // Responder imediatamente para requisições OPTIONS (preflight)
+  // Se for uma requisição OPTIONS, responder imediatamente
   if (req.method === 'OPTIONS') {
     console.log('🛫 Resposta a preflight CORS');
     return res.status(200).end();
