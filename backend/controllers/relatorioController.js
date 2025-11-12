@@ -141,26 +141,27 @@ exports.getVendasMensais = async (req, res) => {
 };
 
 /**
- * Relatório de Produtos Mais Vendidos - MOSTRA TODOS OS PRODUTOS COM LEFT JOIN
+ * Relatório de Produtos Mais Vendidos - SIMPLIFICADO (padrão vendas mensais)
  */
 exports.getProdutosMaisVendidos = async (req, res) => {
     console.log('🔍 Iniciando getProdutosMaisVendidos');
     console.log('📥 Query params recebidos:', req.query);
     
-    let client;
+    const client = await pool.connect();
+    console.log('✅ Conexão com o banco de dados estabelecida');
     
     try {
-        client = await pool.connect();
-        console.log('✅ Conexão com banco estabelecida');
-        
         const { dataInicio, dataFim, limite = 10 } = req.query;
         
+        // Validar limite
         const limiteNum = Math.min(parseInt(limite) || 10, 100);
+        
+        // Construir condições WHERE
+        const whereConditions = [];
         const params = [];
-        let whereConditions = [];
         let paramIndex = 1;
         
-        // Validação e construção de filtros de data
+        // Filtro de data início
         if (dataInicio && dataInicio.trim() !== '') {
             if (!isValidDate(dataInicio)) {
                 return res.status(400).json({
@@ -169,12 +170,13 @@ exports.getProdutosMaisVendidos = async (req, res) => {
                     timestamp: new Date().toISOString()
                 });
             }
-            whereConditions.push(`(p.data_pedido IS NULL OR p.data_pedido >= ${paramIndex}::date)`);
+            whereConditions.push(`p.data_pedido >= $${paramIndex}::date`);
             params.push(dataInicio);
             paramIndex++;
             console.log(`📅 Filtro data início: ${dataInicio}`);
         }
         
+        // Filtro de data fim
         if (dataFim && dataFim.trim() !== '') {
             if (!isValidDate(dataFim)) {
                 return res.status(400).json({
@@ -183,130 +185,70 @@ exports.getProdutosMaisVendidos = async (req, res) => {
                     timestamp: new Date().toISOString()
                 });
             }
-            whereConditions.push(`(p.data_pedido IS NULL OR p.data_pedido <= (${paramIndex}::date + INTERVAL '1 day' - INTERVAL '1 second'))`);
+            whereConditions.push(`p.data_pedido <= ($${paramIndex}::date + INTERVAL '1 day' - INTERVAL '1 second')`);
             params.push(dataFim);
             paramIndex++;
             console.log(`📅 Filtro data fim: ${dataFim}`);
         }
         
-        // Adicionar o limite como último parâmetro
-        params.push(limiteNum);
-        
         const whereClause = whereConditions.length > 0 
             ? 'WHERE ' + whereConditions.join(' AND ')
             : '';
         
-        console.log('🔍 WHERE Clause construída:', whereClause);
+        console.log('🔍 WHERE Clause:', whereClause);
         console.log('🔍 Parâmetros:', params);
         
-        // DIAGNÓSTICO: Verificar dados existentes
-        console.log('\n🔍 === DIAGNÓSTICO DO BANCO ===');
-        
-        const diagnostico = await client.query(`
-            SELECT 
-                (SELECT COUNT(*) FROM produto) as total_produtos,
-                (SELECT COUNT(*) FROM pedido) as total_pedidos,
-                (SELECT COUNT(*) FROM pedidoproduto) as total_itens_pedido,
-                (SELECT COUNT(*) FROM categoria) as total_categorias
-        `);
-        console.log('📊 Contadores:', diagnostico.rows[0]);
-        
-        // Verificar quais produtos têm vendas
-        const produtosComVendas = await client.query(`
-            SELECT 
-                COUNT(DISTINCT pr.id_produto) as produtos_com_vendas,
-                COUNT(DISTINCT pp.id_produto) as produtos_vendidos
-            FROM produto pr
-            LEFT JOIN pedidoproduto pp ON pr.id_produto = pp.id_produto
-        `);
-        console.log('🔍 Análise de vendas:', produtosComVendas.rows[0]);
-        
-        console.log('=== FIM DIAGNÓSTICO ===\n');
-        
-        // Query PRINCIPAL - AGORA COM LEFT JOIN PARA MOSTRAR TODOS OS PRODUTOS
+        // Query simplificada - mesmo padrão de vendas mensais
         const query = `
             SELECT 
                 pr.id_produto,
-                pr.nome_produto,
-                pr.preco as preco_atual,
-                pr.quantidade_estoque,
+                pr.nome_produto as nome,
                 COALESCE(c.nome_categoria, 'Sem categoria') as categoria,
                 COALESCE(SUM(pp.quantidade), 0) as quantidade_vendida,
-                COALESCE(COUNT(DISTINCT pp.id_pedido), 0) as numero_pedidos,
                 COALESCE(SUM(pp.quantidade * pp.preco_unitario), 0) as valor_total_vendido,
-                COALESCE(AVG(pp.preco_unitario), 0) as preco_medio_venda,
-                MIN(p.data_pedido) as primeira_venda,
-                MAX(p.data_pedido) as ultima_venda
+                CASE 
+                    WHEN SUM(pp.quantidade) > 0 
+                    THEN COALESCE(SUM(pp.quantidade * pp.preco_unitario), 0) / SUM(pp.quantidade)
+                    ELSE 0 
+                END as preco_medio_venda
             FROM produto pr
             LEFT JOIN categoria c ON pr.id_categoria = c.id_categoria
-            LEFT JOIN pedidoproduto pp ON pr.id_produto = pp.id_produto
-            LEFT JOIN pedido p ON pp.id_pedido = p.id_pedido
+            INNER JOIN pedidoproduto pp ON pr.id_produto = pp.id_produto
+            INNER JOIN pedido p ON pp.id_pedido = p.id_pedido
             ${whereClause}
-            GROUP BY pr.id_produto, pr.nome_produto, pr.preco, pr.quantidade_estoque, c.nome_categoria
-            ORDER BY quantidade_vendida DESC, valor_total_vendido DESC, pr.nome_produto ASC
-            LIMIT ${paramIndex}
+            GROUP BY pr.id_produto, pr.nome_produto, c.nome_categoria
+            HAVING SUM(pp.quantidade) > 0
+            ORDER BY quantidade_vendida DESC, valor_total_vendido DESC
+            LIMIT $${paramIndex}
         `;
         
-        console.log('\n🔍 === EXECUTANDO QUERY PRINCIPAL ===');
-        console.log('Query:', query);
-        console.log('Parâmetros completos:', params);
+        params.push(limiteNum);
         
+        console.log('🔍 Executando query...');
         const result = await client.query(query, params);
         
-        console.log(`\n✅ Query executada! Linhas retornadas: ${result.rowCount}`);
+        console.log(`📊 Resultado: ${result.rowCount} produtos encontrados`);
         
-        if (result.rowCount === 0) {
-            console.log('\n⚠️ Nenhum produto encontrado no banco de dados!');
-            
-            return res.status(200).json({
-                status: 'success',
-                data: [],
-                meta: {
-                    total: 0,
-                    periodo: {
-                        dataInicio: dataInicio || null,
-                        dataFim: dataFim || null,
-                        limite: limiteNum
-                    },
-                    timestamp: new Date().toISOString()
-                },
-                message: 'Nenhum produto cadastrado no banco de dados'
-            });
-        }
-        
-        // Processar resultados - AGORA INCLUI PRODUTOS SEM VENDAS
-        const produtos = result.rows.map(produto => ({
-            id: produto.id_produto,
-            nome: produto.nome_produto || 'Produto sem nome',
-            descricao: '', // Não existe na estrutura atual
-            categoria: produto.categoria,
-            preco_atual: parseFloat(produto.preco_atual) || 0,
-            preco_medio_venda: parseFloat(produto.preco_medio_venda) || 0,
-            quantidade_vendida: parseInt(produto.quantidade_vendida) || 0,
-            quantidade_estoque: parseInt(produto.quantidade_estoque) || 0,
-            numero_pedidos: parseInt(produto.numero_pedidos) || 0,
-            valor_total_vendido: parseFloat(produto.valor_total_vendido) || 0,
-            primeira_venda: produto.primeira_venda ? produto.primeira_venda.toISOString().split('T')[0] : null,
-            ultima_venda: produto.ultima_venda ? produto.ultima_venda.toISOString().split('T')[0] : null
+        // Processar resultados - formato consistente
+        const produtos = result.rows.map(row => ({
+            nome: row.nome || 'Produto sem nome',
+            descricao: '', // Campo não existe na estrutura atual
+            categoria: row.categoria,
+            quantidade_vendida: parseInt(row.quantidade_vendida) || 0,
+            valor_total_vendido: parseFloat(row.valor_total_vendido) || 0,
+            preco_medio_venda: parseFloat(row.preco_medio_venda) || 0
         }));
         
         console.log(`✅ ${produtos.length} produtos processados com sucesso`);
-        console.log('📦 Primeiro produto:', produtos[0]);
-        
-        // Separar produtos com e sem vendas para análise
-        const produtosComVenda = produtos.filter(p => p.quantidade_vendida > 0);
-        const produtosSemVenda = produtos.filter(p => p.quantidade_vendida === 0);
-        
-        console.log(`📊 Produtos com vendas: ${produtosComVenda.length}`);
-        console.log(`📊 Produtos sem vendas: ${produtosSemVenda.length}`);
+        if (produtos.length > 0) {
+            console.log('📦 Primeiro produto:', produtos[0]);
+        }
         
         res.status(200).json({
             status: 'success',
             data: produtos,
             meta: {
                 total: produtos.length,
-                produtos_com_vendas: produtosComVenda.length,
-                produtos_sem_vendas: produtosSemVenda.length,
                 periodo: {
                     dataInicio: dataInicio || null,
                     dataFim: dataFim || null,
@@ -317,18 +259,10 @@ exports.getProdutosMaisVendidos = async (req, res) => {
         });
         
     } catch (error) {
-        console.error('\n❌ === ERRO COMPLETO ===');
-        console.error('Mensagem:', error.message);
-        console.error('Stack:', error.stack);
-        console.error('Código:', error.code);
-        console.error('Detalhes:', error.detail);
-        console.error('======================\n');
-        
+        console.error('❌ Erro completo:', error);
         handleError(res, error, 'Erro ao processar o relatório de produtos mais vendidos');
     } finally {
-        if (client) {
-            client.release();
-            console.log('🔒 Conexão com banco liberada\n');
-        }
+        client.release();
+        console.log('🔒 Conexão liberada');
     }
 };

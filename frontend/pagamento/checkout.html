@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finalizar Compra - Padaria</title>
+    <link rel="stylesheet" href="checkout.css">
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>💰 Finalizar Compra</h1>
+            <nav class="nav-buttons">
+                <button onclick="window.history.back()" class="btn btn-secondary">
+                    ← Voltar
+                </button>
+                <button onclick="window.location.href='../menu.html'" class="btn btn-secondary">
+                    🏠 Menu Principal
+                </button>
+            </nav>
+        </header>
+
+        <main class="main-content">
+            <!-- Mensagens -->
+            <div id="messageContainer"></div>
+
+            <div class="checkout-container">
+                <!-- Resumo do Pedido -->
+                <div class="resumo-pedido">
+                    <h2>Resumo do Pedido</h2>
+                    <div class="pedido-info">
+                        <p><strong>Número do Pedido:</strong> <span id="pedidoNumero">-</span></p>
+                        <p><strong>Total:</strong> R$ <span id="pedidoTotal">0,00</span></p>
+                    </div>
+                </div>
+
+                <!-- Formas de Pagamento -->
+                <div class="formas-pagamento">
+                    <h2>Escolha a forma de pagamento</h2>
+                    
+                    <div class="metodos-pagamento">
+                        <div class="metodo-pagamento" data-metodo="pix">
+                            <input type="radio" id="pix" name="metodo-pagamento" value="pix" checked>
+                            <label for="pix">
+                                <img src="../../assets/pix-logo.png" alt="PIX" onerror="this.src='https://logodownload.org/wp-content/uploads/2020/08/pix-bcbancentral-logo-3.png'">
+                                <span>PIX</span>
+                            </label>
+                        </div>
+                        
+                        <div class="metodo-pagamento" data-metodo="cartao">
+                            <input type="radio" id="cartao" name="metodo-pagamento" value="cartao">
+                            <label for="cartao">
+                                <img src="../../assets/credit-card.png" alt="Cartão de Crédito" onerror="this.src='https://cdn-icons-png.flaticon.com/512/196/196578.png'">
+                                <span>Cartão de Crédito</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Seção PIX -->
+                    <div id="pix-section" class="pagamento-section">
+                        <div class="qrcode-container">
+                            <div id="qrcode"></div>
+                            <p>Escaneie o QR Code com o aplicativo do seu banco</p>
+                            <div class="codigo-pix">
+                                <p>Ou copie o código PIX:</p>
+                                <div class="codigo-container">
+                                    <input type="text" id="codigoPix" readonly>
+                                    <button id="btnCopiarPix" class="btn-copiar">Copiar</button>
+                                </div>
+                            </div>
+                        </div>
+                        <button id="btnPagoPix" class="btn btn-primary">Já efetuei o pagamento</button>
+                    </div>
+
+                    <!-- Seção Cartão de Crédito -->
+                    <div id="cartao-section" class="pagamento-section" style="display: none;">
+                        <form id="formCartao">
+                            <div class="form-group">
+                                <label for="nomeTitular">Nome do Titular</label>
+                                <input type="text" id="nomeTitular" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="numeroCartao">Número do Cartão</label>
+                                <input type="text" id="numeroCartao" maxlength="19" required>
+                                <div id="bandeiraCartao" class="bandeira-cartao"></div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="validade">Validade (MM/AA)</label>
+                                    <input type="text" id="validade" placeholder="MM/AA" maxlength="5" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="cvv">CVV</label>
+                                    <input type="text" id="cvv" maxlength="4" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="parcelas">Parcelas</label>
+                                <select id="parcelas" required>
+                                    <option value="">Selecione</option>
+                                    <!-- Opções serão preenchidas via JavaScript -->
+                                </select>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Pagar com Cartão</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal de Confirmação -->
+    <div id="modalConfirmacao" class="modal">
+        <div class="modal-content">
+            <h3>Pagamento Confirmado!</h3>
+            <p>Seu pagamento foi processado com sucesso.</p>
+            <p>Número do pedido: <strong id="modalNumeroPedido"></strong></p>
+            <p>Valor: <strong id="modalValorPedido"></strong></p>
+            <button id="btnFecharModal" class="btn btn-primary">Fechar</button>
+        </div>
+    </div>
+
+    <script src="checkout.js"></script>
+</body>
+</html>
