@@ -1,11 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const menuController = require('../controllers/menuController');
+const path = require('path');
 
-// Rotas de autenticação
+// Servir arquivos estáticos da pasta frontend para esta rota
+router.use(express.static(path.join(__dirname, '../../frontend')));
 
-router.get('/', menuController.abrirMenu);
-// router.post('/inicio', menuController.inicio);
-router.post('/logout', menuController.logout);
+// Rota para abrir o menu
+router.get('/', (req, res) => {
+    console.log('📍 Abrindo menu.html');
+    res.sendFile(path.join(__dirname, '../../frontend/menu.html'));
+});
 
 module.exports = router;

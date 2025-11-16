@@ -17,13 +17,11 @@ function showRegister() {
 // FUNÇÕES DE FEEDBACK VISUAL
 // ========================================
 function showAlert(message, type = 'error') {
-    // Remover alertas existentes
     const existingAlert = document.querySelector('.alert');
     if (existingAlert) {
         existingAlert.remove();
     }
     
-    // Criar novo alerta
     const alert = document.createElement('div');
     alert.className = `alert alert-${type}`;
     alert.style.cssText = `
@@ -38,7 +36,6 @@ function showAlert(message, type = 'error') {
     `;
     alert.textContent = message;
     
-    // Inserir no início do formulário ativo
     const activeTab = document.querySelector('.tab-content.active');
     if (activeTab) {
         const form = activeTab.querySelector('form');
@@ -47,7 +44,6 @@ function showAlert(message, type = 'error') {
         }
     }
     
-    // Remover alerta após 5 segundos
     setTimeout(() => {
         if (alert.parentNode) {
             alert.remove();
@@ -93,7 +89,6 @@ function limparCookies() {
             const eqPos = cookie.indexOf("=");
             const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
             
-            // Deletar cookie em múltiplos caminhos e domínios
             document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
             document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname;
             document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=." + window.location.hostname;
@@ -115,21 +110,17 @@ function limparFormularios() {
         const loginForm = document.getElementById('loginForm');
         const cadastroForm = document.getElementById('cadastroForm');
         
-        if (loginForm) {
-            loginForm.reset();
-            console.log('✅ Formulário de login limpo!');
-        }
-        if (cadastroForm) {
-            cadastroForm.reset();
-            console.log('✅ Formulário de cadastro limpo!');
-        }
+        if (loginForm) loginForm.reset();
+        if (cadastroForm) cadastroForm.reset();
+        
+        console.log('✅ Formulários limpos!');
     } catch (error) {
         console.error('❌ Erro ao limpar formulários:', error);
     }
 }
 
 // ========================================
-// LOGIN - USANDO APENAS /auth/login
+// LOGIN
 // ========================================
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('loginForm');
@@ -150,9 +141,6 @@ document.addEventListener('DOMContentLoaded', () => {
             senha: formData.get('senha')
         };
         
-        console.log('📧 Email:', data.email);
-        console.log('══════════════════════════════════════');
-        
         if (!data.email || !data.senha) {
             showAlert('Por favor, preencha email e senha!', 'error');
             return;
@@ -167,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                credentials: 'include', // CRUCIAL para cookies
+                credentials: 'include',
                 body: JSON.stringify(data)
             });
             
@@ -178,13 +166,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { usuario } = result;
                 console.log('✅ Login realizado com sucesso!');
                 console.log('👤 Nome:', usuario.nome);
-                console.log('📧 Email:', usuario.email);
                 console.log('🔑 Tipo:', usuario.tipo);
                 console.log('🎯 Cargo:', usuario.cargo || 'Cliente');
                 console.log('🔰 É gerente?', usuario.isGerente ? 'Sim' : 'Não');
-                console.log('══════════════════════════════════════');
                 
-                // Salvar no sessionStorage
+                // SOLUÇÃO: Salvar no sessionStorage (funciona com Live Server)
                 sessionStorage.setItem('usuarioLogado', JSON.stringify({
                     id: usuario.id,
                     nome: usuario.nome,
@@ -194,9 +180,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     isGerente: usuario.isGerente || false
                 }));
                 
+                console.log('💾 Dados salvos no sessionStorage');
+                
                 showAlert('Login realizado com sucesso!', 'success');
                 
-                // Aguardar um pouco e redirecionar
                 setTimeout(() => {
                     console.log('🔄 Redirecionando para o menu...');
                     window.location.href = '../menu.html';
@@ -242,13 +229,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         console.log('📝 Tentando cadastrar:', data.nome_pessoa);
         
-        // Validação simples de CPF (apenas números e 11 dígitos)
         if (data.cpf.length !== 11) {
             showAlert('CPF deve conter 11 dígitos!', 'error');
             return;
         }
         
-        // Validação de senha
         if (data.senha_pessoa.length > 20) {
             showAlert('Senha deve ter no máximo 20 caracteres!', 'error');
             return;
@@ -257,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             showLoading(true);
             
-            const response = await fetch(`${API_BASE_URL}/login/cadastrarCliente`, {
+            const response = await fetch(`${API_BASE_URL}/auth/cadastrar`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -273,7 +258,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 showAlert('Cadastro realizado com sucesso! Faça login para continuar.', 'success');
                 setTimeout(() => {
                     showLogin();
-                    // Limpar formulário
                     e.target.reset();
                 }, 2000);
             } else {
@@ -298,7 +282,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cpfInput) {
         cpfInput.addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, '');
-            // Limitar a 11 dígitos
             if (value.length > 11) {
                 value = value.substring(0, 11);
             }
@@ -308,105 +291,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ========================================
-// FUNÇÃO DE LOGOUT - CORRIGIDA E MELHORADA
-// ========================================
-async function logout() {
-    if (!confirm('Deseja realmente sair do sistema?')) {
-        return;
-    }
-    
-    console.log('🚪 Iniciando processo de logout...');
-    console.log('══════════════════════════════════════');
-    
-    try {
-        showLoading(true);
-        
-        // 1. Primeiro, tenta fazer logout no servidor
-        console.log('🔒 Solicitando logout no servidor...');
-        const response = await fetch(`${API_BASE_URL}/auth/logout`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            credentials: 'include' // Importante para enviar os cookies
-        });
-        
-        const result = await response.json();
-        console.log('📨 Resposta do servidor:', result);
-        
-        // 2. Limpar dados locais independentemente da resposta do servidor
-        console.log('🧹 Limpando dados locais...');
-        
-        // Limpar sessionStorage
-        sessionStorage.removeItem('usuarioLogado');
-        sessionStorage.clear();
-        console.log('✅ SessionStorage limpo');
-        
-        // Limpar localStorage
-        localStorage.removeItem('usuarioLogado');
-        localStorage.clear();
-        console.log('✅ LocalStorage limpo');
-        
-        // Limpar cookies
-        limparCookies();
-        
-        // Limpar formulários
-        limparFormularios();
-        
-        console.log('══════════════════════════════════════');
-        
-        // 3. Mostrar mensagem de sucesso
-        if (result.status === 'deslogado') {
-            console.log('✅ Logout realizado com sucesso!');
-            showAlert('Você foi desconectado com sucesso!', 'success');
-        } else {
-            console.log('⚠️ O servidor pode não ter processado o logout corretamente, mas os dados locais foram limpos.');
-            showAlert('Sessão encerrada localmente.', 'info');
-        }
-        
-        // 4. Redirecionar para a página de login após um curto atraso
-        setTimeout(() => {
-            console.log('🔄 Redirecionando para a página de login...');
-            window.location.href = '/login/login.html';
-        }, 1000);
-        
-    } catch (error) {
-        console.error('❌ Erro durante o logout:', error);
-        
-        // Mesmo com erro, limpar tudo localmente
-        sessionStorage.clear();
-        localStorage.clear();
-        limparCookies();
-        limparFormularios();
-        
-        console.log('⚠️ Ocorreu um erro, mas os dados locais foram limpos.');
-        console.log('══════════════════════════════════════');
-        
-        showAlert('Você foi desconectado, mas pode ter ocorrido um erro no servidor.', 'warning');
-        
-        // Redirecionar mesmo com erro
-        setTimeout(() => {
-            window.location.href = '/login/login.html';
-        }, 1500);
-    } finally {
-        showLoading(false);
-    }
-}
-
-// Tornar função logout disponível globalmente
-window.logout = logout;
-
-// ========================================
 // VERIFICAÇÃO INICIAL AO CARREGAR PÁGINA
 // ========================================
 window.addEventListener('load', async () => {
     console.log('🔍 Verificando se já está logado...');
     
-    // ✅ SEMPRE limpar formulários ao carregar (garante campos em branco)
     limparFormularios();
     
     try {
-        const response = await fetch(`${API_BASE_URL}/login/verificaSePessoaEstaLogada`, {
+        const response = await fetch(`${API_BASE_URL}/auth/verificar-login`, {
             method: 'GET',
             credentials: 'include'
         });
@@ -416,50 +309,14 @@ window.addEventListener('load', async () => {
         
         if (result.status === 'ok') {
             console.log('✅ Já está logado! Redirecionando...');
-            // Pessoa já está logada, redirecionar para menu
-            window.location.href = '../menu.html';
+            window.location.href = 'http://localhost:3001/menu/';
         } else {
             console.log('ℹ️ Não está logado, mostrando tela de login');
-            // ✅ Garante que os campos estão limpos
             limparFormularios();
         }
     } catch (error) {
         console.error('❌ Erro ao verificar login:', error);
-        // Em caso de erro, garante que campos estão limpos
         limparFormularios();
-    }
-});
-
-// ========================================
-// LOGOUT AUTOMÁTICO AO FECHAR PÁGINA
-// ========================================
-window.addEventListener('beforeunload', async (e) => {
-    // Verifica se a página atual não é a de login
-    const isLoginPage = window.location.pathname.includes('login.html');
-    
-    if (!isLoginPage) {
-        console.log('🚪 Saindo da página, fazendo logout automático...');
-        
-        try {
-            await fetch(`${API_BASE_URL}/auth/logout`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                keepalive: true
-            });
-            
-            // Limpar tudo
-            sessionStorage.removeItem('usuarioLogado');
-            sessionStorage.clear();
-            localStorage.clear();
-            limparCookies();
-            
-            console.log('✅ Logout automático realizado!');
-        } catch (error) {
-            console.error('❌ Erro no logout automático:', error);
-        }
     }
 });
 

@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const loginController = require('../controllers/loginController');
+const path = require('path');
 
-// Rotas de autenticação
-router.get('/verificaSePessoaEstaLogada', loginController.verificaSePessoaEstaLogada);
-router.post('/verificaSePessoaEstaLogada', loginController.verificaSePessoaEstaLogada);
-router.post('/loginCliente', loginController.loginCliente);
-router.post('/loginFuncionario', loginController.loginFuncionario);
-router.post('/cadastrarCliente', loginController.cadastrarCliente);
-router.post('/logout', loginController.logout);
+// Servir arquivos estáticos da pasta login
+router.use(express.static(path.join(__dirname, '../../frontend/login')));
+
+// Rota para abrir a página de login
+router.get('/login.html', (req, res) => {
+    console.log('📍 Abrindo login.html');
+    res.sendFile(path.join(__dirname, '../../frontend/login/login.html'));
+});
 
 module.exports = router;

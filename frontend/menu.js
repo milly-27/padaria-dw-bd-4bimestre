@@ -1,93 +1,38 @@
 const API_BASE_URL = 'http://localhost:3001';
 
 // ========================================
-// ESTILOS DINÂMICOS
+// CONTROLE DE VISIBILIDADE DOS MENUS
 // ========================================
-const injetarEstilos = () => {
-    // Verifica se os estilos já foram adicionados
-    if (document.getElementById('menu-styles')) return;
+function controlarMenus(isGerente) {
+    const menuCadastros = document.getElementById('menuCadastros');
+    const menuRelatorios = document.getElementById('menuRelatorios');
     
-    const style = document.createElement('style');
-    style.id = 'menu-styles';
-    style.textContent = `
-        .hidden {
-            display: none !important;
-        }
-        
-        .user-info {
-            background: var(--accent, #f0f0f0);
-            padding: 0.7rem 1.5rem;
-            border-radius: var(--radius-md, 8px);
-            cursor: pointer;
-            transition: var(--transition, all 0.3s ease);
-            box-shadow: var(--shadow-sm, 0 2px 4px rgba(0,0,0,0.1));
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            position: relative;
-        }
-        
-        .user-info:hover {
-            background: var(--primary, #007bff);
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md, 0 4px 8px rgba(0,0,0,0.15));
-        }
-        
-        .logout-tooltip {
-            position: absolute;
-            top: calc(100% + 10px);
-            right: 0;
-            background: var(--text-dark, #333);
-            color: white;
-            padding: 0.4rem 0.8rem;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            white-space: nowrap;
-            opacity: 0;
-            visibility: hidden;
-            transition: var(--transition, all 0.3s ease);
-            pointer-events: none;
-            z-index: 1000;
-        }
-        
-        .user-info:hover .logout-tooltip {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        .user-section {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-    `;
-    document.head.appendChild(style);
-};
-
-// ========================================
-// CONTROLE DO MENU DE CADASTROS
-// ========================================
-function controlarMenuCadastros(mostrar = true) {
-    // Sempre mostra o menu de cadastros
-    const menuCadastros = document.querySelector('.nav__menu-item:has(a[href="#"])');
-    if (menuCadastros) {
-        menuCadastros.style.display = 'block';
+    console.log('🔐 Controlando menus - É gerente?', isGerente);
+    
+    if (isGerente) {
+        if (menuCadastros) menuCadastros.style.display = 'block';
+        if (menuRelatorios) menuRelatorios.style.display = 'block';
+        console.log('✅ Menus de Cadastros e Relatórios LIBERADOS');
+    } else {
+        if (menuCadastros) menuCadastros.style.display = 'none';
+        if (menuRelatorios) menuRelatorios.style.display = 'none';
+        console.log('🔒 Menus de Cadastros e Relatórios BLOQUEADOS');
     }
 }
 
 // ========================================
-// GERENCIAMENTO DE UI
+// ATUALIZAR INTERFACE DO USUÁRIO
 // ========================================
-const atualizarInterfaceUsuario = (userData = null) => {
+function atualizarInterfaceUsuario(userData = null) {
     console.log('🔄 Atualizando interface do usuário:', userData);
     
     const btnLogin = document.getElementById('btnLogin');
     const userInfo = document.getElementById('userInfo');
     const userName = document.getElementById('userName');
-    const loginMessage = document.getElementById('loginMessage');
+    const welcomeTitle = document.getElementById('welcomeTitle');
+    const welcomeMessage = document.getElementById('welcomeMessage');
+    const loginPrompt = document.getElementById('loginPrompt');
     
-    // Validar elementos necessários
     if (!btnLogin || !userInfo || !userName) {
         console.warn('⚠️ Elementos de UI não encontrados');
         return;
@@ -96,36 +41,46 @@ const atualizarInterfaceUsuario = (userData = null) => {
     if (userData && userData.nome) {
         // Usuário está logado
         console.log('👤 Usuário logado:', userData.nome);
+        console.log('🔰 É gerente?', userData.isGerente);
         
-        // Atualizar visibilidade dos elementos
+        // Atualizar visibilidade
         btnLogin.classList.add('hidden');
         userInfo.classList.remove('hidden');
-        if (loginMessage) loginMessage.classList.remove('hidden');
+        if (loginPrompt) loginPrompt.style.display = 'none';
         
         // Atualizar nome do usuário
         userName.textContent = userData.nome;
         
-        // Remover span de tipo anterior se existir
-        const spanAntigo = userName.querySelector('#tipoUsuario');
-        if (spanAntigo) spanAntigo.remove();
-        
-        // Adicionar tipo de usuário
+        // Adicionar tipo/cargo
         const tipoUsuarioSpan = document.createElement('span');
-        tipoUsuarioSpan.id = 'tipoUsuario';
         tipoUsuarioSpan.style.cssText = 'font-size: 0.85em; color: #999; margin-left: 10px;';
         
-        // Formatar exibição do tipo e cargo
-        if (userData.tipo === 'funcionario' && userData.cargo) {
+        if (userData.isGerente) {
+            tipoUsuarioSpan.textContent = '(Gerente)';
+        } else if (userData.tipo === 'funcionario' && userData.cargo) {
             tipoUsuarioSpan.textContent = `(${userData.cargo})`;
         } else {
-            tipoUsuarioSpan.textContent = `(${userData.tipo})`;
+            tipoUsuarioSpan.textContent = '(Cliente)';
         }
         
         userName.appendChild(tipoUsuarioSpan);
         
-        // Garantir que userInfo pode ser clicado
+        // Configurar userInfo para logout
         userInfo.style.cursor = 'pointer';
         userInfo.title = 'Clique para fazer logout';
+        userInfo.onclick = logout;
+        
+        // Atualizar mensagem de boas-vindas
+        if (userData.isGerente) {
+            if (welcomeTitle) welcomeTitle.textContent = `Bem-vindo gerente, ${userData.nome}`;
+            if (welcomeMessage) welcomeMessage.textContent = 'Você tem acesso total ao sistema. Use o menu acima para gerenciar cadastros e visualizar relatórios.';
+        } else {
+            if (welcomeTitle) welcomeTitle.textContent = `Seja bem-vindo, ${userData.nome}`;
+            if (welcomeMessage) welcomeMessage.textContent = 'Explore nosso cardápio e faça seus pedidos.';
+        }
+        
+        // Controlar menus baseado em permissões
+        controlarMenus(userData.isGerente);
         
     } else {
         // Usuário não está logado
@@ -133,96 +88,63 @@ const atualizarInterfaceUsuario = (userData = null) => {
         
         btnLogin.classList.remove('hidden');
         userInfo.classList.add('hidden');
-        if (loginMessage) loginMessage.classList.add('hidden');
+        if (loginPrompt) loginPrompt.style.display = 'block';
         if (userName) userName.textContent = '';
         
-        // Garantir que o menu de cadastros esteja visível
-        controlarMenuCadastros();
+        // Mensagem padrão
+        if (welcomeTitle) welcomeTitle.textContent = 'Bem-vindo ao Sistema AVAP';
+        if (welcomeMessage) welcomeMessage.textContent = 'Sistema de Gerenciamento integrado. Faça login para acessar todas as funcionalidades.';
+        
+        // Ocultar menus restritos
+        controlarMenus(false);
     }
-};
+}
 
 // ========================================
-// VERIFICAÇÃO DE LOGIN - ATUALIZADA
+// VERIFICAR LOGIN NO SESSIONSTORAGE
 // ========================================
-const verificarSeUsuarioEstaLogadoBackend = async () => {
-    console.log('🔍 Verificando autenticação no backend...');
+async function verificarSeUsuarioEstaLogadoBackend() {
+    console.log('🔍 Verificando autenticação...');
     console.log('══════════════════════════════════════');
     
     try {
-        // Verifica autenticação e carrega dados do usuário
-        const response = await fetch(`${API_BASE_URL}/login/verificaSePessoaEstaLogada`, {
-            method: 'GET',
-            credentials: 'include', // Importante para enviar cookies
-            headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
-            },
-            cache: 'no-store' // Garante que não usará cache
-        });
+        // SOLUÇÃO LIVE SERVER: Usar sessionStorage
+        const usuarioLogado = sessionStorage.getItem('usuarioLogado');
         
-        console.log('📡 Status da resposta:', response.status);
-        
-        if (!response.ok) {
-            throw new Error(`Erro HTTP: ${response.status}`);
+        if (!usuarioLogado) {
+            console.log('❌ Usuário não autenticado (sessionStorage vazio)');
+            console.log('══════════════════════════════════════');
+            atualizarInterfaceUsuario(null);
+            return null;
         }
         
-        const data = await response.json();
-        console.log('📨 Resposta do servidor:', data);
+        const userData = JSON.parse(usuarioLogado);
         
-        if (data.status === 'ok' && data.usuario) {
-            const userData = {
-                id: data.usuario.id,
-                nome: data.usuario.nome,
-                email: data.usuario.email,
-                tipo: data.usuario.tipo || 'cliente',
-                cargo: (data.usuario.cargo || '').toLowerCase(),
-                isGerente: data.usuario.isGerente || (data.usuario.tipo === 'funcionario' && data.usuario.cargo && data.usuario.cargo.toLowerCase() === 'gerente')
-            };
-            
-            console.log('👤 Dados do usuário:');
-            console.log('   - ID:', userData.id);
-            console.log('   - Nome:', userData.nome);
-            console.log('   - Tipo:', userData.tipo);
-            console.log('   - Cargo:', userData.cargo || '(não especificado)');
-            console.log(`   - É gerente? ${userData.isGerente ? '✅ Sim' : '❌ Não'}`);
-            
-            // Salvar no sessionStorage
-            sessionStorage.setItem('usuarioLogado', JSON.stringify(userData));
-            
-            // Atualizar interface
-            atualizarInterfaceUsuario(userData);
-            
-            return userData;
-        }
-        
-        // Se chegou aqui, o usuário não está autenticado
-        console.log('❌ Usuário não autenticado ou sessão expirada');
-        
-        // Limpar dados de sessão
-        sessionStorage.removeItem('usuarioLogado');
+        console.log('👤 Dados do usuário (sessionStorage):');
+        console.log('   - Nome:', userData.nome);
+        console.log('   - Tipo:', userData.tipo);
+        console.log('   - Cargo:', userData.cargo || '(não especificado)');
+        console.log(`   - É gerente? ${userData.isGerente ? '✅ Sim' : '❌ Não'}`);
+        console.log('══════════════════════════════════════');
         
         // Atualizar interface
-        atualizarInterfaceUsuario(null);
+        atualizarInterfaceUsuario(userData);
         
-        return null;
+        return userData;
+        
     } catch (error) {
         console.error('❌ Erro ao verificar autenticação:', error);
         console.log('══════════════════════════════════════');
-        
-        // Em caso de erro, limpar estado
         sessionStorage.removeItem('usuarioLogado');
         atualizarInterfaceUsuario(null);
-        
         return null;
     }
-};
+}
 
 // ========================================
-// FUNÇÃO PARA LIMPAR TODOS OS COOKIES
+// LIMPAR COOKIES
 // ========================================
-const limparCookies = () => {
+function limparCookies() {
     console.log('🍪 Limpando todos os cookies...');
     
     try {
@@ -233,7 +155,6 @@ const limparCookies = () => {
             const eqPos = cookie.indexOf("=");
             const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
             
-            // Deletar o cookie em múltiplos caminhos e domínios
             document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
             document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname;
             document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=." + window.location.hostname;
@@ -243,12 +164,12 @@ const limparCookies = () => {
     } catch (error) {
         console.error('❌ Erro ao limpar cookies:', error);
     }
-};
+}
 
 // ========================================
-// LOGOUT - CORRIGIDO E MELHORADO
+// LOGOUT
 // ========================================
-window.logout = async () => {
+async function logout() {
     if (!confirm('Deseja realmente sair do sistema?')) {
         return;
     }
@@ -256,7 +177,7 @@ window.logout = async () => {
     console.log('🚪 Iniciando logout...');
     
     try {
-        const response = await fetch(`${API_BASE_URL}/login/logout`, {
+        const response = await fetch(`${API_BASE_URL}/auth/logout`, {
             method: 'POST',
             credentials: 'include',
             headers: {
@@ -267,30 +188,22 @@ window.logout = async () => {
         const result = await response.json();
         console.log('📨 Resposta logout:', result);
         
-        // ✅ Verificar 'deslogado'
         if (result.status === 'deslogado') {
             console.log('✅ Logout realizado com sucesso!');
             
-            // 1. Limpar sessionStorage
-            sessionStorage.removeItem('usuarioLogado');
+            // Limpar tudo
             sessionStorage.clear();
-            
-            // 2. Limpar localStorage também (se houver)
-            localStorage.removeItem('usuarioLogado');
             localStorage.clear();
-            
-            // 3. Limpar cookies
             limparCookies();
             
-            // 4. Atualizar interface
+            // Atualizar interface
             atualizarInterfaceUsuario(null);
             
-            // 5. Notificar usuário
+            // Notificar e redirecionar
             alert('Logout realizado com sucesso!');
             
-            // 6. Redirecionar para a página de login
             setTimeout(() => {
-                window.location.href = 'login/login.html';
+                window.location.href = 'http://localhost:3001/login/login.html';
             }, 500);
         } else {
             throw new Error('Resposta inesperada do servidor');
@@ -298,7 +211,7 @@ window.logout = async () => {
     } catch (error) {
         console.error('❌ Erro ao fazer logout:', error);
         
-        // Mesmo com erro, limpar tudo localmente
+        // Limpar mesmo com erro
         sessionStorage.clear();
         localStorage.clear();
         limparCookies();
@@ -306,152 +219,60 @@ window.logout = async () => {
         
         alert('Erro ao fazer logout no servidor, mas dados locais foram limpos.');
         
-        // Redirecionar mesmo assim
         setTimeout(() => {
-            window.location.href = 'login/login.html';
+            window.location.href = 'http://localhost:3001/login/login.html';
         }, 1000);
     }
-};
+}
 
 // ========================================
-// FUNÇÕES AUXILIARES
+// REDIRECIONAR PARA LOGIN
 // ========================================
-// Tornando a função disponível no escopo global
-window.redirecionarLogin = () => {
+function redirecionarLogin() {
     console.log('🔄 Redirecionando para login...');
-    window.location.href = 'login/login.html';
-};
-
-const verificarLogin = () => {
-    const usuarioLogado = sessionStorage.getItem('usuarioLogado');
-    
-    if (usuarioLogado) {
-        try {
-            const userData = JSON.parse(usuarioLogado);
-            atualizarInterfaceUsuario(userData);
-            return userData;
-        } catch (error) {
-            console.error('Erro ao parsear dados do usuário:', error);
-            sessionStorage.removeItem('usuarioLogado');
-            atualizarInterfaceUsuario(null);
-            return null;
-        }
-    }
-    
-    atualizarInterfaceUsuario(null);
-    return null;
-};
-
-const handleUserAction = (action) => {
-    if (action === "gerenciar-conta") {
-        alert("Redirecionando para a página de Gerenciar Conta...");
-        // window.location.href = 'conta/gerenciar.html';
-    } else if (action === "sair") {
-        logout();
-    }
-};
-
-// Funções mantidas para compatibilidade
-const logout2 = () => logout();
-const nomeUsuario = () => verificarLogin();
-
-const usuarioAutorizado = async () => {
-    const userData = verificarLogin();
-    if (!userData) {
-        const backendData = await verificarSeUsuarioEstaLogadoBackend();
-        return backendData && backendData.tipo === 'funcionario';
-    }
-    return userData.tipo === 'funcionario';
-};
+    window.location.href = 'http://localhost:3001/login/login.html';
+}
 
 // ========================================
-// SIMULAÇÃO DE LOGIN (DESENVOLVIMENTO)
+// INICIALIZAÇÃO
 // ========================================
-const simularLogin = () => {
-    const userData = {
-        nome: 'Berola da Silva',
-        tipo: 'funcionario',
-        cargo: 'Gerente'
-    };
-    
-    sessionStorage.setItem('usuarioLogado', JSON.stringify(userData));
-    atualizarInterfaceUsuario(userData);
-    console.log('🎭 Login simulado como funcionário');
-};
-
-// ========================================
-// INICIALIZAÇÃO - CORRIGIDA
-// ========================================
-const inicializarMenu = () => {
+function inicializarMenu() {
     console.log('🚀 Menu carregado, inicializando...');
     
-    // Injetar estilos
-    injetarEstilos();
-    
-    // Verificar login no backend (mas manter menus visíveis)
+    // Verificar login no backend
     verificarSeUsuarioEstaLogadoBackend();
     
-    // ✅ ADICIONAR EVENT LISTENER PARA O BOTÃO DE LOGIN (se existir)
+    // Configurar botão de login
     const btnLogin = document.getElementById('btnLogin');
     if (btnLogin) {
-        // Remover qualquer onclick inline e adicionar via JS
-        btnLogin.onclick = null;
-        btnLogin.removeAttribute('onclick'); // Remove onclick do HTML
-        btnLogin.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('🔄 Botão login clicado');
-            redirecionarLogin();
-        });
+        btnLogin.onclick = redirecionarLogin;
         console.log('✅ Event listener adicionado ao botão de login');
-    } else {
-        console.warn('⚠️ Botão de login (btnLogin) não encontrado');
     }
-    
-    // ✅ ADICIONAR EVENT LISTENER PARA userInfo (LOGOUT)
-    const userInfo = document.getElementById('userInfo');
-    if (userInfo) {
-        userInfo.onclick = null;
-        userInfo.removeAttribute('onclick'); // Remove onclick do HTML
-        userInfo.style.cursor = 'pointer'; // Adiciona cursor pointer
-        userInfo.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('🚪 UserInfo clicado - iniciando logout');
-            logout();
-        });
-        console.log('✅ Event listener adicionado ao userInfo para LOGOUT');
-    } else {
-        console.warn('⚠️ UserInfo não encontrado');
-    }
-};
+}
 
 // ========================================
 // EVENT LISTENERS
 // ========================================
 document.addEventListener('DOMContentLoaded', inicializarMenu);
 
-// Atalho de desenvolvimento: CTRL + L para simular login
+// Atalho de desenvolvimento: CTRL + L para simular login de gerente
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'l') {
         e.preventDefault();
-        simularLogin();
+        console.log('🎭 Simulando login de gerente...');
+        atualizarInterfaceUsuario({
+            nome: 'Gerente Teste',
+            tipo: 'funcionario',
+            cargo: 'gerente',
+            isGerente: true
+        });
     }
 });
 
 // ========================================
 // EXPORTAR FUNÇÕES GLOBALMENTE
 // ========================================
-window.menuFunctions = {
-    verificarLogin,
-    logout,
-    usuarioAutorizado,
-    redirecionarLogin,
-    limparCookies
-};
-
-// ✅ TORNAR FUNÇÕES DISPONÍVEIS GLOBALMENTE PARA O HTML
 window.logout = logout;
 window.redirecionarLogin = redirecionarLogin;
-window.handleUserAction = handleUserAction;
-window.simularLogin = simularLogin;
 
 console.log('✅ menu.js carregado com sucesso!');

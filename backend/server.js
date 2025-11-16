@@ -22,16 +22,16 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 3. Configuração do CORS
+// 3. Configuração do CORS MELHORADA
 const corsOptions = {
   origin: function (origin, callback) {
-    // Lista de origens permitidas
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:3001',
       'http://127.0.0.1:3000',
       'http://127.0.0.1:3001',
-      'http://127.0.0.1:5500'
+      'http://127.0.0.1:5500',
+      'http://localhost:5500'
     ];
     
     // Em desenvolvimento, permitir qualquer origem
@@ -39,17 +39,26 @@ const corsOptions = {
       return callback(null, true);
     }
     
-    // Verificar se a origem está na lista de permitidas
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(null, true); // Permitir mesmo assim em desenvolvimento
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-Access-Token', 'x-access-token'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With', 
+    'Accept', 
+    'X-Access-Token', 
+    'x-access-token',
+    'Cache-Control',
+    'Pragma',
+    'Expires'
+  ],
+  exposedHeaders: ['Content-Range', 'X-Content-Range', 'Set-Cookie'],
   maxAge: 86400,
   preflightContinue: false,
   optionsSuccessStatus: 204
@@ -58,32 +67,27 @@ const corsOptions = {
 // Aplicar o CORS
 app.use(cors(corsOptions));
 
-// 4. Middleware para configurar os cabeçalhos CORS manualmente
+// 4. Middleware CORS manual adicional
 app.use((req, res, next) => {
-  // Log de cabeçalhos recebidos
-  console.log('📨 Headers recebidos:', req.headers);
-  console.log('🌐 Origem da requisição:', req.headers.origin);
-  console.log('🔍 Método:', req.method);
+  const origin = req.headers.origin || req.headers.host;
   
-  // Configurar cabeçalhos CORS
-  const origin = req.headers.origin;
-  
-  // Definir cabeçalhos CORS
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Access-Token, x-access-token');
-  res.header('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range');
+  // Configurar cabeçalhos CORS manualmente
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
   res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Access-Token, x-access-token, Cache-Control, Pragma, Expires');
+  res.header('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range, Set-Cookie');
   
   // Se for uma requisição OPTIONS, responder imediatamente
   if (req.method === 'OPTIONS') {
     console.log('🛫 Resposta a preflight CORS');
-    return res.status(200).end();
+    return res.status(204).end();
   }
   
-  // Continuar para a próxima camada de middleware
   next();
 });
-
 // 5. Arquivos estáticos
 const caminhoFrontend = path.join(__dirname, '../frontend');
 console.log('Caminho frontend:', caminhoFrontend);
