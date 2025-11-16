@@ -18,6 +18,8 @@ let usuarioLogado = null;
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        console.log('🚀 Inicializando carrinho...');
+        
         // Verificar usuário logado
         await verificarUsuarioLogado();
         
@@ -30,9 +32,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Configurar event listeners
         configurarEventListeners();
         
-        console.log('Carrinho inicializado com sucesso!', carrinho);
+        console.log('✅ Carrinho inicializado com sucesso!', carrinho);
     } catch (error) {
-        console.error('Erro ao inicializar o carrinho:', error);
+        console.error('❌ Erro ao inicializar o carrinho:', error);
         mostrarMensagem('Erro ao carregar o carrinho. Por favor, recarregue a página.', 'error');
     }
 });
@@ -42,7 +44,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ========================================
 async function verificarUsuarioLogado() {
     try {
-        const response = await fetch(`${API_BASE_URL}/login/verificaSePessoaEstaLogada`, {
+        console.log('🔍 Verificando usuário logado...');
+        
+        // PRIMEIRO: Verificar sessionStorage (compatível com Live Server)
+        const usuarioSession = sessionStorage.getItem('usuarioLogado');
+        
+        if (usuarioSession) {
+            usuarioLogado = JSON.parse(usuarioSession);
+            console.log('✅ Usuário encontrado no sessionStorage:', usuarioLogado.nome);
+            atualizarHeaderUsuario();
+            return;
+        }
+        
+        // SEGUNDO: Tentar verificar no backend via cookies
+        console.log('🔍 Verificando no backend...');
+        const response = await fetch(`${API_BASE_URL}/auth/verificar-login`, {
             method: 'GET',
             credentials: 'include',
             headers: {
@@ -52,6 +68,7 @@ async function verificarUsuarioLogado() {
         });
         
         const data = await response.json();
+        console.log('📨 Resposta do backend:', data);
         
         if (data.status === 'ok' && data.usuario) {
             usuarioLogado = {
@@ -59,19 +76,21 @@ async function verificarUsuarioLogado() {
                 nome: data.usuario.nome,
                 email: data.usuario.email,
                 tipo: data.usuario.tipo,
-                cargo: data.usuario.cargo
+                cargo: data.usuario.cargo,
+                isGerente: data.usuario.isGerente
             };
             
-            console.log('👤 Usuário logado:', usuarioLogado);
+            // Salvar no sessionStorage para próximas verificações
+            sessionStorage.setItem('usuarioLogado', JSON.stringify(usuarioLogado));
             
-            // Atualizar header com informações do usuário
+            console.log('✅ Usuário autenticado:', usuarioLogado.nome);
             atualizarHeaderUsuario();
         } else {
             console.log('❌ Usuário não autenticado');
             usuarioLogado = null;
         }
     } catch (error) {
-        console.error('Erro ao verificar usuário logado:', error);
+        console.error('❌ Erro ao verificar usuário logado:', error);
         usuarioLogado = null;
     }
 }
@@ -146,14 +165,15 @@ function carregarCarrinho() {
                     quantidade: parseInt(item.quantidade) || 1,
                     preco: parseFloat(item.preco) || 0
                 }));
+                console.log('✅ Carrinho carregado:', carrinho.length, 'itens');
             } catch (error) {
-                console.error('Erro ao carregar carrinho:', error);
+                console.error('❌ Erro ao parsear carrinho:', error);
                 carrinho = [];
                 localStorage.removeItem('carrinho');
             }
         }
     } catch (error) {
-        console.error('Erro ao carregar carrinho:', error);
+        console.error('❌ Erro ao carregar carrinho:', error);
         carrinho = [];
     }
 }
@@ -164,7 +184,7 @@ function salvarCarrinho() {
         localStorage.setItem('carrinho', JSON.stringify(carrinho || []));
         return true;
     } catch (error) {
-        console.error('Erro ao salvar carrinho:', error);
+        console.error('❌ Erro ao salvar carrinho:', error);
         mostrarMensagem('Erro ao salvar o carrinho. Tente novamente.', 'error');
         return false;
     }
@@ -266,7 +286,28 @@ function criarElementoItem(item) {
     itemElement.className = 'item-carrinho';
     
     try {
-        const imagemUrl = item.imagem_produto || 'https://via.placeholder.com/80';
+        // CORREÇÃO: Ajustar caminho da imagem
+        let imagemUrl = 'https://via.placeholder.com/80?text=Sem+Imagem';
+        
+        console.log('🖼️ Processando imagem do produto:', item.nome_produto);
+        console.log('   Imagem original:', item.imagem_produto);
+        
+        if (item.imagem_produto) {
+            // Se a imagem já é uma URL completa
+            if (item.imagem_produto.startsWith('http')) {
+                imagemUrl = item.imagem_produto;
+                console.log('   ✅ URL completa:', imagemUrl);
+            } else {
+                // Se é um caminho relativo, ajustar para o servidor
+                // Remove barras iniciais se existirem
+                const caminhoLimpo = item.imagem_produto.replace(/^\/+/, '');
+                imagemUrl = `${API_BASE_URL}/uploads/${caminhoLimpo}`;
+                console.log('   ✅ URL montada:', imagemUrl);
+            }
+        } else {
+            console.log('   ⚠️ Sem imagem definida, usando placeholder');
+        }
+        
         const nomeProduto = item.nome_produto || 'Produto sem nome';
         const preco = parseFloat(item.preco) || 0;
         const quantidade = parseInt(item.quantidade) || 1;
@@ -274,7 +315,7 @@ function criarElementoItem(item) {
         
         itemElement.innerHTML = `
             <div class="item-imagem">
-                <img src="${imagemUrl}" alt="${nomeProduto}" onerror="this.src='https://via.placeholder.com/80';">
+                <img src="${imagemUrl}" alt="${nomeProduto}" onerror="this.src='https://via.placeholder.com/80?text=Sem+Imagem';">
             </div>
             <div class="item-info">
                 <h4>${nomeProduto}</h4>
@@ -324,7 +365,7 @@ function criarElementoItem(item) {
         }
         
     } catch (error) {
-        console.error('Erro ao criar elemento do item:', error);
+        console.error('❌ Erro ao criar elemento do item:', error);
         itemElement.innerHTML = '<div class="error">Erro ao carregar o item</div>';
     }
     
@@ -345,15 +386,28 @@ function atualizarResumo() {
 }
 
 // ========================================
-// FINALIZAR PAGAMENTO - NOVA FUNÇÃO
+// FINALIZAR PAGAMENTO - CORRIGIDO
 // ========================================
 function finalizarPagamento() {
+    console.log('💳 Iniciando finalização de pagamento...');
+    console.log('👤 Usuário logado:', usuarioLogado);
+    
     if (carrinho.length === 0) {
         mostrarMensagem('Seu carrinho está vazio!', 'error');
         return;
     }
     
+    // CORREÇÃO: Verificar sessionStorage também
     if (!usuarioLogado) {
+        const usuarioSession = sessionStorage.getItem('usuarioLogado');
+        if (usuarioSession) {
+            usuarioLogado = JSON.parse(usuarioSession);
+            console.log('✅ Usuário recuperado do sessionStorage:', usuarioLogado.nome);
+        }
+    }
+    
+    if (!usuarioLogado) {
+        console.log('❌ Usuário não autenticado');
         mostrarMensagem('Você precisa estar logado para finalizar a compra!', 'error');
         setTimeout(() => {
             window.location.href = '../login/login.html';
@@ -361,11 +415,13 @@ function finalizarPagamento() {
         return;
     }
     
+    console.log('✅ Usuário autenticado, redirecionando...');
+    
     // Salvar carrinho antes de redirecionar
     salvarCarrinho();
     
     // Redirecionar para página de finalização
-    window.location.href = '../pagamento/finalizacao.html';
+    window.location.href = '../finalizacao/finalizacao.html';
 }
 
 // Exportar funções globalmente
@@ -396,3 +452,5 @@ window.obterQuantidadeItens = () => {
 window.obterTotalCarrinho = () => {
     return calcularTotal();
 };
+
+console.log('✅ carrinho.js carregado com sucesso!');

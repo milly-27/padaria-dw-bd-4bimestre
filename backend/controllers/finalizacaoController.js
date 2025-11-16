@@ -10,25 +10,56 @@ exports.abrirFinalizacao = (req, res) => {
 };
 
 // ================================
-// Buscar todas as formas de pagamento
+// Buscar todas as formas de pagamento - VERSÃO CORRIGIDA
 // ================================
 exports.getFormasPagamento = async (req, res) => {
   try {
     console.log('📋 Buscando formas de pagamento...');
+    console.log('   Query: SELECT id_forma_pagamento, nome_forma FROM forma_pagamento ORDER BY nome_forma');
     
     const result = await db.query(
       'SELECT id_forma_pagamento, nome_forma FROM forma_pagamento ORDER BY nome_forma'
     );
     
-    console.log(`✅ ${result.rows.length} formas de pagamento encontradas`);
+    console.log(`✅ ${result.rows.length} formas de pagamento encontradas no banco`);
     
-    res.status(200).json(result.rows);
+    // Log detalhado de cada forma
+    result.rows.forEach((forma, index) => {
+      console.log(`   ${index + 1}. ID: ${forma.id_forma_pagamento} - Nome: ${forma.nome_forma}`);
+    });
+    
+    // CRÍTICO: Retornar APENAS result.rows (array), não o objeto result completo
+    const formas = result.rows;
+    
+    console.log('📤 Retornando array com', formas.length, 'itens');
+    console.log('📤 Tipo:', Array.isArray(formas) ? 'Array ✅' : 'ERRO: Não é array ❌');
+    
+    // Validar estrutura antes de enviar
+    if (!Array.isArray(formas)) {
+      console.error('❌ ERRO: result.rows não é um array!');
+      return res.status(500).json([]);
+    }
+    
+    // Verificar se cada item tem os campos necessários
+    const formasValidas = formas.filter(f => f.id_forma_pagamento && f.nome_forma);
+    
+    if (formasValidas.length !== formas.length) {
+      console.warn('⚠️ Algumas formas têm dados inválidos');
+      console.warn('   Total:', formas.length);
+      console.warn('   Válidas:', formasValidas.length);
+    }
+    
+    // Retornar SEMPRE um array, mesmo que vazio
+    res.status(200).json(formasValidas);
+    
   } catch (error) {
     console.error('❌ Erro ao buscar formas de pagamento:', error);
-    res.status(500).json({
-      error: 'Erro interno do servidor',
-      message: 'Não foi possível carregar as formas de pagamento'
-    });
+    console.error('   Mensagem:', error.message);
+    console.error('   Stack:', error.stack);
+    
+    // Em caso de erro, retornar array vazio ao invés de erro
+    // Isso permite que o frontend use formas padrão
+    res.status(200).json([]);
   }
 };
 

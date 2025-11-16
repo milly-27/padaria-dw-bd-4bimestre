@@ -1,6 +1,22 @@
 // Configuração da API
 const API_BASE_URL = 'http://localhost:3001';
 
+// ========================================
+// ⚠️ CONFIGURAÇÃO DA CHAVE PIX
+// ========================================
+// ✅ COLOQUE SUA CHAVE PIX AQUI:
+const MINHA_CHAVE_PIX = '02964990999';  // ← SUBSTITUA PELA SUA CHAVE PIX
+const NOME_RECEBEDOR = 'Celso Mainko';  // ← SUBSTITUA PELO SEU NOME OU NOME DO NEGÓCIO
+const CIDADE_RECEBEDOR = 'Campo Mourao';           // ← SUBSTITUA PELA SUA CIDADE
+
+// Tipos de chave PIX aceitas:
+// - CPF: '12345678900' (só números, sem pontos ou traços)
+// - CNPJ: '12345678000190' (só números)
+// - Email: '[email protected]'
+// - Telefone: '+5544999999999' (formato internacional com +55)
+// - Chave Aleatória: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' (UUID)
+// ========================================
+
 // Variáveis globais
 let carrinho = [];
 let usuario = null;
@@ -34,24 +50,61 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ========================================
 async function carregarDados() {
     try {
-        // 1. Verificar usuário logado
-        const respUsuario = await fetch(`${API_BASE_URL}/login/verificaSePessoaEstaLogada`, {
-            credentials: 'include'
-        });
-        const dataUsuario = await respUsuario.json();
+        console.log('📥 Carregando dados...');
         
-        if (dataUsuario.status !== 'ok' || !dataUsuario.usuario) {
+        // 1. Verificar usuário logado
+        console.log('🔍 Verificando usuário logado...');
+        
+        // PRIMEIRO: Verificar sessionStorage
+        const usuarioSession = sessionStorage.getItem('usuarioLogado');
+        
+        if (usuarioSession) {
+            usuario = JSON.parse(usuarioSession);
+            console.log('✅ Usuário encontrado no sessionStorage:', usuario.nome);
+        } else {
+            // SEGUNDO: Tentar backend
+            console.log('🔍 Verificando no backend...');
+            try {
+                const respUsuario = await fetch(`${API_BASE_URL}/auth/verificar-login`, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                const dataUsuario = await respUsuario.json();
+                
+                if (dataUsuario.status === 'ok' && dataUsuario.usuario) {
+                    usuario = {
+                        id: dataUsuario.usuario.id,
+                        nome: dataUsuario.usuario.nome,
+                        email: dataUsuario.usuario.email,
+                        tipo: dataUsuario.usuario.tipo,
+                        cargo: dataUsuario.usuario.cargo,
+                        isGerente: dataUsuario.usuario.isGerente
+                    };
+                    sessionStorage.setItem('usuarioLogado', JSON.stringify(usuario));
+                    console.log('✅ Usuário encontrado no backend:', usuario.nome);
+                }
+            } catch (error) {
+                console.error('❌ Erro ao verificar backend:', error);
+            }
+        }
+        
+        if (!usuario) {
+            console.log('❌ Usuário não autenticado, redirecionando...');
             mostrarErro('Você precisa estar logado para finalizar a compra');
             setTimeout(() => window.location.href = '../login/login.html', 2000);
             return;
         }
         
-        usuario = dataUsuario.usuario;
-        console.log('👤 Usuário:', usuario.nome);
+        console.log('👤 Usuário:', usuario.nome, '| CPF:', usuario.id);
 
         // 2. Carregar carrinho
         const carrinhoLocal = localStorage.getItem('carrinho');
         if (!carrinhoLocal || carrinhoLocal === '[]') {
+            console.log('❌ Carrinho vazio, redirecionando...');
             mostrarErro('Seu carrinho está vazio');
             setTimeout(() => window.location.href = '../carrinho/carrinho.html', 2000);
             return;
@@ -61,16 +114,41 @@ async function carregarDados() {
         console.log('🛒 Carrinho:', carrinho.length, 'itens');
 
         // 3. Carregar formas de pagamento
-        const respFormas = await fetch(`${API_BASE_URL}/finalizacao/formas-pagamento`);
-        formasPagamento = await respFormas.json();
-        console.log('💳 Formas de pagamento:', formasPagamento.length);
+        console.log('💳 Carregando formas de pagamento...');
+        try {
+            const respFormas = await fetch(`${API_BASE_URL}/finalizacao/formas-pagamento`);
+            console.log('📨 Status da resposta:', respFormas.status);
+            
+            if (respFormas.ok) {
+                const data = await respFormas.json();
+                console.log('📨 Resposta bruta:', data);
+                
+                if (Array.isArray(data) && data.length > 0) {
+                    formasPagamento = data;
+                    console.log('✅ Formas de pagamento carregadas:', formasPagamento.length);
+                } else {
+                    throw new Error('Resposta não é um array válido');
+                }
+            } else {
+                throw new Error(`Erro HTTP: ${respFormas.status}`);
+            }
+        } catch (error) {
+            console.error('❌ Erro ao carregar formas de pagamento:', error);
+            console.log('⚠️ Usando formas de pagamento padrão');
+            formasPagamento = [
+                { id_forma_pagamento: 1, nome_forma: 'PIX' },
+                { id_forma_pagamento: 2, nome_forma: 'Cartão de Crédito' },
+                { id_forma_pagamento: 3, nome_forma: 'Cartão de Débito' },
+                { id_forma_pagamento: 4, nome_forma: 'Dinheiro' }
+            ];
+        }
 
         // 4. Renderizar interface
         renderizarInterface();
 
     } catch (error) {
         console.error('❌ Erro ao carregar dados:', error);
-        mostrarErro('Erro ao carregar dados do sistema');
+        mostrarErro('Erro ao carregar dados do sistema: ' + error.message);
     }
 }
 
@@ -78,22 +156,16 @@ async function carregarDados() {
 // RENDERIZAR INTERFACE
 // ========================================
 function renderizarInterface() {
-    // Atualizar informações do usuário
     document.getElementById('userName').textContent = usuario.nome;
     document.getElementById('userCpf').textContent = usuario.id;
 
-    // Atualizar total
     const total = calcularTotal();
     document.getElementById('totalValor').textContent = formatarMoeda(total);
     document.getElementById('totalItens').textContent = carrinho.length;
 
-    // Renderizar itens do pedido
     renderizarItens();
-
-    // Renderizar formas de pagamento
     renderizarFormasPagamento();
 
-    // Esconder loading e mostrar conteúdo
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('mainScreen').style.display = 'block';
 }
@@ -128,9 +200,28 @@ function renderizarItens() {
 // ========================================
 function renderizarFormasPagamento() {
     const container = document.getElementById('formasPagamentoGrid');
+    
+    if (!container) {
+        console.error('❌ Container de formas de pagamento não encontrado');
+        return;
+    }
+    
     container.innerHTML = '';
+    
+    if (!Array.isArray(formasPagamento) || formasPagamento.length === 0) {
+        console.error('❌ formasPagamento não é um array válido');
+        container.innerHTML = '<p style="color: red; padding: 20px;">Erro ao carregar formas de pagamento</p>';
+        return;
+    }
+    
+    console.log('📋 Renderizando', formasPagamento.length, 'formas de pagamento');
 
-    formasPagamento.forEach(forma => {
+    formasPagamento.forEach((forma, index) => {
+        if (!forma || !forma.nome_forma) {
+            console.warn(`⚠️ Forma ${index} inválida:`, forma);
+            return;
+        }
+        
         const card = document.createElement('div');
         card.className = 'forma-pagamento-card';
         card.onclick = () => selecionarFormaPagamento(forma);
@@ -139,6 +230,8 @@ function renderizarFormasPagamento() {
         let icon = '💳';
         if (nome.includes('pix')) icon = '📱';
         if (nome.includes('dinheiro')) icon = '💵';
+        if (nome.includes('débito')) icon = '💳';
+        if (nome.includes('crédito')) icon = '💳';
         
         card.innerHTML = `
             <div class="forma-icon">${icon}</div>
@@ -147,6 +240,8 @@ function renderizarFormasPagamento() {
         
         card.setAttribute('data-id', forma.id_forma_pagamento);
         container.appendChild(card);
+        
+        console.log(`  ✅ Forma ${index + 1}: ${forma.nome_forma}`);
     });
 }
 
@@ -156,7 +251,6 @@ function renderizarFormasPagamento() {
 function selecionarFormaPagamento(forma) {
     formaSelecionada = forma;
     
-    // Atualizar visual dos cards
     document.querySelectorAll('.forma-pagamento-card').forEach(card => {
         if (parseInt(card.getAttribute('data-id')) === forma.id_forma_pagamento) {
             card.classList.add('selected');
@@ -165,10 +259,7 @@ function selecionarFormaPagamento(forma) {
         }
     });
     
-    // Renderizar formulário de dados
     renderizarDadosPagamento();
-    
-    // Habilitar botão confirmar
     document.getElementById('btnConfirmar').disabled = false;
 }
 
@@ -180,9 +271,8 @@ function renderizarDadosPagamento() {
     const nome = formaSelecionada.nome_forma.toLowerCase();
     
     if (nome.includes('pix')) {
-        // Gerar QR Code PIX
         const total = calcularTotal();
-        gerarQRCodePix(total, 'padaria@avap.com.br', 'Padaria AVAP');
+        gerarQRCodePix(total, MINHA_CHAVE_PIX, NOME_RECEBEDOR, CIDADE_RECEBEDOR);
         
         container.innerHTML = `
             <div class="dados-pagamento">
@@ -195,15 +285,7 @@ function renderizarDadosPagamento() {
                     </button>
                     <div class="codigo-pix">${copiaPix}</div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Sua Chave PIX (para confirmação)</label>
-                    <input 
-                        type="text" 
-                        class="form-input" 
-                        placeholder="email@exemplo.com ou CPF"
-                        oninput="dadosPagamento.pixChave = this.value"
-                    >
-                </div>
+                <!-- Campo removido - não é necessário para pagamento PIX -->
             </div>
         `;
     } else if (nome.includes('cartão') || nome.includes('cartao')) {
@@ -279,26 +361,67 @@ function renderizarDadosPagamento() {
 }
 
 // ========================================
-// GERAR QR CODE PIX
+// GERAR QR CODE PIX - BASEADO NO PADRÃO BACEN
 // ========================================
-function gerarQRCodePix(valor, chave, nome) {
-    const payload = {
-        merchantName: nome || 'Padaria AVAP',
-        merchantCity: 'Campo Mourao',
-        pixKey: chave,
-        amount: valor.toFixed(2),
-        txid: `PED${Date.now()}`
-    };
+function gerarQRCodePix(valor, chave, nome, cidade) {
+    console.log('📱 Gerando QR Code PIX...');
+    console.log('   Chave:', chave);
+    console.log('   Valor:', valor);
+    console.log('   Nome:', nome);
+    console.log('   Cidade:', cidade);
     
-    const payloadString = `00020126${String(chave.length + 14).padStart(2, '0')}0014br.gov.bcb.pix01${String(chave.length).padStart(2, '0')}${chave}52040000530398654${String(valor.toFixed(2).length).padStart(2, '0')}${valor.toFixed(2)}5802BR59${String(payload.merchantName.length).padStart(2, '0')}${payload.merchantName}60${String(payload.merchantCity.length).padStart(2, '0')}${payload.merchantCity}62${String(payload.txid.length + 8).padStart(2, '0')}05${String(payload.txid.length).padStart(2, '0')}${payload.txid}6304`;
+    // Validar chave PIX
+    if (!chave || chave === 'seu_email@exemplo.com') {
+        alert('⚠️ ATENÇÃO: Configure sua chave PIX no código! Procure por "MINHA_CHAVE_PIX" no arquivo finalizacao.js');
+        console.error('❌ Chave PIX não configurada!');
+    }
     
-    const crc = calcularCRC16(payloadString);
-    const payloadCompleto = payloadString + crc;
+    // Formato TLV (Tag-Length-Value) do padrão BR Code
+    const txid = `PED${Date.now()}`;
+    
+    // Campo 26: Merchant Account Information (PIX)
+    const gui = '0014br.gov.bcb.pix';
+    const pixKey = `01${String(chave.length).padStart(2, '0')}${chave}`;
+    const merchantAccount = `26${String(gui.length + pixKey.length).padStart(2, '0')}${gui}${pixKey}`;
+    
+    // Campo 52: Merchant Category Code
+    const mcc = '52040000';
+    
+    // Campo 53: Transaction Currency (986 = BRL)
+    const currency = '5303986';
+    
+    // Campo 54: Transaction Amount
+    const amount = `54${String(valor.toFixed(2).length).padStart(2, '0')}${valor.toFixed(2)}`;
+    
+    // Campo 58: Country Code
+    const countryCode = '5802BR';
+    
+    // Campo 59: Merchant Name
+    const merchantName = `59${String(nome.length).padStart(2, '0')}${nome}`;
+    
+    // Campo 60: Merchant City
+    const merchantCity = `60${String(cidade.length).padStart(2, '0')}${cidade}`;
+    
+    // Campo 62: Additional Data Field Template
+    const additionalData = `05${String(txid.length).padStart(2, '0')}${txid}`;
+    const additionalField = `62${String(additionalData.length).padStart(2, '0')}${additionalData}`;
+    
+    // Montar payload sem CRC
+    const payloadSemCRC = `000201${merchantAccount}${mcc}${currency}${amount}${countryCode}${merchantName}${merchantCity}${additionalField}6304`;
+    
+    // Calcular CRC16
+    const crc = calcularCRC16(payloadSemCRC);
+    
+    // Payload completo
+    const payloadCompleto = payloadSemCRC + crc;
+    
+    console.log('✅ Payload PIX gerado:', payloadCompleto.substring(0, 50) + '...');
     
     copiaPix = payloadCompleto;
     qrCodePix = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(payloadCompleto)}`;
 }
 
+// Função auxiliar para calcular CRC16
 function calcularCRC16(str) {
     let crc = 0xFFFF;
     for (let i = 0; i < str.length; i++) {
@@ -398,7 +521,6 @@ async function confirmarPagamento() {
 
     const nome = formaSelecionada.nome_forma.toLowerCase();
 
-    // Validações específicas
     if (nome.includes('cartão') || nome.includes('cartao')) {
         if (!validarCartao(dadosPagamento.numeroCartao)) {
             mostrarErro('Número de cartão inválido');
@@ -429,14 +551,12 @@ async function confirmarPagamento() {
         }
     }
 
-    // Mostrar tela de processamento
     document.getElementById('mainScreen').style.display = 'none';
     document.getElementById('processingScreen').style.display = 'flex';
 
     try {
         const total = calcularTotal();
 
-        // 1. Criar pedido
         const pedidoData = {
             cpf: usuario.id,
             data_pedido: new Date().toISOString().split('T')[0],
@@ -447,6 +567,8 @@ async function confirmarPagamento() {
                 preco_unitario: item.preco
             }))
         };
+
+        console.log('📦 Criando pedido:', pedidoData);
 
         const respPedido = await fetch(`${API_BASE_URL}/finalizacao/pedidos`, {
             method: 'POST',
@@ -459,12 +581,15 @@ async function confirmarPagamento() {
         const pedido = await respPedido.json();
         pedidoId = pedido.id_pedido;
 
-        // 2. Processar pagamento
+        console.log('✅ Pedido criado:', pedidoId);
+
         const pagamentoData = {
             id_pedido: pedidoId,
             id_forma_pagamento: formaSelecionada.id_forma_pagamento,
             valor_total: total
         };
+
+        console.log('💳 Processando pagamento:', pagamentoData);
 
         const respPagamento = await fetch(`${API_BASE_URL}/finalizacao/processar-pagamento`, {
             method: 'POST',
@@ -475,15 +600,14 @@ async function confirmarPagamento() {
 
         if (!respPagamento.ok) throw new Error('Erro ao processar pagamento');
 
-        // 3. Sucesso!
+        console.log('✅ Pagamento processado com sucesso!');
+
         document.getElementById('processingScreen').style.display = 'none';
         document.getElementById('successScreen').style.display = 'flex';
         document.getElementById('pedidoNumero').textContent = pedidoId;
 
-        // Limpar carrinho
         localStorage.removeItem('carrinho');
 
-        // Redirecionar após 5 segundos
         setTimeout(() => {
             window.location.href = '../menu.html';
         }, 5000);
@@ -505,7 +629,7 @@ function calcularTotal() {
 
 function copiarCodigoPix() {
     navigator.clipboard.writeText(copiaPix);
-    alert('Código PIX copiado!');
+    alert('✅ Código PIX copiado para a área de transferência!');
 }
 
 function voltarCarrinho() {
@@ -523,3 +647,5 @@ function mostrarErro(mensagem) {
         container.innerHTML = '';
     }, 5000);
 }
+
+console.log('✅ finalizacao.js carregado com sucesso!');
