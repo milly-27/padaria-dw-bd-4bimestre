@@ -35,23 +35,23 @@
                 </div>
             </div>
 
-            <!-- Resumo do Pedido -->
-            <div class="content-section">
-                <h2 class="section-title">Resumo do Pedido</h2>
-                <div class="pedido-itens" id="pedidoItens">
-                    <!-- Itens serão inseridos aqui -->
-                </div>
-            </div>
-
-            <!-- Forma de Pagamento -->
-            <div class="content-section">
-                <h2 class="section-title">Forma de Pagamento</h2>
-                <div class="formas-pagamento-grid" id="formasPagamentoGrid">
-                    <!-- Formas de pagamento serão inseridas aqui -->
+            <!-- Grid com 2 colunas: Resumo (esquerda) e Pagamento (direita) -->
+            <div class="content-grid">
+                <!-- COLUNA ESQUERDA: Resumo do Pedido -->
+                <div class="content-section">
+                    <h2 class="section-title">Resumo do Pedido</h2>
+                    <div class="pedido-itens" id="pedidoItens">
+                        <!-- Itens serão inseridos aqui -->
+                    </div>
                 </div>
 
-                <!-- Dados de Pagamento -->
-                <div id="dadosPagamentoContainer"></div>
+                <!-- COLUNA DIREITA: Forma de Pagamento -->
+                <div class="content-section">
+                    <h2 class="section-title">Forma de Pagamento</h2>
+                    <div class="formas-pagamento-grid" id="formasPagamentoGrid">
+                        <!-- Formas de pagamento serão inseridas aqui -->
+                    </div>
+                </div>
             </div>
 
             <!-- Mensagem de erro -->
@@ -65,6 +65,16 @@
                 <button class="btn btn-confirmar" id="btnConfirmar" onclick="confirmarPagamento()" disabled>
                     💳 Confirmar Pagamento
                 </button>
+            </div>
+        </div>
+
+        <!-- Modal de Pagamento -->
+        <div class="modal-overlay" id="modalPagamento" style="display: none;">
+            <div class="modal-content">
+                <button class="modal-close" onclick="fecharModal()">✕</button>
+                <div id="modalPagamentoContainer">
+                    <!-- Conteúdo do modal será inserido aqui -->
+                </div>
             </div>
         </div>
 

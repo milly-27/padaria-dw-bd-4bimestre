@@ -116,20 +116,50 @@ async function carregarDados() {
         // 3. Carregar formas de pagamento
         console.log('💳 Carregando formas de pagamento...');
         try {
-            const respFormas = await fetch(`${API_BASE_URL}/finalizacao/formas-pagamento`);
+            const respFormas = await fetch(`${API_BASE_URL}/finalizacao/formas-pagamento`, {
+                method: 'GET',
+                headers: { 
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache'
+                },
+                credentials: 'include'
+            });
+            
             console.log('📨 Status da resposta:', respFormas.status);
+            console.log('📨 Headers:', respFormas.headers);
             
             if (respFormas.ok) {
                 const data = await respFormas.json();
-                console.log('📨 Resposta bruta:', data);
+                console.log('📨 Resposta completa:', JSON.stringify(data, null, 2));
+                console.log('📨 Tipo da resposta:', typeof data);
+                console.log('📨 É array?', Array.isArray(data));
                 
-                if (Array.isArray(data) && data.length > 0) {
-                    formasPagamento = data;
+                // Verificar diferentes formatos de resposta
+                let formasArray = null;
+                
+                if (Array.isArray(data)) {
+                    formasArray = data;
+                } else if (data.formas && Array.isArray(data.formas)) {
+                    formasArray = data.formas;
+                } else if (data.data && Array.isArray(data.data)) {
+                    formasArray = data.data;
+                } else if (data.rows && Array.isArray(data.rows)) {
+                    formasArray = data.rows;
+                }
+                
+                if (formasArray && formasArray.length > 0) {
+                    formasPagamento = formasArray;
                     console.log('✅ Formas de pagamento carregadas:', formasPagamento.length);
+                    formasPagamento.forEach((forma, i) => {
+                        console.log(`   ${i+1}. ID: ${forma.id_forma_pagamento}, Nome: ${forma.nome_forma}`);
+                    });
                 } else {
-                    throw new Error('Resposta não é um array válido');
+                    throw new Error('Nenhuma forma de pagamento encontrada na resposta');
                 }
             } else {
+                const errorText = await respFormas.text();
+                console.error('❌ Erro HTTP:', respFormas.status, errorText);
                 throw new Error(`Erro HTTP: ${respFormas.status}`);
             }
         } catch (error) {
@@ -216,148 +246,189 @@ function renderizarFormasPagamento() {
     
     console.log('📋 Renderizando', formasPagamento.length, 'formas de pagamento');
 
+    // Criar select de formas de pagamento
+    const selectWrapper = document.createElement('div');
+    selectWrapper.className = 'select-wrapper';
+    
+    const select = document.createElement('select');
+    select.className = 'select-forma-pagamento';
+    select.id = 'selectFormaPagamento';
+    
+    // Opção padrão
+    const optionDefault = document.createElement('option');
+    optionDefault.value = '';
+    optionDefault.textContent = '-- Selecione uma forma de pagamento --';
+    optionDefault.disabled = true;
+    optionDefault.selected = true;
+    select.appendChild(optionDefault);
+    
+    // Adicionar todas as formas do banco
     formasPagamento.forEach((forma, index) => {
         if (!forma || !forma.nome_forma) {
             console.warn(`⚠️ Forma ${index} inválida:`, forma);
             return;
         }
         
-        const card = document.createElement('div');
-        card.className = 'forma-pagamento-card';
-        card.onclick = () => selecionarFormaPagamento(forma);
+        const option = document.createElement('option');
+        option.value = forma.id_forma_pagamento;
+        option.textContent = forma.nome_forma;
+        option.dataset.forma = JSON.stringify(forma);
+        select.appendChild(option);
         
-        const nome = forma.nome_forma.toLowerCase();
-        let icon = '💳';
-        if (nome.includes('pix')) icon = '📱';
-        if (nome.includes('dinheiro')) icon = '💵';
-        if (nome.includes('débito')) icon = '💳';
-        if (nome.includes('crédito')) icon = '💳';
-        
-        card.innerHTML = `
-            <div class="forma-icon">${icon}</div>
-            <div class="forma-nome">${forma.nome_forma}</div>
-        `;
-        
-        card.setAttribute('data-id', forma.id_forma_pagamento);
-        container.appendChild(card);
-        
-        console.log(`  ✅ Forma ${index + 1}: ${forma.nome_forma}`);
+        console.log(`  ✅ Forma ${index + 1}: ID=${forma.id_forma_pagamento}, Nome=${forma.nome_forma}`);
     });
+    
+    // Event listener para mudança de seleção
+    select.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (selectedOption.dataset.forma) {
+            const forma = JSON.parse(selectedOption.dataset.forma);
+            
+            // Adicionar classe visual de seleção
+            this.classList.add('selected');
+            selectWrapper.classList.add('has-selection');
+            
+            selecionarFormaPagamento(forma);
+        }
+    });
+    
+    selectWrapper.appendChild(select);
+    container.appendChild(selectWrapper);
+    
+    console.log('✅ Select de formas de pagamento renderizado com', formasPagamento.length, 'opções');
 }
 
 // ========================================
 // SELECIONAR FORMA DE PAGAMENTO
 // ========================================
 function selecionarFormaPagamento(forma) {
+    console.log('💳 Forma selecionada:', forma.nome_forma);
     formaSelecionada = forma;
     
-    document.querySelectorAll('.forma-pagamento-card').forEach(card => {
-        if (parseInt(card.getAttribute('data-id')) === forma.id_forma_pagamento) {
-            card.classList.add('selected');
-        } else {
-            card.classList.remove('selected');
-        }
-    });
-    
-    renderizarDadosPagamento();
+    // Habilitar botão confirmar
     document.getElementById('btnConfirmar').disabled = false;
+    
+    // Abrir modal com os dados de pagamento
+    abrirModalPagamento(forma);
 }
 
 // ========================================
-// RENDERIZAR DADOS DE PAGAMENTO
+// ABRIR MODAL DE PAGAMENTO
 // ========================================
-function renderizarDadosPagamento() {
-    const container = document.getElementById('dadosPagamentoContainer');
-    const nome = formaSelecionada.nome_forma.toLowerCase();
+function abrirModalPagamento(forma) {
+    const modal = document.getElementById('modalPagamento');
+    const container = document.getElementById('modalPagamentoContainer');
+    const nome = forma.nome_forma.toLowerCase();
+    const total = calcularTotal();
+    
+    console.log('🔓 Abrindo modal para:', forma.nome_forma);
+    
+    container.innerHTML = '';
     
     if (nome.includes('pix')) {
-        const total = calcularTotal();
+        // Gerar QR Code PIX
         gerarQRCodePix(total, MINHA_CHAVE_PIX, NOME_RECEBEDOR, CIDADE_RECEBEDOR);
         
         container.innerHTML = `
-            <div class="dados-pagamento">
-                <h3 class="section-title">Dados do PIX</h3>
-                <div class="pix-container">
-                    <img src="${qrCodePix}" alt="QR Code PIX" class="qrcode-image">
-                    <p class="pix-instrucoes">Escaneie o QR Code com seu app de banco</p>
-                    <button class="btn-copiar-pix" onclick="copiarCodigoPix()">
-                        📋 Copiar Código PIX
-                    </button>
-                    <div class="codigo-pix">${copiaPix}</div>
-                </div>
-                <!-- Campo removido - não é necessário para pagamento PIX -->
+            <div class="pix-container">
+                <h3>💳 Pagamento via PIX</h3>
+                <p class="pix-instrucoes">Escaneie o QR Code abaixo com o app do seu banco</p>
+                <img src="${qrCodePix}" alt="QR Code PIX" class="qrcode-image">
+                <p class="pix-instrucoes">Ou copie o código PIX:</p>
+                <button class="btn-copiar-pix" onclick="copiarCodigoPix()">
+                    📋 Copiar Código PIX
+                </button>
+                <div class="codigo-pix" id="codigoPix">${copiaPix}</div>
             </div>
         `;
     } else if (nome.includes('cartão') || nome.includes('cartao')) {
         container.innerHTML = `
-            <div class="dados-pagamento">
-                <h3 class="section-title">Dados do Cartão</h3>
-                <div class="form-group">
-                    <label class="form-label">Número do Cartão</label>
-                    <input 
-                        type="text" 
-                        class="form-input" 
-                        placeholder="0000 0000 0000 0000"
-                        maxlength="19"
-                        oninput="formatarNumeroCartao(this)"
-                    >
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Nome no Cartão</label>
-                    <input 
-                        type="text" 
-                        class="form-input" 
-                        placeholder="NOME COMO NO CARTÃO"
-                        oninput="dadosPagamento.nomeCartao = this.value.toUpperCase(); this.value = this.value.toUpperCase()"
-                    >
-                </div>
-                <div class="form-grid-2">
+            <div class="cartao-container">
+                <h3>💎 Pagamento com Cartão</h3>
+                <form id="formCartao" onsubmit="return false;">
                     <div class="form-group">
-                        <label class="form-label">Validade</label>
+                        <label class="form-label">Número do Cartão</label>
                         <input 
                             type="text" 
                             class="form-input" 
-                            placeholder="MM/AA"
-                            maxlength="5"
-                            oninput="formatarValidadeCartao(this)"
-                        >
+                            id="numeroCartao"
+                            placeholder="0000 0000 0000 0000"
+                            maxlength="19"
+                            oninput="formatarNumeroCartao(this)"
+                            required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">CVV</label>
+                        <label class="form-label">Nome no Cartão</label>
                         <input 
                             type="text" 
                             class="form-input" 
-                            placeholder="123"
-                            maxlength="4"
-                            oninput="dadosPagamento.cvv = this.value.replace(/\\D/g, ''); this.value = dadosPagamento.cvv"
-                        >
+                            id="nomeCartao"
+                            placeholder="NOME COMO NO CARTÃO"
+                            oninput="dadosPagamento.nomeCartao = this.value.toUpperCase(); this.value = this.value.toUpperCase()"
+                            required>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">CPF do Titular</label>
-                    <input 
-                        type="text" 
-                        class="form-input" 
-                        placeholder="000.000.000-00"
-                        maxlength="14"
-                        oninput="formatarCPF(this)"
-                    >
-                </div>
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Validade</label>
+                            <input 
+                                type="text" 
+                                class="form-input" 
+                                id="validadeCartao"
+                                placeholder="MM/AA"
+                                maxlength="5"
+                                oninput="formatarValidadeCartao(this)"
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">CVV</label>
+                            <input 
+                                type="text" 
+                                class="form-input" 
+                                id="cvvCartao"
+                                placeholder="123"
+                                maxlength="4"
+                                oninput="dadosPagamento.cvv = this.value.replace(/\\D/g, ''); this.value = dadosPagamento.cvv"
+                                required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">CPF do Titular</label>
+                        <input 
+                            type="text" 
+                            class="form-input" 
+                            id="cpfTitular"
+                            placeholder="000.000.000-00"
+                            maxlength="14"
+                            oninput="formatarCPF(this)"
+                            required>
+                    </div>
+                </form>
             </div>
         `;
     } else if (nome.includes('dinheiro')) {
-        const total = calcularTotal();
         container.innerHTML = `
-            <div class="dados-pagamento">
-                <h3 class="section-title">Pagamento em Dinheiro</h3>
-                <div class="dinheiro-container">
-                    <div class="dinheiro-icon">💵</div>
-                    <p class="dinheiro-texto">Pagamento será realizado na entrega</p>
-                    <p class="dinheiro-valor">${formatarMoeda(total)}</p>
-                </div>
+            <div class="dinheiro-container">
+                <h3>💵 Pagamento em Dinheiro</h3>
+                <div class="dinheiro-icon">💰</div>
+                <p class="dinheiro-texto">Total a pagar:</p>
+                <p class="dinheiro-valor">${formatarMoeda(total)}</p>
+                <p class="pix-instrucoes" style="margin-top: 20px;">
+                    Pagamento será realizado na entrega
+                </p>
             </div>
         `;
     }
+    
+    // Mostrar modal
+    modal.style.display = 'flex';
+    console.log('✅ Modal aberto com sucesso');
+}
+
+// ========================================
+// FECHAR MODAL
+// ========================================
+function fecharModal() {
+    document.getElementById('modalPagamento').style.display = 'none';
 }
 
 // ========================================
@@ -471,6 +542,26 @@ function formatarMoeda(valor) {
 }
 
 // ========================================
+// COPIAR CÓDIGO PIX
+// ========================================
+function copiarCodigoPix() {
+    navigator.clipboard.writeText(copiaPix).then(() => {
+        const btn = document.querySelector('.btn-copiar-pix');
+        const textoOriginal = btn.innerHTML;
+        btn.innerHTML = '✅ Código Copiado!';
+        btn.style.background = 'linear-gradient(135deg, #27ae60, #2ecc71)';
+        
+        setTimeout(() => {
+            btn.innerHTML = textoOriginal;
+            btn.style.background = 'linear-gradient(135deg, #8b6f47, #d4a574)';
+        }, 2000);
+    }).catch(err => {
+        console.error('Erro ao copiar:', err);
+        alert('Erro ao copiar código PIX');
+    });
+}
+
+// ========================================
 // VALIDAÇÕES
 // ========================================
 function validarCartao(numero) {
@@ -521,6 +612,7 @@ async function confirmarPagamento() {
 
     const nome = formaSelecionada.nome_forma.toLowerCase();
 
+    // Validar campos do cartão se for pagamento com cartão
     if (nome.includes('cartão') || nome.includes('cartao')) {
         if (!validarCartao(dadosPagamento.numeroCartao)) {
             mostrarErro('Número de cartão inválido');
@@ -544,13 +636,10 @@ async function confirmarPagamento() {
         }
     }
 
-    if (nome.includes('pix')) {
-        if (!dadosPagamento.pixChave || dadosPagamento.pixChave.length < 5) {
-            mostrarErro('Chave PIX inválida');
-            return;
-        }
-    }
+    // Fechar modal
+    fecharModal();
 
+    // Mostrar tela de processamento
     document.getElementById('mainScreen').style.display = 'none';
     document.getElementById('processingScreen').style.display = 'flex';
 
@@ -627,11 +716,6 @@ function calcularTotal() {
     return carrinho.reduce((total, item) => total + (item.preco * item.quantidade), 0);
 }
 
-function copiarCodigoPix() {
-    navigator.clipboard.writeText(copiaPix);
-    alert('✅ Código PIX copiado para a área de transferência!');
-}
-
 function voltarCarrinho() {
     window.location.href = '../carrinho/carrinho.html';
 }
@@ -646,6 +730,14 @@ function mostrarErro(mensagem) {
     setTimeout(() => {
         container.innerHTML = '';
     }, 5000);
+}
+
+// Fechar modal ao clicar fora
+window.onclick = function(event) {
+    const modal = document.getElementById('modalPagamento');
+    if (event.target === modal) {
+        fecharModal();
+    }
 }
 
 console.log('✅ finalizacao.js carregado com sucesso!');
