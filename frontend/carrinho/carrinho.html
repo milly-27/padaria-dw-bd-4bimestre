@@ -63,70 +63,14 @@
                             <button id="btnLimparCarrinho" class="btn btn-outline">
                                 🗑️ Limpar Carrinho
                             </button>
-                            <button id="btnCriarPedido" class="btn btn-primary">
-                                📝 Criar Pedido
+                            <button id="btnFinalizarPagamento" class="btn btn-primary" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-size: 1.1rem; padding: 1rem 1.5rem;">
+                                💳 Finalizar Pagamento
                             </button>
                         </div>
-                    </div>
-
-                    <!-- Botão para ir para o pagamento -->
-                    <div class="ir-para-pagamento">
-                        <button id="btnIrParaPagamento" class="btn btn-primary">
-                            💰 Ir para Pagamento
-                        </button>
                     </div>
                 </div>
             </div>
         </main>
-    </div>
-
-    <!-- Modal de confirmação do pedido -->
-    <div id="modalConfirmacaoPedido" class="modal" style="display: none;">
-        <div class="modal-content">
-            <h3>Confirmar Criação do Pedido</h3>
-            <p>Deseja criar este pedido?</p>
-            <div class="modal-resumo">
-                <p><strong>CPF: <span id="modalCpf">-</span></strong></p>
-                <p><strong>Total: <span id="modalTotal">R$ 0,00</span></strong></p>
-                <p><strong>Forma de Pagamento: <span id="modalFormaPagamento">-</span></strong></p>
-            </div>
-            <div class="modal-actions">
-                <button id="btnCancelarModalPedido" class="btn btn-outline">Cancelar</button>
-                <button id="btnConfirmarPedido" class="btn btn-primary">Confirmar Pedido</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de pagamento -->
-    <div id="modalPagamento" class="modal" style="display: none;">
-        <div class="modal-content">
-            <h3>Finalizar Pagamento</h3>
-            <div class="pedido-criado-info">
-                <p>✅ Pedido criado com sucesso!</p>
-                <p><strong>Número do Pedido: <span id="numeroPedido">-</span></strong></p>
-                <p><strong>Total a Pagar: <span id="totalPagar">R$ 0,00</span></strong></p>
-                <p><strong>Forma de Pagamento: <span id="formaPagamentoEscolhida">-</span></strong></p>
-            </div>
-            <div class="modal-actions">
-                <button id="btnCancelarPagamento" class="btn btn-outline">Cancelar</button>
-                <button id="btnFinalizarPagamento" class="btn btn-success">💳 Pagamento Finalizado</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de sucesso -->
-    <div id="modalSucesso" class="modal" style="display: none;">
-        <div class="modal-content">
-            <h3>🎉 Pedido Finalizado com Sucesso!</h3>
-            <div class="sucesso-info">
-                <p>Seu pedido foi processado e pago com sucesso!</p>
-                <p><strong>Número do Pedido: <span id="pedidoFinalizado">-</span></strong></p>
-                <p>Obrigado pela sua compra!</p>
-            </div>
-            <div class="modal-actions">
-                <button id="btnVoltarCardapio" class="btn btn-primary">Voltar ao Cardápio</button>
-            </div>
-        </div>
     </div>
 
     <script src="carrinho.js"></script>

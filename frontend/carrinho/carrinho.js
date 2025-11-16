@@ -9,46 +9,25 @@ const subtotalElement = document.getElementById('subtotal');
 const totalElement = document.getElementById('total');
 const messageContainer = document.getElementById('messageContainer');
 const btnLimparCarrinho = document.getElementById('btnLimparCarrinho');
-const btnCriarPedido = document.getElementById('btnCriarPedido');
-const btnIrParaPagamento = document.getElementById('btnIrParaPagamento');
-
-// Modais
-const modalConfirmacaoPedido = document.getElementById('modalConfirmacaoPedido');
-const modalPagamento = document.getElementById('modalPagamento');
-const modalSucesso = document.getElementById('modalSucesso');
-
-// Elementos dos modais
-const modalCpf = document.getElementById('modalCpf');
-const modalTotal = document.getElementById('modalTotal');
-const modalFormaPagamento = document.getElementById('modalFormaPagamento');
-const btnCancelarModalPedido = document.getElementById('btnCancelarModalPedido');
-const btnConfirmarPedido = document.getElementById('btnConfirmarPedido');
-
-const numeroPedido = document.getElementById('numeroPedido');
-const totalPagar = document.getElementById('totalPagar');
-const formaPagamentoEscolhida = document.getElementById('formaPagamentoEscolhida');
-const btnCancelarPagamento = document.getElementById('btnCancelarPagamento');
 const btnFinalizarPagamento = document.getElementById('btnFinalizarPagamento');
-
-const pedidoFinalizado = document.getElementById('pedidoFinalizado');
-const btnVoltarCardapio = document.getElementById('btnVoltarCardapio');
 
 // Variáveis globais
 let carrinho = [];
-let pedidoAtual = null;
-let formasPagamento = [];
+let usuarioLogado = null;
 
 // Inicialização
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Inicializar carrinho vazio se não existir
-        if (!Array.isArray(carrinho)) {
-            carrinho = [];
-        }
+        // Verificar usuário logado
+        await verificarUsuarioLogado();
         
+        // Carregar carrinho
         carregarCarrinho();
-        carregarFormasPagamento();
+        
+        // Atualizar interface
         atualizarInterface();
+        
+        // Configurar event listeners
         configurarEventListeners();
         
         console.log('Carrinho inicializado com sucesso!', carrinho);
@@ -58,90 +37,81 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Função para abrir modal
-function abrirModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
+// ========================================
+// VERIFICAR USUÁRIO LOGADO
+// ========================================
+async function verificarUsuarioLogado() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/login/verificaSePessoaEstaLogada`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'ok' && data.usuario) {
+            usuarioLogado = {
+                id: data.usuario.id,
+                nome: data.usuario.nome,
+                email: data.usuario.email,
+                tipo: data.usuario.tipo,
+                cargo: data.usuario.cargo
+            };
+            
+            console.log('👤 Usuário logado:', usuarioLogado);
+            
+            // Atualizar header com informações do usuário
+            atualizarHeaderUsuario();
+        } else {
+            console.log('❌ Usuário não autenticado');
+            usuarioLogado = null;
+        }
+    } catch (error) {
+        console.error('Erro ao verificar usuário logado:', error);
+        usuarioLogado = null;
     }
 }
 
-// Função para fechar modal
-function fecharModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.style.display = 'none';
-        document.body.style.overflow = 'auto';
+// ========================================
+// ATUALIZAR HEADER COM INFO DO USUÁRIO
+// ========================================
+function atualizarHeaderUsuario() {
+    const headerElement = document.querySelector('.header h1');
+    if (headerElement && usuarioLogado) {
+        // Adicionar informação do usuário no header
+        const userInfoDiv = document.createElement('div');
+        userInfoDiv.className = 'user-info-header';
+        userInfoDiv.style.cssText = 'font-size: 0.9rem; color: #666; margin-top: 0.5rem;';
+        userInfoDiv.innerHTML = `
+            <span style="font-weight: 500;">Olá, <span style="color: #667eea; font-weight: 600;">${usuarioLogado.nome}</span></span>
+            ${usuarioLogado.tipo === 'funcionario' && usuarioLogado.cargo ? 
+                `<span style="margin-left: 10px; padding: 2px 8px; background: #f0f0f0; border-radius: 4px; font-size: 0.8rem;">${usuarioLogado.cargo}</span>` 
+                : ''}
+        `;
+        
+        // Verificar se já existe e substituir
+        const existingUserInfo = document.querySelector('.user-info-header');
+        if (existingUserInfo) {
+            existingUserInfo.replaceWith(userInfoDiv);
+        } else {
+            headerElement.after(userInfoDiv);
+        }
     }
 }
-
-// Fechar modal ao clicar fora do conteúdo
-window.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal')) {
-        fecharModal(e.target.id);
-    }
-});
 
 // Event Listeners
 function configurarEventListeners() {
-    // Verificar se os elementos existem antes de adicionar os event listeners
     if (btnLimparCarrinho) {
-        btnLimparCarrinho.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            limparCarrinho();
-        });
+        btnLimparCarrinho.addEventListener('click', limparCarrinho);
     }
     
-    if (btnCriarPedido) {
-        btnCriarPedido.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            abrirModalConfirmacaoPedido();
-        });
+    if (btnFinalizarPagamento) {
+        btnFinalizarPagamento.addEventListener('click', finalizarPagamento);
     }
-    
-    if (btnIrParaPagamento) {
-        btnIrParaPagamento.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            irParaPagamento();
-        });
-    }
-    
-    if (btnVoltarCardapio) {
-        btnVoltarCardapio.addEventListener('click', (e) => {
-            e.preventDefault();
-            window.location.href = '../cardapio/cardapio.html';
-        });
-    }
-    
-    // Adicionar listener para o botão de cancelar modal
-    if (btnCancelarModalPedido) {
-        btnCancelarModalPedido.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            fecharModal('modalConfirmacaoPedido');
-        });
-    }
-    
-    // Adicionar listener para o botão de confirmar pedido no modal
-    if (btnConfirmarPedido) {
-        btnConfirmarPedido.addEventListener('click', (e) => {
-            e.preventDefault();
-            criarPedido();
-        });
-    }
-}
-
-// Função para aplicar máscara no CPF
-function aplicarMascaraCPF(e) {
-    let value = e.target.value.replace(/\D/g, '');
-    value = value.replace(/(\d{3})(\d)/, '$1.$2');
-    value = value.replace(/(\d{3})(\d)/, '$1.$2');
-    value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-    e.target.value = value;
 }
 
 // Função para mostrar mensagens
@@ -153,7 +123,6 @@ function mostrarMensagem(texto, tipo = 'info') {
     
     messageContainer.innerHTML = `<div class="message ${tipo}">${texto}</div>`;
     
-    // Remover mensagem após 4 segundos
     if (messageContainer.timeoutId) {
         clearTimeout(messageContainer.timeoutId);
     }
@@ -165,43 +134,13 @@ function mostrarMensagem(texto, tipo = 'info') {
     }, 4000);
 }
 
-// Função para carregar formas de pagamento do banco
-async function carregarFormasPagamento() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/formas-pagamento`);
-        if (!response.ok) throw new Error('Erro ao carregar formas de pagamento');
-        
-        formasPagamento = await response.json();
-        
-        // Limpar e popular o select
-        formaPagamentoSelect.innerHTML = '<option value="">Selecione uma forma de pagamento</option>';
-        formasPagamento.forEach(forma => {
-            const option = document.createElement('option');
-            option.value = forma.id_forma_pagamento;
-            option.textContent = forma.nome_forma;
-            formaPagamentoSelect.appendChild(option);
-        });
-        
-    } catch (error) {
-        console.error('Erro ao carregar formas de pagamento:', error);
-        formaPagamentoSelect.innerHTML = '<option value="">Erro ao carregar formas de pagamento</option>';
-    }
-}
-
 // Função para carregar carrinho do localStorage
 function carregarCarrinho() {
     try {
-        if (typeof localStorage === 'undefined') {
-            console.error('localStorage não está disponível neste navegador');
-            carrinho = [];
-            return;
-        }
-        
         const carrinhoSalvo = localStorage.getItem('carrinho');
         if (carrinhoSalvo) {
-        try {
+            try {
                 carrinho = JSON.parse(carrinhoSalvo);
-                // Garantir que as quantidades sejam números
                 carrinho = carrinho.map(item => ({
                     ...item,
                     quantidade: parseInt(item.quantidade) || 1,
@@ -222,11 +161,6 @@ function carregarCarrinho() {
 // Função para salvar carrinho no localStorage
 function salvarCarrinho() {
     try {
-        if (typeof localStorage === 'undefined') {
-            console.error('localStorage não está disponível neste navegador');
-            return false;
-        }
-        
         localStorage.setItem('carrinho', JSON.stringify(carrinho || []));
         return true;
     } catch (error) {
@@ -236,35 +170,13 @@ function salvarCarrinho() {
     }
 }
 
-// Função para adicionar item ao carrinho (será chamada de outras páginas)
-function adicionarAoCarrinho(produto, quantidade = 1) {
-    const itemExistente = carrinho.find(item => item.id_produto === produto.id_produto);
-    
-    if (itemExistente) {
-        itemExistente.quantidade += quantidade;
-    } else {
-        carrinho.push({
-            id_produto: produto.id_produto,
-            nome_produto: produto.nome_produto,
-            preco: produto.preco,
-            imagem_path: produto.imagem_path,
-            nome_categoria: produto.nome_categoria,
-            quantidade: quantidade
-        });
-    }
-    
-    salvarCarrinho();
-    atualizarInterface();
-    mostrarMensagem(`${produto.nome_produto} adicionado ao carrinho!`, 'success');
-}
-
 // Função para remover item do carrinho
 function removerDoCarrinho(idProduto) {
     if (!idProduto) return;
     
     const index = carrinho.findIndex(item => item && item.id_produto === idProduto);
     if (index !== -1) {
-        const nomeItem = carrinho[index]?.nome_produto || carrinho[index]?.nome || 'Item';
+        const nomeItem = carrinho[index]?.nome_produto || 'Item';
         carrinho.splice(index, 1);
         const salvou = salvarCarrinho();
         if (salvou) {
@@ -314,14 +226,13 @@ function calcularSubtotal() {
     return carrinho.reduce((total, item) => total + (item.preco * item.quantidade), 0);
 }
 
-// Função para calcular total (sem taxa de entrega)
+// Função para calcular total
 function calcularTotal() {
     return calcularSubtotal();
 }
 
 // Função para atualizar interface
 function atualizarInterface() {
-    // Verificar se os elementos existem antes de manipulá-los
     if (!carrinhoVazio || !carrinhoConteudo) return;
     
     if (carrinho.length === 0) {
@@ -333,17 +244,12 @@ function atualizarInterface() {
         renderizarItens();
         atualizarResumo();
     }
-    
-    // Atualizar contador de itens no menu (se existir)
-    const contadorItens = document.getElementById('contadorItens');
-    if (contadorItens) {
-        const totalItens = carrinho.reduce((total, item) => total + (parseInt(item.quantidade) || 0), 0);
-        contadorItens.textContent = totalItens > 0 ? totalItens : '';
-    }
 }
 
 // Função para renderizar itens do carrinho
 function renderizarItens() {
+    if (!itensCarrinho) return;
+    
     itensCarrinho.innerHTML = '';
     
     carrinho.forEach(item => {
@@ -352,22 +258,16 @@ function renderizarItens() {
     });
 }
 
-// Função para criar elemento de item com imagem
+// Função para criar elemento de item
 function criarElementoItem(item) {
     if (!item) return document.createElement('div');
     
     const itemElement = document.createElement('div');
-    itemElement.className = 'carrinho-item';
+    itemElement.className = 'item-carrinho';
     
     try {
-        // Construir a URL da imagem - assumindo que a imagem está em /frontend/uploads/
-        const imagemUrl = item.imagem && item.imagem.trim() !== ''
-            ? `/frontend/uploads/${item.imagem}`
-            : 'https://via.placeholder.com/80';
-        
-        // Usar nome_produto em vez de nome para compatibilidade
-        const nomeProduto = item.nome_produto || item.nome || 'Produto sem nome';
-        const descricao = item.descricao || 'Sem descrição';
+        const imagemUrl = item.imagem_produto || 'https://via.placeholder.com/80';
+        const nomeProduto = item.nome_produto || 'Produto sem nome';
         const preco = parseFloat(item.preco) || 0;
         const quantidade = parseInt(item.quantidade) || 1;
         const subtotal = preco * quantidade;
@@ -376,29 +276,24 @@ function criarElementoItem(item) {
             <div class="item-imagem">
                 <img src="${imagemUrl}" alt="${nomeProduto}" onerror="this.src='https://via.placeholder.com/80';">
             </div>
-            <div class="item-detalhes">
+            <div class="item-info">
                 <h4>${nomeProduto}</h4>
-                <p class="item-descricao">${descricao}</p>
-                <div class="item-acoes">
-                    <button type="button" class="btn-quantidade" data-action="decrease" data-id="${item.id_produto}" aria-label="Diminuir quantidade">-</button>
-                    <span class="quantidade">${quantidade}</span>
-                    <button type="button" class="btn-quantidade" data-action="increase" data-id="${item.id_produto}" aria-label="Aumentar quantidade">+</button>
-                    <button type="button" class="btn-remover" data-id="${item.id_produto}" aria-label="Remover item">Remover</button>
-                </div>
+                <p class="item-preco">R$ ${preco.toFixed(2).replace('.', ',')}</p>
             </div>
-            <div class="item-preco">
-                R$ ${preco.toFixed(2).replace('.', ',')}
-                <span class="item-subtotal">R$ ${subtotal.toFixed(2).replace('.', ',')}</span>
+            <div class="quantidade-controles">
+                <button class="btn-quantidade" data-action="decrease" data-id="${item.id_produto}">-</button>
+                <input type="number" class="quantidade-input" value="${quantidade}" min="1" data-id="${item.id_produto}" readonly>
+                <button class="btn-quantidade" data-action="increase" data-id="${item.id_produto}">+</button>
             </div>
+            <div class="item-subtotal">R$ ${subtotal.toFixed(2).replace('.', ',')}</div>
+            <button class="btn-remover" data-id="${item.id_produto}">🗑️</button>
         `;
         
-        // Adiciona event listeners para os botões
+        // Event listeners
         const btnsQuantidade = itemElement.querySelectorAll('.btn-quantidade');
         btnsQuantidade.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                e.stopPropagation();
-                
                 const action = btn.getAttribute('data-action');
                 const idProduto = parseInt(btn.getAttribute('data-id'));
                 const item = carrinho.find(i => i && i.id_produto === idProduto);
@@ -421,7 +316,6 @@ function criarElementoItem(item) {
         if (btnRemover) {
             btnRemover.addEventListener('click', (e) => {
                 e.preventDefault();
-                e.stopPropagation();
                 const idProduto = parseInt(btnRemover.getAttribute('data-id'));
                 if (confirm('Tem certeza que deseja remover este item do carrinho?')) {
                     removerDoCarrinho(idProduto);
@@ -442,158 +336,63 @@ function atualizarResumo() {
     const subtotal = calcularSubtotal();
     const total = calcularTotal();
     
-    subtotalElement.textContent = `R$ ${subtotal.toFixed(2).replace('.', ',')}`;
-    totalElement.textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
+    if (subtotalElement) {
+        subtotalElement.textContent = `R$ ${subtotal.toFixed(2).replace('.', ',')}`;
+    }
+    if (totalElement) {
+        totalElement.textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
+    }
 }
 
-// Função para validar CPF
-function validarCPF(cpf) {
-    cpf = cpf.replace(/\D/g, '');
-    if (cpf.length !== 11) return false;
-    
-    // Verificar se todos os dígitos são iguais
-    if (/^(\d)\1{10}$/.test(cpf)) return false;
-    
-    // Validar dígitos verificadores
-    let soma = 0;
-    for (let i = 0; i < 9; i++) {
-        soma += parseInt(cpf.charAt(i)) * (10 - i);
-    }
-    let resto = 11 - (soma % 11);
-    if (resto === 10 || resto === 11) resto = 0;
-    if (resto !== parseInt(cpf.charAt(9))) return false;
-    
-    soma = 0;
-    for (let i = 0; i < 10; i++) {
-        soma += parseInt(cpf.charAt(i)) * (11 - i);
-    }
-    resto = 11 - (soma % 11);
-    if (resto === 10 || resto === 11) resto = 0;
-    if (resto !== parseInt(cpf.charAt(10))) return false;
-    
-    return true;
-}
-
-// Função para abrir modal de confirmação do pedido (simplificada)
-function abrirModalConfirmacaoPedido() {
+// ========================================
+// FINALIZAR PAGAMENTO - NOVA FUNÇÃO
+// ========================================
+function finalizarPagamento() {
     if (carrinho.length === 0) {
         mostrarMensagem('Seu carrinho está vazio!', 'error');
         return;
     }
     
-    // Abre o modal de confirmação
-    abrirModal('modalConfirmacaoPedido');
-}
-
-// Função para criar pedido
-async function criarPedido() {
-    try {
-        if (carrinho.length === 0) {
-            mostrarMensagem('Seu carrinho está vazio!', 'error');
-            return;
-        }
-
-        // Criar pedido
-        const pedido = {
-            data_pedido: new Date().toISOString().split('T')[0],
-            status: 'pendente',
-            observacoes: '',
-            itens: carrinho.map(item => ({
-                id_produto: item.id_produto,
-                quantidade: item.quantidade,
-                preco_unitario: item.preco
-            }))
-        };
-
-        const responsePedido = await fetch(`${API_BASE_URL}/api/pedidos`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(pedido)
-        });
-
-        if (!responsePedido.ok) {
-            const errorData = await responsePedido.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Erro ao criar pedido');
-        }
-
-        const pedidoCriado = await responsePedido.json();
-        pedidoAtual = pedidoCriado;
-
-        // Atualizar o modal de pagamento com as informações do pedido
-        if (numeroPedido) numeroPedido.textContent = pedidoCriado.id_pedido || 'N/A';
-        if (totalPagar) totalPagar.textContent = `R$ ${calcularTotal().toFixed(2).replace('.', ',')}`;
-        
-        // Mostrar modal de pagamento
-        abrirModal('modalPagamento');
-        
-    } catch (error) {
-        console.error('Erro ao criar pedido:', error);
-        mostrarMensagem(`Erro ao criar pedido: ${error.message}`, 'error');
-    }
-}
-
-// Função para finalizar o pedido
-async function finalizarPedido() {
-    if (!pedidoAtual || !pedidoAtual.id_pedido) {
-        mostrarMensagem('Nenhum pedido encontrado para finalizar.', 'error');
+    if (!usuarioLogado) {
+        mostrarMensagem('Você precisa estar logado para finalizar a compra!', 'error');
+        setTimeout(() => {
+            window.location.href = '../login/login.html';
+        }, 2000);
         return;
     }
+    
+    // Salvar carrinho antes de redirecionar
+    salvarCarrinho();
+    
+    // Redirecionar para página de finalização
+    window.location.href = '../pagamento/finalizacao.html';
+}
 
-    try {
-        // Atualizar status do pedido para 'pago'
-        const response = await fetch(`${API_BASE_URL}/api/pedidos/${pedidoAtual.id_pedido}/status`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'pago' })
+// Exportar funções globalmente
+window.adicionarAoCarrinho = (produto, quantidade = 1) => {
+    const itemExistente = carrinho.find(item => item.id_produto === produto.id_produto);
+    
+    if (itemExistente) {
+        itemExistente.quantidade += quantidade;
+    } else {
+        carrinho.push({
+            id_produto: produto.id_produto,
+            nome_produto: produto.nome_produto,
+            preco: produto.preco,
+            imagem_produto: produto.imagem_produto,
+            quantidade: quantidade
         });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Erro ao atualizar status do pedido');
-        }
-
-        // Atualizar o modal de sucesso
-        if (pedidoFinalizado) {
-            pedidoFinalizado.textContent = pedidoAtual.id_pedido;
-        }
-        
-        // Fechar modal de pagamento e abrir modal de sucesso
-        fecharModal('modalPagamento');
-        abrirModal('modalSucesso');
-        
-        // Limpar carrinho após finalização
-        limparCarrinho();
-        
-    } catch (error) {
-        console.error('Erro ao finalizar pedido:', error);
-        mostrarMensagem(`Erro ao finalizar pedido: ${error.message}`, 'error');
     }
-}
+    
+    salvarCarrinho();
+    atualizarInterface();
+    mostrarMensagem(`${produto.nome_produto} adicionado ao carrinho!`, 'success');
+};
 
-// Função para ir para a página de pagamento
-function irParaPagamento() {
-    if (carrinho.length === 0) {
-        mostrarMensagem('Seu carrinho está vazio!', 'error');
-        return;
-    } catch (error) {
-        console.error('Erro ao finalizar pagamento:', error);
-        mostrarMensagem(error.message || 'Erro ao processar pagamento. Tente novamente.', 'error');
-    }
-}
-
-// Função para obter quantidade de itens no carrinho (útil para outras páginas)
-function obterQuantidadeItens() {
+window.obterQuantidadeItens = () => {
     return carrinho.reduce((total, item) => total + item.quantidade, 0);
-}
+};
 
-// Função para obter valor total do carrinho (útil para outras páginas)
-function obterTotalCarrinho() {
+window.obterTotalCarrinho = () => {
     return calcularTotal();
-}
-
-// Expor funções globalmente para uso em outras páginas
-window.adicionarAoCarrinho = adicionarAoCarrinho;
-window.obterQuantidadeItens = obterQuantidadeItens;
-window.obterTotalCarrinho = obterTotalCarrinho;
-window.atualizarQuantidade = atualizarQuantidade;
-window.removerDoCarrinho = removerDoCarrinho;
+};

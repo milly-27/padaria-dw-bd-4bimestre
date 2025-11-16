@@ -146,6 +146,9 @@ app.use('/api/relatorios', relatorioRoutes);
 const cardapioRoutes = require('./routes/cardapioRoutes');
 app.use('/cardapio', cardapioRoutes);
 
+const finalizacaoRoutes = require('./routes/finalizacaoRoutes');
+app.use('/finalizacao', finalizacaoRoutes);
+
 const pedidoRoutes = require('./routes/pedidoRoutes');
 app.use('/pedido', pedidoRoutes);
 
