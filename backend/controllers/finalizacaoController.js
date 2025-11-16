@@ -67,10 +67,10 @@ exports.getFormasPagamento = async (req, res) => {
 // Criar pedido completo
 // ================================
 exports.criarPedido = async (req, res) => {
-  const client = await db.connect();
+  const client = await db.pool.connect();
   
   try {
-    console.log('📝 Criando novo pedido...');
+    console.log('\n📝 Criando novo pedido...');
     const { cpf, data_pedido, valor_total, itens } = req.body;
 
     // Validações
@@ -159,10 +159,10 @@ exports.criarPedido = async (req, res) => {
 // Processar pagamento
 // ================================
 exports.processarPagamento = async (req, res) => {
-  const client = await db.connect();
+  const client = await db.pool.connect();
   
   try {
-    console.log('💳 Processando pagamento...');
+    console.log('\n💳 Processando pagamento...');
     const { id_pedido, id_forma_pagamento, valor_total } = req.body;
 
     if (!id_pedido || !id_forma_pagamento || !valor_total) {
