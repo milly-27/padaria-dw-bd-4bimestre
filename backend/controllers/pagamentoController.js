@@ -1,7 +1,4 @@
-//import { query } from '../database.js';
 const { query } = require('../database');
-// Funções do controller
-
 const path = require('path');
 
 exports.abrirCrudPagamento = (req, res) => {
@@ -12,7 +9,6 @@ exports.abrirCrudPagamento = (req, res) => {
 exports.listarPagamentos = async (req, res) => {
   try {
     const result = await query('SELECT * FROM pagamento ORDER BY id_pagamento');
-    // console.log('Resultado do SELECT:', result.rows);//verifica se está retornando algo
     res.json(result.rows);
   } catch (error) {
     console.error('Erro ao listar pagamentos:', error);
@@ -21,32 +17,67 @@ exports.listarPagamentos = async (req, res) => {
 }
 
 exports.criarPagamento = async (req, res) => {
-  //  console.log('Criando pagamento com dados:', req.body);
   try {
-    const { id_pagamento,id_pedido, data_pagamento, valor_total} = req.body;
+    console.log('\n💳 [PAGAMENTO CONTROLLER] Criando pagamento...');
+    console.log('   Body recebido:', JSON.stringify(req.body, null, 2));
+    
+    let { id_pagamento, id_pedido, data_pagamento, valor_total } = req.body;
 
     // Validação básica
-    if (!id_pedido || !data_pagamento || !valor_total) {
+    if (!id_pedido || !valor_total) {
+      console.error('❌ [PAGAMENTO] id_pedido ou valor_total não fornecidos');
       return res.status(400).json({
-        error: 'id_pedido, data_pagamento e valor_total são obrigatórios'
+        error: 'id_pedido e valor_total são obrigatórios'
       });
     }
-    
 
+    // PUXAR DATA AUTOMÁTICA SE NÃO VIER DO FRONTEND
+    if (!data_pagamento) {
+      const hoje = new Date();
+      const ano = hoje.getFullYear();
+      const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+      const dia = String(hoje.getDate()).padStart(2, '0');
+      data_pagamento = `${ano}-${mes}-${dia}`;
+      
+      console.log('   ℹ️ Data não fornecida, usando data atual:', data_pagamento);
+    } else {
+      console.log('   ℹ️ Data fornecida:', data_pagamento);
+    }
+
+    console.log('   Valores:');
+    console.log('   - id_pedido:', id_pedido);
+    console.log('   - data_pagamento:', data_pagamento);
+    console.log('   - valor_total:', valor_total);
+
+    console.log('🔍 [PAGAMENTO] Executando INSERT...');
     const result = await query(
       'INSERT INTO pagamento (id_pedido, data_pagamento, valor_total) VALUES ($1, $2, $3) RETURNING *',
       [id_pedido, data_pagamento, valor_total]
     );
-    
 
-    res.status(201).json(result.rows[0]);
+    const pagamentoCriado = result.rows[0];
+    console.log('✅ [PAGAMENTO] Criado com sucesso!');
+    console.log('   ID:', pagamentoCriado.id_pagamento);
+    console.log('   Resposta:', JSON.stringify(pagamentoCriado, null, 2));
+
+    res.status(201).json(pagamentoCriado);
   } catch (error) {
-    console.error('Erro ao criar pagamento:', error);
+    console.error('\n❌ [PAGAMENTO] Erro ao criar pagamento:', error);
+    console.error('   Mensagem:', error.message);
+    console.error('   Código:', error.code);
 
-    // Verifica se é erro de violação de constraint NOT NULL
     if (error.code === '23502') {
       return res.status(400).json({
-        error: 'Dados obrigatórios não fornecidos'
+        error: 'Dados obrigatórios não fornecidos',
+        message: 'Verifique se todos os campos necessários foram enviados',
+        column: error.column
+      });
+    }
+
+    if (error.code === '23503') {
+      return res.status(400).json({
+        error: 'Violação de chave estrangeira',
+        message: 'Pedido não encontrado no sistema'
       });
     }
 
@@ -83,8 +114,7 @@ exports.atualizarPagamento = async (req, res) => {
     const id = parseInt(req.params.id);
     const { id_pagamento, data_pagamento, valor_total } = req.body;
 
-   
-    // Verifica se a pagamento existe
+    // Verifica se o pagamento existe
     const existingPersonResult = await query(
       'SELECT * FROM pagamento WHERE id_pagamento = $1',
       [id]
@@ -102,7 +132,7 @@ exports.atualizarPagamento = async (req, res) => {
       valor_total: valor_total !== undefined ? valor_total : currentPerson.valor_total
     };
 
-    // Atualiza a pagamento
+    // Atualiza o pagamento
     const updateResult = await query(
       'UPDATE pagamento SET data_pagamento = $1, valor_total = $2 WHERE id_pagamento = $3 RETURNING *',
       [updatedFields.data_pagamento, updatedFields.valor_total, id]
@@ -111,7 +141,6 @@ exports.atualizarPagamento = async (req, res) => {
     res.json(updateResult.rows[0]);
   } catch (error) {
     console.error('Erro ao atualizar pagamento:', error);
-
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }
@@ -119,7 +148,8 @@ exports.atualizarPagamento = async (req, res) => {
 exports.deletarPagamento = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    // Verifica se a pagamento existe
+    
+    // Verifica se o pagamento existe
     const existingPersonResult = await query(
       'SELECT * FROM pagamento WHERE id_pagamento = $1',
       [id]
@@ -129,7 +159,7 @@ exports.deletarPagamento = async (req, res) => {
       return res.status(404).json({ error: 'Pagamento não encontrada' });
     }
 
-    // Deleta a pagamento (as constraints CASCADE cuidarão das dependências)
+    // Deleta o pagamento
     await query(
       'DELETE FROM pagamento WHERE id_pagamento = $1',
       [id]
@@ -139,7 +169,6 @@ exports.deletarPagamento = async (req, res) => {
   } catch (error) {
     console.error('Erro ao deletar pagamento:', error);
 
-    // Verifica se é erro de violação de foreign key (dependências)
     if (error.code === '23503') {
       return res.status(400).json({
         error: 'Não é possível deletar pagamento com dependências associadas'

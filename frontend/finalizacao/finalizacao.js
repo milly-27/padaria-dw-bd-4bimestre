@@ -138,27 +138,7 @@ async function carregarFormasPagamento() {
         console.log('📨 [API] Status:', response.status);
         
         if (!response.ok) {
-            console.warn('⚠️ [API] Falha na rota /forma_pagamentos, tentando rota alternativa...');
-            
-            // Tentar rota alternativa
-            const response2 = await fetch(`${API_BASE_URL}/finalizacao/formas-pagamento`, {
-                method: 'GET',
-                headers: { 
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include'
-            });
-            
-            console.log('📨 [API] Status rota alternativa:', response2.status);
-            
-            if (!response2.ok) {
-                throw new Error('Ambas as rotas falharam');
-            }
-            
-            const data = await response2.json();
-            processarFormasPagamento(data);
-            return;
+            throw new Error('Erro ao buscar formas de pagamento');
         }
         
         const data = await response.json();
@@ -272,9 +252,13 @@ function renderizarSelectFormasPagamento() {
         return;
     }
 
-    // Criar wrapper
+    // Criar container para select e dados de pagamento
+    const wrapperDiv = document.createElement('div');
+    wrapperDiv.style.cssText = 'width: 100%;';
+    
+    // Criar wrapper do select
     const selectWrapper = document.createElement('div');
-    selectWrapper.style.cssText = 'width: 100%; margin: 20px 0;';
+    selectWrapper.style.cssText = 'width: 100%; margin-bottom: 20px;';
     
     // Label
     const label = document.createElement('label');
@@ -321,6 +305,11 @@ function renderizarSelectFormasPagamento() {
         select.appendChild(option);
     });
     
+    // Container para dados de pagamento (criado aqui)
+    const dadosContainer = document.createElement('div');
+    dadosContainer.id = 'dadosPagamentoContainer';
+    dadosContainer.style.cssText = 'margin-top: 20px;';
+    
     // Event listener
     select.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
@@ -351,12 +340,15 @@ function renderizarSelectFormasPagamento() {
         }
     });
     
-    // Montar
+    // Montar estrutura
     selectWrapper.appendChild(label);
     selectWrapper.appendChild(select);
-    container.appendChild(selectWrapper);
+    wrapperDiv.appendChild(selectWrapper);
+    wrapperDiv.appendChild(dadosContainer);
+    container.appendChild(wrapperDiv);
     
     console.log('✅ [SELECT] Renderizado com', select.options.length - 1, 'opções');
+    console.log('✅ [CONTAINER] Container dadosPagamentoContainer criado');
 }
 
 // ========================================
@@ -374,25 +366,9 @@ function selecionarFormaPagamento(forma) {
 function renderizarDadosPagamento() {
     const container = document.getElementById('dadosPagamentoContainer');
     
-    // VERIFICAR SE O CONTAINER EXISTE
     if (!container) {
-        console.error('❌ [DADOS PAGAMENTO] Container "dadosPagamentoContainer" não encontrado no HTML!');
-        console.log('🔧 [DADOS PAGAMENTO] Criando container dinamicamente...');
-        
-        // Criar container se não existir
-        const formasGrid = document.getElementById('formasPagamentoGrid');
-        if (formasGrid && formasGrid.parentElement) {
-            const newContainer = document.createElement('div');
-            newContainer.id = 'dadosPagamentoContainer';
-            newContainer.style.cssText = 'margin-top: 20px;';
-            formasGrid.parentElement.appendChild(newContainer);
-            renderizarDadosPagamento(); // Chamar novamente
-            return;
-        } else {
-            console.error('❌ [DADOS PAGAMENTO] Não foi possível criar container');
-            mostrarErro('Erro ao exibir dados de pagamento');
-            return;
-        }
+        console.error('❌ [DADOS PAGAMENTO] Container não encontrado!');
+        return;
     }
     
     const nome = formaSelecionada.nome_forma.toLowerCase();
@@ -540,7 +516,7 @@ function calcularCRC16(str) {
 }
 
 // ========================================
-// CONFIRMAR PAGAMENTO - TRANSAÇÃO NO BANCO
+// CONFIRMAR PAGAMENTO - TRANSAÇÃO NO BANCO (CORRIGIDO)
 // ========================================
 async function confirmarPagamento() {
     if (!formaSelecionada) {
@@ -583,10 +559,17 @@ async function confirmarPagamento() {
     try {
         const total = calcularTotal();
 
+        // OBTER DATA ATUAL AUTOMATICAMENTE (UMA VEZ)
+        const hoje = new Date();
+        const ano = hoje.getFullYear();
+        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+        const dia = String(hoje.getDate()).padStart(2, '0');
+        const dataAtual = `${ano}-${mes}-${dia}`;
+
         // Preparar dados do pedido
         const pedidoData = {
             cpf: usuario.id,
-            data_pedido: new Date().toISOString().split('T')[0],
+            data_pedido: dataAtual,
             valor_total: total,
             itens: carrinho.map(item => ({
                 id_produto: item.id_produto,
@@ -597,48 +580,111 @@ async function confirmarPagamento() {
 
         console.log('📦 [PEDIDO] Criando no banco...');
         console.log('   CPF:', pedidoData.cpf);
+        console.log('   Data (automática):', pedidoData.data_pedido);
         console.log('   Valor:', pedidoData.valor_total);
         console.log('   Itens:', pedidoData.itens.length);
+        console.log('   Payload completo:', JSON.stringify({
+            cpf: pedidoData.cpf,
+            data_pedido: pedidoData.data_pedido,
+            valor_total: pedidoData.valor_total
+        }, null, 2));
 
-        // CRIAR PEDIDO (TRANSAÇÃO NO BANCO)
-        const respPedido = await fetch(`${API_BASE_URL}/finalizacao/pedidos`, {
+        // CRIAR PEDIDO
+        const respPedido = await fetch(`${API_BASE_URL}/pedido`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify(pedidoData)
+            body: JSON.stringify({
+                cpf: pedidoData.cpf,
+                data_pedido: pedidoData.data_pedido,
+                valor_total: pedidoData.valor_total
+            })
         });
 
+        console.log('📨 [PEDIDO] Status da resposta:', respPedido.status);
+
         if (!respPedido.ok) {
-            const errorData = await respPedido.json();
-            throw new Error(errorData.message || 'Erro ao criar pedido');
+            let errorData;
+            try {
+                errorData = await respPedido.json();
+                console.error('❌ [PEDIDO] Erro do servidor:', errorData);
+            } catch (e) {
+                const errorText = await respPedido.text();
+                console.error('❌ [PEDIDO] Resposta de erro:', errorText);
+                throw new Error(`Erro ao criar pedido: ${respPedido.status} - ${errorText}`);
+            }
+            throw new Error(errorData.error || errorData.message || 'Erro ao criar pedido');
         }
         
         const pedido = await respPedido.json();
         pedidoId = pedido.id_pedido;
         console.log('✅ [PEDIDO] Criado com sucesso! ID:', pedidoId);
 
-        // PROCESSAR PAGAMENTO
-        const pagamentoData = {
-            id_pedido: pedidoId,
-            id_forma_pagamento: formaSelecionada.id_forma_pagamento,
-            valor_total: total
-        };
+        // INSERIR ITENS DO PEDIDO
+        console.log('📦 [ITENS] Inserindo itens do pedido...');
+        for (const item of pedidoData.itens) {
+            const itemResp = await fetch(`${API_BASE_URL}/pedidoproduto`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    id_pedido: pedidoId,
+                    id_produto: item.id_produto,
+                    quantidade: item.quantidade,
+                    preco_unitario: item.preco_unitario
+                })
+            });
 
-        console.log('💰 [PAGAMENTO] Processando...');
+            if (!itemResp.ok) {
+                const errorData = await itemResp.json().catch(() => ({}));
+                throw new Error(errorData.message || `Erro ao inserir item ${item.id_produto}`);
+            }
+            console.log(`   ✅ Item ${item.id_produto} inserido`);
+        }
+
+        // CRIAR PAGAMENTO
+        console.log('💰 [PAGAMENTO] Criando registro de pagamento...');
         
-        const respPagamento = await fetch(`${API_BASE_URL}/finalizacao/processar-pagamento`, {
+        const pagamentoResp = await fetch(`${API_BASE_URL}/pagamento`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify(pagamentoData)
+            body: JSON.stringify({
+                id_pedido: pedidoId,
+                data_pagamento: dataAtual, // Usar a mesma data
+                valor_total: total
+            })
         });
 
-        if (!respPagamento.ok) {
-            const errorData = await respPagamento.json();
-            throw new Error(errorData.message || 'Erro ao processar pagamento');
+        if (!pagamentoResp.ok) {
+            const errorData = await pagamentoResp.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Erro ao criar registro de pagamento');
         }
 
-        console.log('✅ [PAGAMENTO] Processado com sucesso!');
+        const pagamento = await pagamentoResp.json();
+        const idPagamento = pagamento.id_pagamento;
+        console.log('✅ [PAGAMENTO] Registro criado! ID:', idPagamento);
+
+        // RELACIONAR FORMA DE PAGAMENTO
+        console.log('🔗 [FORMA PAGAMENTO] Relacionando forma de pagamento...');
+        
+        const formaPagResp = await fetch(`${API_BASE_URL}/pagamento_has_formapagamentos`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                id_pagamento: idPagamento,
+                id_forma_pagamento: formaSelecionada.id_forma_pagamento,
+                valor_pago: total
+            })
+        });
+
+        if (!formaPagResp.ok) {
+            const errorData = await formaPagResp.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Erro ao relacionar forma de pagamento');
+        }
+
+        console.log('✅ [PAGAMENTO] Pagamento processado com sucesso!');
 
         // SUCESSO - Mostrar tela de confirmação
         document.getElementById('processingScreen').style.display = 'none';
@@ -756,10 +802,275 @@ function tentarNovamente() {
 
 function mostrarErro(mensagem) {
     const container = document.getElementById('errorContainer');
-    container.innerHTML = `<div class="error-message">${mensagem}</div>`;
-    setTimeout(() => {
-        container.innerHTML = '';
-    }, 5000);
+    if (container) {
+        container.innerHTML = `<div class="error-message">${mensagem}</div>`;
+        setTimeout(() => {
+            container.innerHTML = '';
+        }, 5000);
+    }
 }
 
 console.log('✅ Sistema de pagamento carregado!');
+// ========================================
+// FUNÇÃO AUXILIAR: OBTER PRÓXIMO ID DO PEDIDO
+// ========================================
+async function obterProximoIdPedido() {
+    try {
+        console.log('🔢 [ID] Buscando próximo ID disponível...');
+        const response = await fetch(`${API_BASE_URL}/pedido`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const pedidos = await response.json();
+            if (pedidos.length > 0) {
+                const maxId = Math.max(...pedidos.map(p => p.id_pedido || 0));
+                const proximoId = maxId + 1;
+                console.log('   Último ID:', maxId);
+                console.log('   Próximo ID:', proximoId);
+                return proximoId;
+            }
+        }
+        console.log('   Nenhum pedido encontrado, usando ID 1');
+        return 1;
+    } catch (error) {
+        console.error('❌ [ID] Erro ao obter próximo ID:', error);
+        const timestamp = Date.now();
+        console.log('   Fallback: usando timestamp:', timestamp);
+        return timestamp;
+    }
+}
+
+// ========================================
+// CONFIRMAR PAGAMENTO - VERSÃO SIMPLIFICADA E CORRIGIDA
+// ========================================
+async function confirmarPagamento() {
+    if (!formaSelecionada) {
+        mostrarErro('Selecione uma forma de pagamento');
+        return;
+    }
+
+    console.log('\n💳 [PAGAMENTO] Iniciando processo de confirmação...');
+
+    const nome = formaSelecionada.nome_forma.toLowerCase();
+
+    // Validar cartão
+    if (nome.includes('cartão') || nome.includes('cartao')) {
+        if (!validarCartao(dadosPagamento.numeroCartao)) {
+            mostrarErro('Número de cartão inválido');
+            return;
+        }
+        if (!dadosPagamento.nomeCartao || dadosPagamento.nomeCartao.length < 3) {
+            mostrarErro('Nome do titular inválido');
+            return;
+        }
+        if (!/^\d{2}\/\d{2}$/.test(dadosPagamento.validadeCartao)) {
+            mostrarErro('Validade inválida (MM/AA)');
+            return;
+        }
+        if (!/^\d{3,4}$/.test(dadosPagamento.cvv)) {
+            mostrarErro('CVV inválido');
+            return;
+        }
+        if (!validarCPF(dadosPagamento.cpfTitular)) {
+            mostrarErro('CPF do titular inválido');
+            return;
+        }
+    }
+
+    // Mostrar tela de processamento
+    document.getElementById('mainScreen').style.display = 'none';
+    document.getElementById('processingScreen').style.display = 'flex';
+
+    try {
+        const total = calcularTotal();
+
+        // OBTER DATA ATUAL
+        const hoje = new Date();
+        const ano = hoje.getFullYear();
+        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+        const dia = String(hoje.getDate()).padStart(2, '0');
+        const dataAtual = `${ano}-${mes}-${dia}`;
+
+        console.log('\n📋 [DADOS] Preparando pedido...');
+        console.log('   CPF:', usuario.id);
+        console.log('   Data:', dataAtual);
+        console.log('   Total:', total);
+
+        // ============================================
+        // PAYLOAD SIMPLIFICADO - APENAS 3 CAMPOS!
+        // ============================================
+        const pedidoPayload = {
+            cpf: usuario.id,
+            data_pedido: dataAtual,
+            valor_total: total
+        };
+
+        console.log('\n📦 [PEDIDO] Payload SIMPLIFICADO:');
+        console.log(JSON.stringify(pedidoPayload, null, 2));
+
+        // ============================================
+        // CRIAR PEDIDO - UMA ÚNICA TENTATIVA
+        // ============================================
+        console.log('\n🚀 [API] POST /pedido');
+        console.log('   URL:', `${API_BASE_URL}/pedido`);
+        console.log('   Body:', JSON.stringify(pedidoPayload));
+
+        const respPedido = await fetch(`${API_BASE_URL}/pedido`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify(pedidoPayload)
+        });
+
+        console.log('📨 [PEDIDO] Status:', respPedido.status);
+
+        if (!respPedido.ok) {
+            const errorText = await respPedido.text();
+            console.error('❌ [PEDIDO] Erro:', errorText);
+            
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch (e) {
+                errorData = { error: errorText };
+            }
+
+            throw new Error(errorData.message || errorData.error || `Erro ${respPedido.status}`);
+        }
+        
+        const pedido = await respPedido.json();
+        pedidoId = pedido.id_pedido;
+        console.log('✅ [PEDIDO] Criado! ID:', pedidoId);
+
+        // ============================================
+        // INSERIR ITENS DO PEDIDO
+        // ============================================
+        console.log('\n📦 [ITENS] Inserindo itens...');
+        for (const item of carrinho) {
+            console.log(`   Inserindo: ${item.nome_produto} (${item.quantidade}x R$${item.preco})`);
+            
+            const itemPayload = {
+                id_pedido: pedidoId,
+                id_produto: item.id_produto,
+                quantidade: item.quantidade,
+                preco_unitario: item.preco
+            };
+
+            const itemResp = await fetch(`${API_BASE_URL}/pedidoproduto`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(itemPayload)
+            });
+
+            if (!itemResp.ok) {
+                const errorData = await itemResp.json().catch(() => ({}));
+                throw new Error(errorData.message || `Erro ao inserir item ${item.id_produto}`);
+            }
+            console.log(`   ✅ Item ${item.id_produto} inserido`);
+        }
+
+        // ============================================
+        // CRIAR PAGAMENTO
+        // ============================================
+        console.log('\n💰 [PAGAMENTO] Criando registro...');
+        
+        const pagamentoPayload = {
+            id_pedido: pedidoId,
+            data_pagamento: dataAtual,
+            valor_total: total
+        };
+
+        const pagamentoResp = await fetch(`${API_BASE_URL}/pagamento`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(pagamentoPayload)
+        });
+
+        if (!pagamentoResp.ok) {
+            const errorData = await pagamentoResp.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Erro ao criar pagamento');
+        }
+
+        const pagamento = await pagamentoResp.json();
+        const idPagamento = pagamento.id_pagamento;
+        console.log('✅ [PAGAMENTO] Criado! ID:', idPagamento);
+
+        // ============================================
+        // RELACIONAR FORMA DE PAGAMENTO
+        // ============================================
+        console.log('\n🔗 [FORMA PAGAMENTO] Relacionando...');
+        
+        const formaPagPayload = {
+            id_pagamento: idPagamento,
+            id_forma_pagamento: formaSelecionada.id_forma_pagamento,
+            valor_pago: total
+        };
+
+        const formaPagResp = await fetch(`${API_BASE_URL}/pagamento_has_formapagamentos`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(formaPagPayload)
+        });
+
+        if (!formaPagResp.ok) {
+            const errorData = await formaPagResp.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Erro ao relacionar forma de pagamento');
+        }
+
+        console.log('✅ [PAGAMENTO] Completo!');
+
+        // ============================================
+        // SUCESSO!
+        // ============================================
+        document.getElementById('processingScreen').style.display = 'none';
+        document.getElementById('successScreen').style.display = 'flex';
+        document.getElementById('pedidoNumero').textContent = pedidoId;
+
+        // LIMPAR CARRINHO
+        localStorage.removeItem('carrinho');
+        console.log('🗑️ [CARRINHO] Limpo');
+
+        // Redirecionar após 5 segundos
+        setTimeout(() => {
+            window.location.href = '../menu.html';
+        }, 5000);
+
+    } catch (error) {
+        console.error('\n❌ [ERRO FATAL]:', error);
+        console.error('   Mensagem:', error.message);
+        console.error('   Stack:', error.stack);
+        
+        document.getElementById('processingScreen').style.display = 'none';
+        document.getElementById('errorScreen').style.display = 'flex';
+        document.getElementById('errorMessage').textContent = error.message || 'Erro ao processar pagamento';
+    }
+}
+
+// ========================================
+// INSTRUÇÕES DE USO
+// ========================================
+/*
+SUBSTITUA a função confirmarPagamento() no arquivo finalizacao.js
+pela versão acima.
+
+ESTA VERSÃO:
+✅ Envia APENAS os 3 campos obrigatórios: cpf, data_pedido, valor_total
+✅ Faz UMA ÚNICA tentativa (não há fallback)
+✅ Logs detalhados em cada etapa
+✅ Tratamento de erro claro
+✅ Remove as estratégias 1, 2, 3, 4 que estavam confundindo
+
+APÓS APLICAR:
+1. Salve o arquivo
+2. Recarregue a página (F5)
+3. Tente finalizar o pedido novamente
+4. Verifique o console do navegador para logs detalhados
+*/

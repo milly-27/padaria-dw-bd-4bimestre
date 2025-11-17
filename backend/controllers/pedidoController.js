@@ -1,3 +1,4 @@
+// backend/controllers/pedidoController.js - VERSÃO CORRIGIDA
 
 const { query } = require('../database');
 const path = require('path');
@@ -16,32 +17,88 @@ exports.listarPedidos = async (req, res) => {
   }
 };
 
+// ============================================
+// FUNÇÃO CORRIGIDA - CRIAR PEDIDO
+// ============================================
 exports.criarPedido = async (req, res) => {
+  console.log('\n📝 [CRIAR PEDIDO] Iniciando...');
+  console.log('📦 Body recebido:', JSON.stringify(req.body, null, 2));
+  
   try {
-    const { id_pedido, data_pedido, cpf, valor_total } = req.body;
+    const { cpf, data_pedido, valor_total } = req.body;
 
-    if (!data_pedido) {
+    // ============================================
+    // VALIDAÇÃO CORRIGIDA - TODOS OS CAMPOS OBRIGATÓRIOS
+    // ============================================
+    console.log('🔍 Validando campos obrigatórios...');
+    console.log('   CPF:', cpf);
+    console.log('   Data:', data_pedido);
+    console.log('   Valor:', valor_total);
+
+    // Verificar se TODOS os campos obrigatórios estão presentes
+    if (!cpf || !data_pedido || valor_total === undefined || valor_total === null) {
+      console.error('❌ Validação falhou!');
+      console.error('   CPF presente?', !!cpf);
+      console.error('   Data presente?', !!data_pedido);
+      console.error('   Valor presente?', valor_total !== undefined && valor_total !== null);
+      
       return res.status(400).json({
-        error: 'A data do pedido é obrigatória'
+        error: 'Dados obrigatórios não fornecidos',
+        message: 'CPF, data_pedido e valor_total são obrigatórios',
+        campos_recebidos: {
+          cpf: cpf || 'AUSENTE',
+          data_pedido: data_pedido || 'AUSENTE',
+          valor_total: valor_total !== undefined ? valor_total : 'AUSENTE'
+        }
       });
     }
+
+    console.log('✅ Validação OK! Todos os campos presentes');
+
+    // ============================================
+    // INSERIR NO BANCO
+    // ============================================
+    console.log('💾 Inserindo no banco de dados...');
+    console.log('   Query: INSERT INTO pedido (cpf, data_pedido, valor_total)');
+    console.log('   Valores: [$1, $2, $3]', [cpf, data_pedido, valor_total]);
 
     const result = await query(
-      'INSERT INTO pedido (id_pedido, data_pedido, cpf, valor_total) VALUES ($1, $2, $3, $4) RETURNING *',
-      [id_pedido, data_pedido, cpf, valor_total]
+      'INSERT INTO pedido (cpf, data_pedido, valor_total) VALUES ($1, $2, $3) RETURNING *',
+      [cpf, data_pedido, valor_total]
     );
 
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('Erro ao criar pedido:', error);
+    console.log('✅ Pedido criado com sucesso!');
+    console.log('   ID gerado:', result.rows[0].id_pedido);
 
+    res.status(201).json(result.rows[0]);
+
+  } catch (error) {
+    console.error('❌ Erro ao criar pedido:', error);
+    console.error('   Mensagem:', error.message);
+    console.error('   Código:', error.code);
+    console.error('   Stack:', error.stack);
+
+    // Tratamento de erros específicos do PostgreSQL
     if (error.code === '23502') {
       return res.status(400).json({
-        error: 'Dados obrigatórios não fornecidos'
+        error: 'Erro de validação do banco de dados',
+        message: 'Um ou mais campos obrigatórios estão ausentes',
+        detalhe: error.message
       });
     }
 
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    if (error.code === '23503') {
+      return res.status(400).json({
+        error: 'CPF não encontrado',
+        message: 'O CPF fornecido não existe na tabela pessoa',
+        detalhe: 'Verifique se o usuário está cadastrado'
+      });
+    }
+
+    res.status(500).json({ 
+      error: 'Erro interno do servidor',
+      message: error.message 
+    });
   }
 };
 
@@ -129,4 +186,3 @@ exports.deletarPedido = async (req, res) => {
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 };
-
