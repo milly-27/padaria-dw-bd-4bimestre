@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login - PARDARIA</title>
+<link rel="stylesheet" href="login.css">
+</head>
+<body>
+<div class="container">
+<div class="login-card">
+<div class="logo">
+<h1>🍞 PARDARIA</h1>
+<p>Padaria Artesanal</p>
+</div>
+<div class="form-content-area">
+<div class="tab-content active">
+<h2>Login</h2>
+<form id="loginForm">
+<div class="form-group">
+<label for="loginEmail">Email:</label>
+<input type="email" id="loginEmail" name="email" required>
+</div>
+<div class="form-group">
+<label for="loginSenha">Senha:</label>
+<input type="password" id="loginSenha" name="senha" maxlength="20" required>
+</div>
+<button type="submit" class="btn-login">Entrar</button>
+<div id="mensagem" class="mensagem"></div>
+</form>
+<p class="register-link">
+Não tem conta? <a href="register.html">Cadastre-se aqui</a>
+</p>
+</div>
+</div>
+</div>
+</div>
+<script type="module">
+import { login, mostrarMensagem } from './auth.js';
+
+const loginForm = document.getElementById('loginForm');
+const mensagem = document.getElementById('mensagem');
+
+loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = document.getElementById('loginEmail').value.trim();
+    const senha = document.getElementById('loginSenha').value;
+    
+    const btn = loginForm.querySelector('.btn-login');
+    const originalText = btn.textContent;
+    btn.textContent = 'Entrando...';
+    btn.disabled = true;
+    
+    try {
+        const data = await login(email, senha);
+        
+        if (data.logged && data.user) {
+            mostrarMensagem(mensagem, 'Login realizado com sucesso! Redirecionando...', 'sucesso');
+            setTimeout(() => {
+                window.location.href = '../menu.html';
+            }, 1500);
+        } else {
+            mostrarMensagem(mensagem, data.error || 'Email ou senha incorretos', 'erro');
+        }
+    } catch (err) {
+        console.error(err);
+        mostrarMensagem(mensagem, 'Falha na conexão com o servidor', 'erro');
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+});
+</script>
+</body>
+</html>

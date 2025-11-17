@@ -1,8 +1,44 @@
 const API_BASE_URL = 'http://localhost:3001';
 
+console.log('✅ menu.js carregado com sucesso!');
+
+// ========================================
+// FUNÇÕES DE COOKIES
+// ========================================
+
+function lerCookie(nome) {
+    const nomeCookie = nome + "=";
+    const cookies = document.cookie.split(';');
+    
+    for(let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i].trim();
+        if (cookie.indexOf(nomeCookie) === 0) {
+            return cookie.substring(nomeCookie.length, cookie.length);
+        }
+    }
+    return null;
+}
+
+function deletarCookie(nome) {
+    document.cookie = `${nome}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+    console.log(`🗑️ Cookie deletado: ${nome}`);
+}
+
+function deletarTodosCookies() {
+    console.log('🍪 Deletando todos os cookies de autenticação...');
+    deletarCookie('token');
+    deletarCookie('userId');
+    deletarCookie('userName');
+    deletarCookie('userEmail');
+    deletarCookie('userType');
+    deletarCookie('userCargo');
+    console.log('✅ Todos os cookies deletados!');
+}
+
 // ========================================
 // CONTROLE DE VISIBILIDADE DOS MENUS
 // ========================================
+
 function controlarMenus(isGerente) {
     const menuCadastros = document.getElementById('menuCadastros');
     const menuRelatorios = document.getElementById('menuRelatorios');
@@ -23,6 +59,7 @@ function controlarMenus(isGerente) {
 // ========================================
 // ATUALIZAR INTERFACE DO USUÁRIO
 // ========================================
+
 function atualizarInterfaceUsuario(userData = null) {
     console.log('🔄 Atualizando interface do usuário:', userData);
     
@@ -48,8 +85,13 @@ function atualizarInterfaceUsuario(userData = null) {
         userInfo.classList.remove('hidden');
         if (loginPrompt) loginPrompt.style.display = 'none';
         
-        // Atualizar nome do usuário
-        userName.textContent = userData.nome;
+        // Limpar conteúdo anterior
+        userName.textContent = '';
+        
+        // Adicionar nome do usuário
+        const nomeSpan = document.createElement('span');
+        nomeSpan.textContent = userData.nome;
+        userName.appendChild(nomeSpan);
         
         // Adicionar tipo/cargo
         const tipoUsuarioSpan = document.createElement('span');
@@ -72,10 +114,10 @@ function atualizarInterfaceUsuario(userData = null) {
         
         // Atualizar mensagem de boas-vindas
         if (userData.isGerente) {
-            if (welcomeTitle) welcomeTitle.textContent = `Bem-vindo gerente, ${userData.nome}`;
+            if (welcomeTitle) welcomeTitle.textContent = `Bem-vindo gerente, ${userData.nome}! 🍞`;
             if (welcomeMessage) welcomeMessage.textContent = 'Você tem acesso total ao sistema. Use o menu acima para gerenciar cadastros e visualizar relatórios.';
         } else {
-            if (welcomeTitle) welcomeTitle.textContent = `Seja bem-vindo, ${userData.nome}`;
+            if (welcomeTitle) welcomeTitle.textContent = `Seja bem-vindo, ${userData.nome}! 🍞`;
             if (welcomeMessage) welcomeMessage.textContent = 'Explore nosso cardápio e faça seus pedidos.';
         }
         
@@ -92,8 +134,8 @@ function atualizarInterfaceUsuario(userData = null) {
         if (userName) userName.textContent = '';
         
         // Mensagem padrão
-        if (welcomeTitle) welcomeTitle.textContent = 'Bem-vindo ao Sistema AVAP';
-        if (welcomeMessage) welcomeMessage.textContent = 'Sistema de Gerenciamento integrado. Faça login para acessar todas as funcionalidades.';
+        if (welcomeTitle) welcomeTitle.textContent = 'Tradição e Sabor';
+        if (welcomeMessage) welcomeMessage.textContent = 'Feito com carinho, assado com amor. Experimente o melhor da confeitaria artesanal.';
         
         // Ocultar menus restritos
         controlarMenus(false);
@@ -101,26 +143,50 @@ function atualizarInterfaceUsuario(userData = null) {
 }
 
 // ========================================
-// VERIFICAR LOGIN NO SESSIONSTORAGE
+// VERIFICAR LOGIN NOS COOKIES
 // ========================================
-async function verificarSeUsuarioEstaLogadoBackend() {
-    console.log('🔍 Verificando autenticação...');
+
+function verificarSeUsuarioEstaLogado() {
+    console.log('🔍 Verificando autenticação nos cookies...');
     console.log('══════════════════════════════════════');
     
     try {
-        // SOLUÇÃO LIVE SERVER: Usar sessionStorage
-        const usuarioLogado = sessionStorage.getItem('usuarioLogado');
+        // Ler cookies
+        const userId = lerCookie('userId');
+        const userName = lerCookie('userName');
+        const userEmail = lerCookie('userEmail');
+        const userType = lerCookie('userType');
+        const userCargo = lerCookie('userCargo');
+        const token = lerCookie('token');
         
-        if (!usuarioLogado) {
-            console.log('❌ Usuário não autenticado (sessionStorage vazio)');
+        console.log('🍪 Cookies encontrados:');
+        console.log('   - userId:', userId || '❌ Não encontrado');
+        console.log('   - userName:', userName || '❌ Não encontrado');
+        console.log('   - userEmail:', userEmail || '❌ Não encontrado');
+        console.log('   - userType:', userType || '❌ Não encontrado');
+        console.log('   - userCargo:', userCargo || '❌ Não encontrado');
+        console.log('   - token:', token ? '✅ Presente' : '❌ Ausente');
+        
+        if (!userId || !userName) {
+            console.log('❌ Usuário não autenticado (cookies ausentes)');
             console.log('══════════════════════════════════════');
             atualizarInterfaceUsuario(null);
             return null;
         }
         
-        const userData = JSON.parse(usuarioLogado);
+        // Determinar se é gerente
+        const isGerente = userType === 'funcionario' && userCargo === 'gerente';
         
-        console.log('👤 Dados do usuário (sessionStorage):');
+        const userData = {
+            id: userId,
+            nome: userName,
+            email: userEmail,
+            tipo: userType || 'cliente',
+            cargo: userCargo || null,
+            isGerente: isGerente
+        };
+        
+        console.log('👤 Dados do usuário (cookies):');
         console.log('   - Nome:', userData.nome);
         console.log('   - Tipo:', userData.tipo);
         console.log('   - Cargo:', userData.cargo || '(não especificado)');
@@ -135,40 +201,16 @@ async function verificarSeUsuarioEstaLogadoBackend() {
     } catch (error) {
         console.error('❌ Erro ao verificar autenticação:', error);
         console.log('══════════════════════════════════════');
-        sessionStorage.removeItem('usuarioLogado');
+        deletarTodosCookies();
         atualizarInterfaceUsuario(null);
         return null;
     }
 }
 
 // ========================================
-// LIMPAR COOKIES
-// ========================================
-function limparCookies() {
-    console.log('🍪 Limpando todos os cookies...');
-    
-    try {
-        const cookies = document.cookie.split(";");
-        
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i];
-            const eqPos = cookie.indexOf("=");
-            const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-            
-            document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-            document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname;
-            document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=." + window.location.hostname;
-        }
-        
-        console.log('✅ Cookies limpos!');
-    } catch (error) {
-        console.error('❌ Erro ao limpar cookies:', error);
-    }
-}
-
-// ========================================
 // LOGOUT
 // ========================================
+
 async function logout() {
     if (!confirm('Deseja realmente sair do sistema?')) {
         return;
@@ -177,6 +219,7 @@ async function logout() {
     console.log('🚪 Iniciando logout...');
     
     try {
+        // Tentar logout no servidor
         const response = await fetch(`${API_BASE_URL}/auth/logout`, {
             method: 'POST',
             credentials: 'include',
@@ -184,63 +227,53 @@ async function logout() {
                 'Content-Type': 'application/json'
             }
         });
-
+        
         const result = await response.json();
         console.log('📨 Resposta logout:', result);
         
         if (result.status === 'deslogado') {
-            console.log('✅ Logout realizado com sucesso!');
-            
-            // Limpar tudo
-            sessionStorage.clear();
-            localStorage.clear();
-            limparCookies();
-            
-            // Atualizar interface
-            atualizarInterfaceUsuario(null);
-            
-            // Notificar e redirecionar
-            alert('Logout realizado com sucesso!');
-            
-            setTimeout(() => {
-                window.location.href = 'http://localhost:3001/login/login.html';
-            }, 500);
-        } else {
-            throw new Error('Resposta inesperada do servidor');
+            console.log('✅ Logout realizado com sucesso no servidor!');
         }
     } catch (error) {
-        console.error('❌ Erro ao fazer logout:', error);
-        
-        // Limpar mesmo com erro
-        sessionStorage.clear();
-        localStorage.clear();
-        limparCookies();
-        atualizarInterfaceUsuario(null);
-        
-        alert('Erro ao fazer logout no servidor, mas dados locais foram limpos.');
-        
-        setTimeout(() => {
-            window.location.href = 'http://localhost:3001/login/login.html';
-        }, 1000);
+        console.warn('⚠️ Erro ao fazer logout no servidor:', error);
+        console.log('➡️ Continuando com logout local...');
     }
+    
+    // Limpar tudo (independente da resposta do servidor)
+    console.log('🧹 Limpando dados locais...');
+    sessionStorage.clear();
+    localStorage.clear();
+    deletarTodosCookies();
+    
+    // Atualizar interface
+    atualizarInterfaceUsuario(null);
+    
+    // Notificar e redirecionar
+    alert('Logout realizado com sucesso!');
+    
+    setTimeout(() => {
+        window.location.href = './auth/login.html';
+    }, 500);
 }
 
 // ========================================
 // REDIRECIONAR PARA LOGIN
 // ========================================
+
 function redirecionarLogin() {
     console.log('🔄 Redirecionando para login...');
-    window.location.href = 'http://localhost:3001/login/login.html';
+    window.location.href = './auth/login.html';
 }
 
 // ========================================
 // INICIALIZAÇÃO
 // ========================================
+
 function inicializarMenu() {
     console.log('🚀 Menu carregado, inicializando...');
     
-    // Verificar login no backend
-    verificarSeUsuarioEstaLogadoBackend();
+    // Verificar login nos cookies
+    verificarSeUsuarioEstaLogado();
     
     // Configurar botão de login
     const btnLogin = document.getElementById('btnLogin');
@@ -253,26 +286,23 @@ function inicializarMenu() {
 // ========================================
 // EVENT LISTENERS
 // ========================================
+
 document.addEventListener('DOMContentLoaded', inicializarMenu);
 
-// Atalho de desenvolvimento: CTRL + L para simular login de gerente
+// Atalho de desenvolvimento: CTRL + L para ver todos os cookies
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'l') {
         e.preventDefault();
-        console.log('🎭 Simulando login de gerente...');
-        atualizarInterfaceUsuario({
-            nome: 'Gerente Teste',
-            tipo: 'funcionario',
-            cargo: 'gerente',
-            isGerente: true
-        });
+        console.log('🍪 Todos os cookies:');
+        console.log(document.cookie);
+        verificarSeUsuarioEstaLogado();
     }
 });
 
 // ========================================
 // EXPORTAR FUNÇÕES GLOBALMENTE
 // ========================================
+
 window.logout = logout;
 window.redirecionarLogin = redirecionarLogin;
-
-console.log('✅ menu.js carregado com sucesso!');
+window.verificarSeUsuarioEstaLogado = verificarSeUsuarioEstaLogado;

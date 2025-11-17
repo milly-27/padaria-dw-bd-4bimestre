@@ -1,126 +1,112 @@
-const { query } = require('../database');
+const db = require('../database');
 
-/**
- * Middleware para verificar se o usuário está autenticado
- * Verifica se existe um cookie de sessão válido e carrega os dados do usuário
- */
-const verificarAutenticacao = async (req, res, next) => {
-    console.log('🔐 Verificando autenticação...');
-    
-    try {
-        // Verifica se o cookie de sessão existe
-        const idPessoa = req.cookies.idPessoa;
-        if (!idPessoa) {
-            console.log('❌ Acesso não autorizado - Cookie de sessão não encontrado');
-            return res.status(401).json({
-                status: 'error',
-                message: 'Acesso não autorizado. Por favor, faça login novamente.'
-            });
-        }
-        
-        // Busca os dados do usuário no banco de dados
-        const result = await query(
-            `SELECT p.*, f.id_cargo, c.nome_cargo 
-             FROM pessoa p 
-             LEFT JOIN funcionario f ON p.cpf_pessoa = f.cpf
-             LEFT JOIN cargo c ON f.id_cargo = c.id_cargo
-             WHERE p.id_pessoa = $1`,
-            [idPessoa]
-        );
-        
-        if (result.rows.length === 0) {
-            console.log('❌ Usuário não encontrado no banco de dados');
-            // Limpa o cookie inválido
-            res.clearCookie('idPessoa', { path: '/' });
-            return res.status(401).json({
-                status: 'error',
-                message: 'Sessão inválida. Por favor, faça login novamente.'
-            });
-        }
-        
-        // Adiciona os dados do usuário ao objeto de requisição
-        const usuario = result.rows[0];
-        req.user = {
-            id_pessoa: usuario.id_pessoa,
-            nome: usuario.nome_pessoa,
-            email: usuario.email_pessoa,
-            cpf: usuario.cpf_pessoa,
-            tipo: usuario.id_cargo ? 'funcionario' : 'cliente',
-            cargo: usuario.nome_cargo || ''
-        };
-        
-        console.log(`✅ Usuário autenticado: ${req.user.nome} (${req.user.tipo}${req.user.cargo ? ' - ' + req.user.cargo : ''})`);
-        next();
-        
-    } catch (error) {
-        console.error('❌ Erro ao verificar autenticação:', error);
-        return res.status(500).json({
-            status: 'error',
-            message: 'Erro interno do servidor ao verificar autenticação.'
-        });
-    }
-};
+// Middleware para verificar se o usuário está autenticado
+exports.verificarAutenticacao = async (req, res, next) => {
+  const cpf = req.cookies.usuarioCpf;
+  const nome = req.cookies.usuarioLogado;
 
-/**
- * Middleware para verificar se o usuário é um gerente
- */
-const verificarGerente = (req, res, next) => {
-    console.log('👔 Verificando se o usuário é gerente...');
-    
-    // Verifica se o usuário está autenticado
-    if (!req.user) {
-        console.log('❌ Acesso negado - Usuário não autenticado');
-        return res.status(401).json({
-            status: 'error',
-            message: 'Acesso não autorizado. Por favor, faça login novamente.'
-        });
+  if (!cpf || !nome) {
+    return res.status(401).json({ 
+      error: 'Não autenticado',
+      message: 'Faça login para acessar este recurso' 
+    });
+  }
+
+  try {
+    // Verificar se o usuário ainda existe
+    const result = await db.query(
+      'SELECT cpf, nome_pessoa, email_pessoa FROM pessoa WHERE cpf = $1',
+      [cpf]
+    );
+
+    if (result.rows.length === 0) {
+      // Limpar cookies inválidos
+      res.clearCookie('usuarioLogado', {
+        sameSite: 'None',
+        secure: true,
+        httpOnly: true,
+        path: '/',
+      });
+      res.clearCookie('usuarioCpf', {
+        sameSite: 'None',
+        secure: true,
+        httpOnly: true,
+        path: '/',
+      });
+      return res.status(401).json({ 
+        error: 'Sessão inválida',
+        message: 'Faça login novamente' 
+      });
     }
-    
-    // Verifica se o usuário é um gerente
-    if (req.user.tipo !== 'funcionario' || req.user.cargo.toLowerCase() !== 'gerente') {
-        console.log(`❌ Acesso negado - O usuário ${req.user.nome} não é um gerente`);
-        return res.status(403).json({
-            status: 'error',
-            message: 'Acesso negado. Você não tem permissão para acessar este recurso.'
-        });
-    }
-    
-    // Se chegou aqui, o usuário é um gerente
-    console.log(`✅ Acesso concedido - ${req.user.nome} é um gerente`);
+
+    // Adicionar dados do usuário na requisição
+    req.user = result.rows[0];
     next();
+
+  } catch (err) {
+    console.error('❌ Erro ao verificar autenticação:', err);
+    res.status(500).json({ error: 'Erro ao verificar autenticação' });
+  }
 };
 
-/**
- * Middleware para verificar se o usuário é um funcionário
- */
-const verificarFuncionario = (req, res, next) => {
-    console.log('👤 Verificando se o usuário é funcionário...');
-    
-    // Verifica se o usuário está autenticado
-    if (!req.user) {
-        console.log('❌ Acesso negado - Usuário não autenticado');
-        return res.status(401).json({
-            status: 'error',
-            message: 'Acesso não autorizado. Por favor, faça login novamente.'
-        });
+// Middleware para verificar se o usuário é funcionário
+exports.verificarFuncionario = async (req, res, next) => {
+  const cpf = req.cookies.usuarioCpf;
+
+  if (!cpf) {
+    return res.status(401).json({ 
+      error: 'Não autenticado',
+      message: 'Faça login para acessar este recurso' 
+    });
+  }
+
+  try {
+    const result = await db.query(
+      `SELECT f.cpf, c.nome_cargo 
+       FROM funcionario f
+       JOIN cargo c ON f.id_cargo = c.id_cargo
+       WHERE f.cpf = $1`,
+      [cpf]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(403).json({ 
+        error: 'Acesso negado',
+        message: 'Apenas funcionários podem acessar este recurso' 
+      });
     }
-    
-    // Verifica se o usuário é um funcionário
-    if (req.user.tipo !== 'funcionario') {
-        console.log(`❌ Acesso negado - O usuário ${req.user.nome} não é um funcionário`);
-        return res.status(403).json({
-            status: 'error',
-            message: 'Acesso negado. Apenas funcionários podem acessar este recurso.'
-        });
-    }
-    
-    // Se chegou aqui, o usuário é um funcionário
-    console.log(`✅ Acesso concedido - ${req.user.nome} é um funcionário`);
+
+    // Adicionar dados do funcionário na requisição
+    req.funcionario = result.rows[0];
     next();
+
+  } catch (err) {
+    console.error('❌ Erro ao verificar funcionário:', err);
+    res.status(500).json({ error: 'Erro ao verificar permissões' });
+  }
 };
 
-module.exports = {
-    verificarAutenticacao,
-    verificarGerente,
-    verificarFuncionario
+// Middleware opcional - não bloqueia se não estiver logado
+exports.verificarAutenticacaoOpcional = async (req, res, next) => {
+  const cpf = req.cookies.usuarioCpf;
+
+  if (!cpf) {
+    req.user = null;
+    return next();
+  }
+
+  try {
+    const result = await db.query(
+      'SELECT cpf, nome_pessoa, email_pessoa FROM pessoa WHERE cpf = $1',
+      [cpf]
+    );
+
+    req.user = result.rows.length > 0 ? result.rows[0] : null;
+    next();
+
+  } catch (err) {
+    console.error('❌ Erro ao verificar autenticação opcional:', err);
+    req.user = null;
+    next();
+  }
 };

@@ -1,305 +1,59 @@
 const db = require('../database');
-const path = require('path');
 
-// Configuração de cookies
-const getCookieOptions = () => {
-  return {
-    httpOnly: false,     // Permite JavaScript acessar
-    secure: false,       // Permite HTTP (não HTTPS)
-    sameSite: 'none',    // Permite cross-site (CRITICAL para Live Server)
-    path: '/',
-    maxAge: 24 * 60 * 60 * 1000, // 24 horas
-    domain: undefined    // Não especificar domínio para funcionar em qualquer localhost
-  };
-};
+// ======================================
+// REGISTRO DE NOVO USUÁRIO
+// ======================================
+exports.registro = async (req, res) => {
+  const {
+    name, email, password, cpf, birthdate,
+    cidade, estado, rua, numero, cep, complemento, bairro
+  } = req.body;
 
-// LOGIN
-exports.login = async (req, res) => {
-  try {
-    const { email, senha } = req.body;
+  console.log('📝 Tentativa de registro:', { email, cpf });
 
-    console.log('🔐 Login - Email:', email);
-
-    if (!email || !senha) {
-      return res.status(400).json({
-        status: 'error',
-        error: 'Email e senha são obrigatórios'
-      });
-    }
-
-    // 1. Buscar pessoa pelo email e senha
-    const pessoaResult = await db.query(
-      `SELECT cpf, nome_pessoa, email_pessoa 
-       FROM pessoa 
-       WHERE email_pessoa = $1 AND senha_pessoa = $2`,
-      [email, senha]
-    );
-
-    if (pessoaResult.rows.length === 0) {
-      console.log('❌ Credenciais incorretas');
-      return res.status(401).json({
-        status: 'error',
-        error: 'Email ou senha incorretos'
-      });
-    }
-
-    const pessoa = pessoaResult.rows[0];
-    const cpf = pessoa.cpf;
-    let isGerente = false;
-    let cargo = '';
-    let tipo = 'cliente'; // padrão
-
-    // 2. Verificar se é funcionário e se é gerente
-    const funcionarioResult = await db.query(
-      `SELECT f.id_cargo, c.nome_cargo 
-       FROM funcionario f 
-       INNER JOIN cargo c ON f.id_cargo = c.id_cargo 
-       WHERE f.cpf = $1`,
-      [cpf]
-    );
-
-    if (funcionarioResult.rows.length > 0) {
-      tipo = 'funcionario';
-      cargo = (funcionarioResult.rows[0].nome_cargo || '').toLowerCase();
-      isGerente = (cargo === 'gerente');
-      
-      console.log(`✅ Identificado como FUNCIONÁRIO - Cargo: ${cargo}`);
-      console.log(`   É gerente? ${isGerente ? 'SIM' : 'NÃO'}`);
-    } else {
-      // Verificar se existe na tabela cliente
-      const clienteResult = await db.query(
-        'SELECT cpf FROM cliente WHERE cpf = $1',
-        [cpf]
-      );
-      
-      if (clienteResult.rows.length === 0) {
-        console.log('❌ Usuário não é nem funcionário nem cliente');
-        return res.status(401).json({
-          status: 'error',
-          error: 'Usuário não autorizado'
-        });
-      }
-      
-      console.log('✅ Identificado como CLIENTE');
-    }
-
-    // 3. Configurar cookies
-    const cookieOptions = getCookieOptions();
-    
-    res.cookie('idPessoa', cpf, cookieOptions);
-    res.cookie('tipoPessoa', tipo, cookieOptions);
-    res.cookie('cargoPessoa', cargo, cookieOptions);
-    res.cookie('pessoaLogada', pessoa.nome_pessoa, cookieOptions);
-    res.cookie('emailPessoa', pessoa.email_pessoa, cookieOptions);
-    res.cookie('isGerente', isGerente.toString(), cookieOptions);
-
-    console.log('✅ Login realizado com sucesso!');
-    console.log('   Nome:', pessoa.nome_pessoa);
-    console.log('   Tipo:', tipo);
-    console.log('   Cargo:', cargo || 'N/A');
-    console.log('   É Gerente:', isGerente);
-
-    // 4. Retornar resposta
-    return res.status(200).json({
-      status: 'ok',
-      message: 'Login realizado com sucesso',
-      usuario: {
-        id: cpf,
-        nome: pessoa.nome_pessoa,
-        email: pessoa.email_pessoa,
-        tipo: tipo,
-        cargo: cargo,
-        isGerente: isGerente
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Erro ao fazer login:', error);
-    return res.status(500).json({ 
-      status: 'error',
-      error: 'Erro interno do servidor',
-      details: error.message
-    });
+  // Validações básicas
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: 'Nome, e-mail e senha são obrigatórios.' });
   }
-};
 
-// VERIFICAR SE ESTÁ LOGADO
-exports.verificarLogin = async (req, res) => {
-  console.log('✅ Verificando se pessoa está logada');
-  console.log('🍪 Cookies recebidos:', req.cookies);
-  
+  if (!cpf || cpf.length !== 11) {
+    return res.status(400).json({ error: 'CPF deve ter 11 dígitos.' });
+  }
+
+  if (password.length > 20) {
+    return res.status(400).json({ error: 'Senha deve ter no máximo 20 caracteres.' });
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Formato de email inválido.' });
+  }
+
   try {
-    const id = req.cookies.idPessoa;
-    const nome = req.cookies.pessoaLogada;
-    const email = req.cookies.emailPessoa;
-    const tipo = req.cookies.tipoPessoa || 'cliente';
-    let cargo = (req.cookies.cargoPessoa || '').toLowerCase();
-    let isGerente = req.cookies.isGerente === 'true';
-    
-    if (!id || !nome) {
-      console.log('❌ Dados de autenticação ausentes nos cookies');
-      return res.json({ 
-        status: 'nao_logado',
-        message: 'Usuário não está logado'
-      });
-    }
+    // Verificar se CPF ou email já existem
+    const checkUser = await db.query(
+      'SELECT cpf, email_pessoa FROM pessoa WHERE cpf = $1 OR email_pessoa = $2',
+      [cpf, email]
+    );
 
-    // Se for funcionário, revalidar cargo no banco
-    if (tipo === 'funcionario') {
-      try {
-        const result = await db.query(
-          `SELECT c.nome_cargo 
-           FROM funcionario f 
-           INNER JOIN cargo c ON f.id_cargo = c.id_cargo 
-           WHERE f.cpf = $1`,
-          [id]
-        );
-        
-        if (result.rows.length > 0) {
-          cargo = (result.rows[0].nome_cargo || '').toLowerCase();
-          isGerente = (cargo === 'gerente');
-          
-          // Atualizar cookies se mudou
-          if (req.cookies.cargoPessoa !== cargo || req.cookies.isGerente !== isGerente.toString()) {
-            const cookieOptions = getCookieOptions();
-            res.cookie('cargoPessoa', cargo, cookieOptions);
-            res.cookie('isGerente', isGerente.toString(), cookieOptions);
-          }
-        }
-      } catch (error) {
-        console.error('❌ Erro ao revalidar cargo:', error);
+    if (checkUser.rows.length > 0) {
+      if (checkUser.rows[0].cpf === cpf) {
+        return res.status(400).json({ error: 'CPF já cadastrado.' });
       }
-    }
-
-    console.log('✅ Usuário autenticado:', { id, nome, tipo, cargo, isGerente });
-    
-    return res.json({ 
-      status: 'ok', 
-      usuario: {
-        id,
-        nome,
-        email: email || '',
-        tipo,
-        cargo,
-        isGerente
+      if (checkUser.rows[0].email_pessoa === email) {
+        return res.status(400).json({ error: 'E-mail já cadastrado.' });
       }
-    });
-    
-  } catch (error) {
-    console.error('❌ Erro ao verificar autenticação:', error);
-    return res.status(500).json({
-      status: 'erro',
-      message: 'Erro ao verificar autenticação'
-    });
-  }
-};
-
-// VERIFICAR EMAIL
-exports.verificarEmail = async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({
-        error: 'Email é obrigatório'
-      });
-    }
-
-    const result = await db.query(
-      'SELECT * FROM pessoa WHERE email_pessoa = $1',
-      [email]
-    );
-
-    if (result.rows.length > 0) {
-      return res.status(409).json({
-        error: 'Email já está em uso'
-      });
-    }
-
-    res.json({
-      message: 'Email disponível'
-    });
-
-  } catch (error) {
-    console.error('Erro ao verificar email:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-};
-
-// LOGOUT
-exports.logout = async (req, res) => {
-  try {
-    console.log('🚪 Processando logout...');
-    
-    const cookieOptions = {
-      httpOnly: false,
-      secure: false,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 0
-    };
-
-    // Limpar todos os cookies
-    res.cookie('idPessoa', '', cookieOptions);
-    res.cookie('tipoPessoa', '', cookieOptions);
-    res.cookie('cargoPessoa', '', cookieOptions);
-    res.cookie('pessoaLogada', '', cookieOptions);
-    res.cookie('emailPessoa', '', cookieOptions);
-    res.cookie('isGerente', '', cookieOptions);
-    
-    console.log('✅ Cookies limpos');
-
-    res.status(200).json({
-      status: 'deslogado',
-      message: 'Logout realizado com sucesso'
-    });
-  } catch (error) {
-    console.error('❌ Erro ao fazer logout:', error);
-    res.status(500).json({ 
-      status: 'error',
-      error: 'Erro interno do servidor ao fazer logout' 
-    });
-  }
-};
-
-// CADASTRAR CLIENTE
-exports.cadastrarCliente = async (req, res) => {
-  const { cpf, nome_pessoa, email_pessoa, senha_pessoa } = req.body;
-
-  console.log('📝 Tentando cadastrar cliente:', nome_pessoa);
-
-  try {
-    // Verificar se CPF já existe
-    const cpfExiste = await db.query(
-      'SELECT cpf FROM pessoa WHERE cpf = $1',
-      [cpf]
-    );
-
-    if (cpfExiste.rows.length > 0) {
-      return res.json({ 
-        status: 'erro',
-        error: 'CPF já cadastrado' 
-      });
-    }
-
-    // Verificar se email já existe
-    const emailExiste = await db.query(
-      'SELECT email_pessoa FROM pessoa WHERE email_pessoa = $1',
-      [email_pessoa]
-    );
-
-    if (emailExiste.rows.length > 0) {
-      return res.json({ 
-        status: 'erro',
-        error: 'Email já cadastrado' 
-      });
     }
 
     // Inserir pessoa
-    await db.query(
-      'INSERT INTO pessoa (cpf, nome_pessoa, email_pessoa, senha_pessoa) VALUES ($1, $2, $3, $4)',
-      [cpf, nome_pessoa, email_pessoa, senha_pessoa]
+    const resultPessoa = await db.query(
+      `INSERT INTO pessoa (cpf, nome_pessoa, email_pessoa, senha_pessoa)
+       VALUES ($1, $2, $3, $4)
+       RETURNING cpf, nome_pessoa, email_pessoa`,
+      [cpf, name, email, password]
     );
+
+    const user = resultPessoa.rows[0];
 
     // Inserir cliente
     await db.query(
@@ -307,34 +61,274 @@ exports.cadastrarCliente = async (req, res) => {
       [cpf]
     );
 
-    console.log('✅ Cliente cadastrado com sucesso');
+    console.log('✅ Usuário registrado:', user.email_pessoa);
 
-    return res.json({
-      status: 'ok',
-      message: 'Cliente cadastrado com sucesso'
+    // Criar cookie de sessão
+    res.cookie('usuarioLogado', user.nome_pessoa, {
+      sameSite: 'None',
+      secure: true,
+      httpOnly: true,
+      path: '/',
+      maxAge: 24 * 60 * 60 * 1000, // 1 dia
+    });
+
+    res.cookie('usuarioCpf', user.cpf, {
+      sameSite: 'None',
+      secure: true,
+      httpOnly: true,
+      path: '/',
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    res.json({
+      message: 'Usuário registrado com sucesso.',
+      user: {
+        cpf: user.cpf,
+        nome: user.nome_pessoa,
+        email: user.email_pessoa
+      },
+      logged: true
     });
 
   } catch (err) {
-    console.error('❌ Erro ao cadastrar cliente:', err);
-    return res.status(500).json({ 
-      status: 'erro',
-      error: 'Erro ao cadastrar cliente',
-      mensagem: err.message 
-    });
+    console.error('❌ Erro no registro:', err);
+    res.status(500).json({ error: 'Erro ao registrar usuário.' });
   }
 };
 
-// MIDDLEWARE DE AUTENTICAÇÃO
-exports.verificarAutenticacao = (req, res, next) => {
-  const id = req.cookies.idPessoa;
-  const nome = req.cookies.pessoaLogada;
-  
-  if (!id || !nome) {
-    return res.status(401).json({
-      status: 'error',
-      error: 'Não autorizado'
-    });
+// ======================================
+// LOGIN
+// ======================================
+exports.login = async (req, res) => {
+  const { email_usuario, senha_usuario } = req.body;
+
+  console.log('🔐 Tentativa de login:', email_usuario);
+
+  if (!email_usuario || !senha_usuario) {
+    return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
   }
-  
-  next();
+
+  try {
+    // Buscar pessoa e verificar se é funcionário
+    const resultPessoa = await db.query(
+      `SELECT p.cpf, p.nome_pessoa, p.email_pessoa, p.senha_pessoa,
+              f.cpf as is_funcionario, c.nome_cargo
+       FROM pessoa p
+       LEFT JOIN funcionario f ON p.cpf = f.cpf
+       LEFT JOIN cargo c ON f.id_cargo = c.id_cargo
+       WHERE p.email_pessoa = $1`,
+      [email_usuario]
+    );
+
+    if (resultPessoa.rows.length === 0) {
+      return res.status(401).json({ error: 'E-mail ou senha inválidos.' });
+    }
+
+    const user = resultPessoa.rows[0];
+
+    // Verificar senha (texto plano - não recomendado em produção)
+    if (user.senha_pessoa !== senha_usuario) {
+      return res.status(401).json({ error: 'E-mail ou senha inválidos.' });
+    }
+
+    console.log('✅ Login bem-sucedido:', user.email_pessoa);
+
+    // Criar cookies
+    res.cookie('usuarioLogado', user.nome_pessoa, {
+      sameSite: 'None',
+      secure: true,
+      httpOnly: true,
+      path: '/',
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    res.cookie('usuarioCpf', user.cpf, {
+      sameSite: 'None',
+      secure: true,
+      httpOnly: true,
+      path: '/',
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    res.json({
+      message: 'Login efetuado com sucesso.',
+      user: {
+        cpf: user.cpf,
+        nome: user.nome_pessoa,
+        email: user.email_pessoa,
+        is_funcionario: !!user.is_funcionario,
+        cargo: user.nome_cargo || null
+      },
+      logged: true
+    });
+
+  } catch (err) {
+    console.error('❌ Erro no login:', err);
+    res.status(500).json({ error: 'Erro ao efetuar login.' });
+  }
+};
+
+// ======================================
+// VERIFICAR SE ESTÁ LOGADO
+// ======================================
+exports.verificarLogin = async (req, res) => {
+  const nome = req.cookies.usuarioLogado;
+  const cpf = req.cookies.usuarioCpf;
+
+  console.log('🔍 Verificando login:', { nome, cpf });
+
+  if (!nome || !cpf) {
+    return res.json({ logged: false });
+  }
+
+  try {
+    // Verificar se o usuário ainda existe no banco
+    const result = await db.query(
+      `SELECT p.cpf, p.nome_pessoa, p.email_pessoa,
+              f.cpf as is_funcionario, c.nome_cargo
+       FROM pessoa p
+       LEFT JOIN funcionario f ON p.cpf = f.cpf
+       LEFT JOIN cargo c ON f.id_cargo = c.id_cargo
+       WHERE p.cpf = $1`,
+      [cpf]
+    );
+
+    if (result.rows.length === 0) {
+      // Usuário não existe mais, limpar cookies
+      res.clearCookie('usuarioLogado', {
+        sameSite: 'None',
+        secure: true,
+        httpOnly: true,
+        path: '/',
+      });
+      res.clearCookie('usuarioCpf', {
+        sameSite: 'None',
+        secure: true,
+        httpOnly: true,
+        path: '/',
+      });
+      return res.json({ logged: false });
+    }
+
+    const user = result.rows[0];
+
+    res.json({
+      logged: true,
+      cpf: user.cpf,
+      nome: user.nome_pessoa,
+      email: user.email_pessoa,
+      is_funcionario: !!user.is_funcionario,
+      cargo: user.nome_cargo || null
+    });
+
+  } catch (err) {
+    console.error('❌ Erro ao verificar login:', err);
+    res.status(500).json({ error: 'Erro ao verificar sessão.' });
+  }
+};
+
+// ======================================
+// LOGOUT
+// ======================================
+exports.logout = (req, res) => {
+  console.log('👋 Logout realizado');
+
+  res.clearCookie('usuarioLogado', {
+    sameSite: 'None',
+    secure: true,
+    httpOnly: true,
+    path: '/',
+  });
+
+  res.clearCookie('usuarioCpf', {
+    sameSite: 'None',
+    secure: true,
+    httpOnly: true,
+    path: '/',
+  });
+
+  res.json({
+    message: 'Logout realizado com sucesso.',
+    logged: false
+  });
+};
+
+// ======================================
+// VERIFICAR EMAIL (para fluxo de login em etapas)
+// ======================================
+exports.verificarEmail = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email é obrigatório' });
+  }
+
+  try {
+    const result = await db.query(
+      'SELECT nome_pessoa FROM pessoa WHERE email_pessoa = $1',
+      [email]
+    );
+
+    if (result.rows.length > 0) {
+      return res.json({
+        status: 'existe',
+        nome: result.rows[0].nome_pessoa
+      });
+    }
+
+    res.json({ status: 'nao_encontrado' });
+  } catch (err) {
+    console.error('❌ Erro ao verificar email:', err);
+    res.status(500).json({ error: 'Erro ao verificar email.' });
+  }
+};
+
+// ======================================
+// ATUALIZAR SENHA
+// ======================================
+exports.atualizarSenha = async (req, res) => {
+  const cpf = req.cookies.usuarioCpf;
+  const { senha_atual, nova_senha } = req.body;
+
+  if (!cpf) {
+    return res.status(401).json({ error: 'Usuário não autenticado.' });
+  }
+
+  if (!senha_atual || !nova_senha) {
+    return res.status(400).json({ error: 'Senha atual e nova senha são obrigatórias.' });
+  }
+
+  if (nova_senha.length > 20) {
+    return res.status(400).json({ error: 'Nova senha deve ter no máximo 20 caracteres.' });
+  }
+
+  try {
+    // Verificar senha atual
+    const checkPassword = await db.query(
+      'SELECT senha_pessoa FROM pessoa WHERE cpf = $1',
+      [cpf]
+    );
+
+    if (checkPassword.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
+    }
+
+    if (checkPassword.rows[0].senha_pessoa !== senha_atual) {
+      return res.status(400).json({ error: 'Senha atual incorreta.' });
+    }
+
+    // Atualizar senha
+    await db.query(
+      'UPDATE pessoa SET senha_pessoa = $1 WHERE cpf = $2',
+      [nova_senha, cpf]
+    );
+
+    console.log('✅ Senha atualizada para CPF:', cpf);
+
+    res.json({ message: 'Senha atualizada com sucesso.' });
+
+  } catch (err) {
+    console.error('❌ Erro ao atualizar senha:', err);
+    res.status(500).json({ error: 'Erro ao atualizar senha.' });
+  }
 };

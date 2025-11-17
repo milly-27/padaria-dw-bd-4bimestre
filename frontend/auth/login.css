@@ -9,16 +9,16 @@
 
 :root {
     /* Cores do Tema Padaria */
-    --cor-fundo-geral: #F8F4E3; /* Creme/Trigo claro para o fundo da página */
-    --cor-card-fundo: #FFFFFF; /* Branco puro para o card */
-    --cor-primaria-padaria: #A0522D; /* Marrom suave (cor de canela/casca de pão) */
-    --cor-secundaria-padaria: #D2B48C; /* Bege claro (massa/farinha) */
+    --cor-fundo-geral: #F8F4E3;
+    --cor-card-fundo: #FFFFFF;
+    --cor-primaria-padaria: #A0522D;
+    --cor-secundaria-padaria: #D2B48C;
     --cor-texto-escuro: #333;
-    --cor-link-acao: #B8860B; /* Dourado/Caramelo */
+    --cor-link-acao: #B8860B;
 }
 
 body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', 'Arial', sans-serif;
     background-color: var(--cor-fundo-geral);
     min-height: 100vh;
     display: flex;
@@ -27,26 +27,38 @@ body {
     padding: 20px;
 }
 
-/* Container Principal - Layout Flexível */
+/* Container Principal */
 .container {
     width: 100%;
-    max-width: 900px; /* Aumenta a largura para acomodar as duas seções lado a lado */
-    padding: 0; /* Remove padding desnecessário */
+    max-width: 900px;
+    padding: 0;
 }
 
 .login-card {
     background: var(--cor-card-fundo);
-    border-radius: 16px; /* Cantos arredondados */
+    border-radius: 16px;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    display: flex; /* Habilita o layout de duas colunas */
+    display: flex;
     min-height: 550px;
+    animation: slideUp 0.6s ease-out;
 }
 
-/* Coluna da Logo (Estilização de fundo) */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Coluna da Logo */
 .logo {
     flex: 1;
-    background: linear-gradient(145deg, var(--cor-primaria-padaria) 0%, #CD853F 100%); /* Gradiente quente */
+    background: linear-gradient(145deg, var(--cor-primaria-padaria) 0%, #CD853F 100%);
     color: white;
     display: flex;
     flex-direction: column;
@@ -69,40 +81,23 @@ body {
     font-style: italic;
 }
 
-/* Conteúdo da Aba (Formulários) */
+/* Conteúdo dos Formulários */
 .form-content-area {
     flex: 1;
     padding: 40px;
     position: relative;
-    /* Remove a animação 'slideUp' que pode conflitar com o layout flex */
 }
 
 .tab-content {
-    /* Manter a transição para quando for ativado pelo JS */
     opacity: 0;
-    position: absolute;
-    width: calc(100% - 80px); /* 100% menos o padding de 40px de cada lado */
-    transition: opacity 0.5s ease, transform 0.5s ease;
-    top: 40px;
-    left: 40px;
     visibility: hidden;
+    transition: opacity 0.5s ease;
 }
 
 .tab-content.active {
     opacity: 1;
     visibility: visible;
-    position: relative; /* Volta ao fluxo normal quando ativo */
-    transform: none;
 }
-
-/* Oculta os não-ativos fora da tela (para o efeito de transição) */
-#login-tab:not(.active) {
-    transform: translateX(-100%);
-}
-#register-tab:not(.active) {
-    transform: translateX(100%);
-}
-
 
 .tab-content h2 {
     text-align: center;
@@ -112,7 +107,7 @@ body {
     font-weight: 700;
 }
 
-/* Grupos de Formulário e Inputs */
+/* Grupos de Formulário */
 .form-group {
     margin-bottom: 18px;
 }
@@ -128,7 +123,7 @@ body {
 .form-group input {
     width: 100%;
     padding: 12px 15px;
-    border: 1px solid #E0DED7; /* Borda suave */
+    border: 1px solid #E0DED7;
     border-radius: 8px;
     font-size: 16px;
     transition: all 0.3s ease;
@@ -139,7 +134,14 @@ body {
     outline: none;
     border-color: var(--cor-link-acao);
     background: var(--cor-card-fundo);
-    box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.2); /* Sombra do caramelo */
+    box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.2);
+}
+
+.form-group small {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.85em;
+    color: #666;
 }
 
 /* Botões */
@@ -159,12 +161,22 @@ body {
 }
 
 .btn-login:hover, .btn-register:hover {
-    background: #CD853F; /* Um pouco mais claro no hover */
+    background: #CD853F;
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(160, 82, 45, 0.4);
 }
 
-/* Links de Troca (Login/Cadastro) */
+.btn-login:active, .btn-register:active {
+    transform: translateY(0);
+}
+
+.btn-login:disabled, .btn-register:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Links de Troca */
 .register-link, .login-link {
     text-align: center;
     margin-top: 25px;
@@ -183,12 +195,63 @@ body {
     color: var(--cor-primaria-padaria);
 }
 
-/* Esconde as tabs/buttons do seu exemplo anterior, já que o foco é o split */
-.login-tabs, .tab-btn {
-    display: none !important;
+/* Mensagens */
+.mensagem {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: 600;
+    display: none;
 }
 
-/* Responsividade (Abaixo de 768px, as colunas empilham) */
+.mensagem.sucesso {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+    display: block;
+}
+
+.mensagem.erro {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    display: block;
+}
+
+.mensagem.info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+    display: block;
+}
+
+/* Animação de Loading */
+.loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid transparent;
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsividade */
 @media (max-width: 768px) {
     .login-card {
         flex-direction: column;
@@ -196,7 +259,7 @@ body {
     }
 
     .logo {
-        height: 150px; /* Altura fixa para o topo */
+        height: 150px;
         padding: 20px;
         border-radius: 16px 16px 0 0;
     }
@@ -212,17 +275,29 @@ body {
     .form-content-area {
         padding: 30px;
     }
+}
 
-    /* Ajuste para o layout empilhado */
-    .tab-content {
-        width: 100%;
-        left: 0;
-        top: 0;
+@media (max-width: 480px) {
+    .container {
+        padding: 10px;
+    }
+
+    .form-content-area {
+        padding: 20px;
+    }
+
+    .logo h1 {
+        font-size: 1.8em;
     }
     
-    /* Remove a transição horizontal nos dispositivos móveis para melhor UX */
-    #login-tab:not(.active),
-    #register-tab:not(.active) {
-        transform: none;
+    .tab-content h2 {
+        font-size: 1.5em;
+    }
+
+    .form-group input,
+    .btn-login,
+    .btn-register {
+        padding: 12px;
+        font-size: 1em;
     }
 }
