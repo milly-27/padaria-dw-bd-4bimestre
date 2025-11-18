@@ -228,26 +228,43 @@ exports.verificarLogin = async (req, res) => {
 };
 
 // ======================================
-// LOGOUT
+// LOGOUT - VERSÃO ROBUSTA E CORRIGIDA
 // ======================================
 exports.logout = (req, res) => {
-  console.log('👋 Logout realizado');
-
-  res.clearCookie('usuarioLogado', {
+  console.log('\n👋 [LOGOUT] Iniciando processo de logout...');
+  console.log('════════════════════════════════════════');
+  
+  // Configurações comuns dos cookies
+  const cookieOptions = {
     sameSite: 'None',
     secure: true,
     httpOnly: true,
     path: '/',
+  };
+  
+  // Lista completa de cookies para limpar
+  const cookiesParaLimpar = [
+    'usuarioLogado',
+    'usuarioCpf',
+    'token',
+    'userId',
+    'userName',
+    'userEmail',
+    'userType',
+    'userCargo'
+  ];
+  
+  // Limpar todos os cookies
+  cookiesParaLimpar.forEach(cookieName => {
+    res.clearCookie(cookieName, cookieOptions);
+    console.log(`   🗑️ Cookie limpo: ${cookieName}`);
   });
-
-  res.clearCookie('usuarioCpf', {
-    sameSite: 'None',
-    secure: true,
-    httpOnly: true,
-    path: '/',
-  });
+  
+  console.log('✅ [LOGOUT] Todos os cookies removidos');
+  console.log('════════════════════════════════════════\n');
 
   res.json({
+    status: 'deslogado',
     message: 'Logout realizado com sucesso.',
     logged: false
   });

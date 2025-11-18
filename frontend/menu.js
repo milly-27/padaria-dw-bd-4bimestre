@@ -3,36 +3,22 @@ const API_BASE_URL = 'http://localhost:3001';
 console.log('✅ menu.js carregado com sucesso!');
 
 // ========================================
-// FUNÇÕES DE COOKIES
+// FUNÇÕES DE SESSÃO (sessionStorage)
 // ========================================
 
-function lerCookie(nome) {
-    const nomeCookie = nome + "=";
-    const cookies = document.cookie.split(';');
-    
-    for(let i = 0; i < cookies.length; i++) {
-        let cookie = cookies[i].trim();
-        if (cookie.indexOf(nomeCookie) === 0) {
-            return cookie.substring(nomeCookie.length, cookie.length);
-        }
-    }
-    return null;
+function lerSessao(nome) {
+    return sessionStorage.getItem(nome);
 }
 
-function deletarCookie(nome) {
-    document.cookie = `${nome}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-    console.log(`🗑️ Cookie deletado: ${nome}`);
+function deletarSessao(nome) {
+    sessionStorage.removeItem(nome);
+    console.log(`🗑️ Sessão deletada: ${nome}`);
 }
 
-function deletarTodosCookies() {
-    console.log('🍪 Deletando todos os cookies de autenticação...');
-    deletarCookie('token');
-    deletarCookie('userId');
-    deletarCookie('userName');
-    deletarCookie('userEmail');
-    deletarCookie('userType');
-    deletarCookie('userCargo');
-    console.log('✅ Todos os cookies deletados!');
+function deletarTodasSessoes() {
+    console.log('🍪 Deletando todas as sessões de autenticação...');
+    sessionStorage.clear();
+    console.log('✅ Todas as sessões deletadas!');
 }
 
 // ========================================
@@ -143,23 +129,23 @@ function atualizarInterfaceUsuario(userData = null) {
 }
 
 // ========================================
-// VERIFICAR LOGIN NOS COOKIES
+// VERIFICAR LOGIN NO SESSIONSTORAGE
 // ========================================
 
 function verificarSeUsuarioEstaLogado() {
-    console.log('🔍 Verificando autenticação nos cookies...');
+    console.log('🔍 Verificando autenticação no sessionStorage...');
     console.log('══════════════════════════════════════');
     
     try {
-        // Ler cookies
-        const userId = lerCookie('userId');
-        const userName = lerCookie('userName');
-        const userEmail = lerCookie('userEmail');
-        const userType = lerCookie('userType');
-        const userCargo = lerCookie('userCargo');
-        const token = lerCookie('token');
+        // Ler sessões
+        const userId = lerSessao('userId');
+        const userName = lerSessao('userName');
+        const userEmail = lerSessao('userEmail');
+        const userType = lerSessao('userType');
+        const userCargo = lerSessao('userCargo');
+        const token = lerSessao('token');
         
-        console.log('🍪 Cookies encontrados:');
+        console.log('💾 Dados da sessão:');
         console.log('   - userId:', userId || '❌ Não encontrado');
         console.log('   - userName:', userName || '❌ Não encontrado');
         console.log('   - userEmail:', userEmail || '❌ Não encontrado');
@@ -168,14 +154,16 @@ function verificarSeUsuarioEstaLogado() {
         console.log('   - token:', token ? '✅ Presente' : '❌ Ausente');
         
         if (!userId || !userName) {
-            console.log('❌ Usuário não autenticado (cookies ausentes)');
+            console.log('❌ Usuário não autenticado (sessão vazia)');
             console.log('══════════════════════════════════════');
             atualizarInterfaceUsuario(null);
             return null;
         }
         
-        // Determinar se é gerente
-        const isGerente = userType === 'funcionario' && userCargo === 'gerente';
+        // Determinar se é gerente (CASE INSENSITIVE - corrigido)
+        const isGerente = userType === 'funcionario' && 
+                         userCargo && 
+                         userCargo.toLowerCase() === 'gerente';
         
         const userData = {
             id: userId,
@@ -186,7 +174,7 @@ function verificarSeUsuarioEstaLogado() {
             isGerente: isGerente
         };
         
-        console.log('👤 Dados do usuário (cookies):');
+        console.log('👤 Dados do usuário (sessão):');
         console.log('   - Nome:', userData.nome);
         console.log('   - Tipo:', userData.tipo);
         console.log('   - Cargo:', userData.cargo || '(não especificado)');
@@ -201,7 +189,7 @@ function verificarSeUsuarioEstaLogado() {
     } catch (error) {
         console.error('❌ Erro ao verificar autenticação:', error);
         console.log('══════════════════════════════════════');
-        deletarTodosCookies();
+        deletarTodasSessoes();
         atualizarInterfaceUsuario(null);
         return null;
     }
@@ -231,7 +219,7 @@ async function logout() {
         const result = await response.json();
         console.log('📨 Resposta logout:', result);
         
-        if (result.status === 'deslogado') {
+        if (result.logged === false || result.status === 'deslogado') {
             console.log('✅ Logout realizado com sucesso no servidor!');
         }
     } catch (error) {
@@ -241,9 +229,7 @@ async function logout() {
     
     // Limpar tudo (independente da resposta do servidor)
     console.log('🧹 Limpando dados locais...');
-    sessionStorage.clear();
-    localStorage.clear();
-    deletarTodosCookies();
+    deletarTodasSessoes();
     
     // Atualizar interface
     atualizarInterfaceUsuario(null);
@@ -272,7 +258,7 @@ function redirecionarLogin() {
 function inicializarMenu() {
     console.log('🚀 Menu carregado, inicializando...');
     
-    // Verificar login nos cookies
+    // Verificar login no sessionStorage
     verificarSeUsuarioEstaLogado();
     
     // Configurar botão de login
@@ -289,12 +275,15 @@ function inicializarMenu() {
 
 document.addEventListener('DOMContentLoaded', inicializarMenu);
 
-// Atalho de desenvolvimento: CTRL + L para ver todos os cookies
+// Atalho de desenvolvimento: CTRL + L para ver sessão
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'l') {
         e.preventDefault();
-        console.log('🍪 Todos os cookies:');
-        console.log(document.cookie);
+        console.log('💾 Conteúdo do sessionStorage:');
+        for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            console.log(`   ${key}: ${sessionStorage.getItem(key)}`);
+        }
         verificarSeUsuarioEstaLogado();
     }
 });

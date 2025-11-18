@@ -20,36 +20,91 @@ exports.listarPagamento_has_formapagamentos = async (req, res) => {
   }
 }
 
+// ========================================
+// CRIAR PAGAMENTO_HAS_FORMAPAGAMENTO - VERSÃO CORRIGIDA
+// ========================================
 exports.criarPagamento_has_formapagamento = async (req, res) => {
-  //  console.log('Criando pagamento_has_formapagamento com dados:', req.body);
   try {
-    const { id_pagamento_res,id_pagamento, id_forma_pagamento, valor_pago} = req.body;
+    console.log('\n🔗 [FORMA PAGAMENTO CONTROLLER] Criando relacionamento...');
+    console.log('   Body recebido:', JSON.stringify(req.body, null, 2));
+    
+    const { id_pagamento, id_forma_pagamento, valor_pago } = req.body;
 
-    // Validação básica
+    // ============================================
+    // BUSCAR PRÓXIMO ID DISPONÍVEL (CRÍTICO!)
+    // ============================================
+    console.log('🔢 [ID] Buscando próximo id_pagamento_res disponível...');
+    
+    const maxIdResult = await query('SELECT MAX(id_pagamento_res) as max_id FROM pagamento_has_formapagamento');
+    const maxId = maxIdResult.rows[0].max_id || 0;
+    const proximoId = maxId + 1;
+    
+    console.log(`   Último ID no banco: ${maxId}`);
+    console.log(`   Próximo ID será: ${proximoId}`);
+
+    // ============================================
+    // VALIDAÇÃO
+    // ============================================
     if (!id_pagamento || !id_forma_pagamento || !valor_pago) {
+      console.error('❌ [FORMA PAGAMENTO] Dados obrigatórios não fornecidos');
       return res.status(400).json({
         error: 'id_pagamento, id_forma_pagamento e valor_pago são obrigatórios'
       });
     }
-    
 
+    console.log('   Valores finais:');
+    console.log('   - id_pagamento_res:', proximoId);
+    console.log('   - id_pagamento:', id_pagamento);
+    console.log('   - id_forma_pagamento:', id_forma_pagamento);
+    console.log('   - valor_pago:', valor_pago);
+
+    // ============================================
+    // INSERT COM ID EXPLÍCITO
+    // ============================================
+    console.log('🔍 [FORMA PAGAMENTO] Executando INSERT com ID explícito...');
     const result = await query(
-      'INSERT INTO pagamento_has_formapagamento (id_pagamento_res, id_pagamento, id_forma_pagamento, valor_pago) VALUES ($1, $2,$3, $4) RETURNING *',
-      [id_pagamento_res, id_pagamento, id_forma_pagamento, valor_pago]
+      'INSERT INTO pagamento_has_formapagamento (id_pagamento_res, id_pagamento, id_forma_pagamento, valor_pago) VALUES ($1, $2, $3, $4) RETURNING *',
+      [proximoId, id_pagamento, id_forma_pagamento, valor_pago]
     );
 
+    console.log('✅ [FORMA PAGAMENTO] Relacionamento criado com sucesso!');
+    console.log('   ID:', result.rows[0].id_pagamento_res);
+
     res.status(201).json(result.rows[0]);
+    
   } catch (error) {
-    console.error('Erro ao criar pagamento_has_formapagamento:', error);
+    console.error('\n❌ [FORMA PAGAMENTO] Erro ao criar relacionamento:', error);
+    console.error('   Mensagem:', error.message);
+    console.error('   Código:', error.code);
 
     // Verifica se é erro de violação de constraint NOT NULL
     if (error.code === '23502') {
       return res.status(400).json({
-        error: 'Dados obrigatórios não fornecidos'
+        error: 'Dados obrigatórios não fornecidos',
+        message: 'Verifique se todos os campos necessários foram enviados',
+        column: error.column
       });
     }
 
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    if (error.code === '23503') {
+      return res.status(400).json({
+        error: 'Violação de chave estrangeira',
+        message: 'Pagamento ou forma de pagamento não encontrados'
+      });
+    }
+
+    if (error.code === '23505') {
+      return res.status(400).json({
+        error: 'ID duplicado',
+        message: 'Já existe um relacionamento com este ID. Tente novamente.',
+        detail: error.detail
+      });
+    }
+
+    res.status(500).json({ 
+      error: 'Erro interno do servidor',
+      message: error.message 
+    });
   }
 }
 
@@ -104,7 +159,7 @@ exports.atualizarPagamento_has_formapagamento = async (req, res) => {
     // Atualiza a pagamento_has_formapagamento
     const updateResult = await query(
       'UPDATE pagamento_has_formapagamento SET id_pagamento = $1, id_forma_pagamento = $2, valor_pago = $3 WHERE id_pagamento_res = $4 RETURNING *',
-      [updatedFields.id_pagamento, id_forma_pagamento, valor_pago, id]
+      [updatedFields.id_pagamento, updatedFields.id_forma_pagamento, updatedFields.valor_pago, id]
     );
 
     res.json(updateResult.rows[0]);

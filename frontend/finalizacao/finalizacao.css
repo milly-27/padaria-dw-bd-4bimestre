@@ -1,11 +1,31 @@
 /* Importando fontes */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Pacifico&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Pacifico&display=swap');
 
 /* Reset e configurações básicas */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+}
+
+:root {
+    /* Paleta de cores elegante de padaria */
+    --primary: #8b6f47;
+    --secondary: #d4a574;
+    --accent: #f5e6d3;
+    --dark-brown: #5d4037;
+    --cream: #faf8f3;
+    --gold: #c9a961;
+    --bg-light: #fff;
+    --text-dark: #3e2723;
+    --text-light: #6d4c41;
+    --shadow-color: rgba(139, 111, 71, 0.15);
+    --shadow-sm: 0 4px 15px var(--shadow-color);
+    --shadow-md: 0 8px 25px var(--shadow-color);
+    --shadow-lg: 0 15px 50px rgba(139, 111, 71, 0.2);
+    --radius-md: 15px;
+    --radius-lg: 25px;
+    --transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 body {
@@ -15,7 +35,7 @@ body {
     animation: gradientDance 20s ease infinite;
     min-height: 100vh;
     padding: 15px;
-    color: #3e2723;
+    color: var(--text-dark);
     position: relative;
     overflow-x: hidden;
 }
@@ -29,7 +49,7 @@ body::before {
     width: 100%;
     height: 100%;
     font-size: 2.5rem;
-    opacity: 0.03;
+    opacity: 0.05;
     pointer-events: none;
     z-index: 1;
     animation: float 25s infinite;
@@ -39,7 +59,9 @@ body::before {
 
 @keyframes gradientDance {
     0%, 100% { background-position: 0% 50%; }
+    25% { background-position: 50% 25%; }
     50% { background-position: 100% 50%; }
+    75% { background-position: 50% 75%; }
 }
 
 @keyframes float {
@@ -62,7 +84,7 @@ body::before {
     border-radius: 18px;
     padding: 1rem 1.3rem;
     margin-bottom: 1.2rem;
-    box-shadow: 0 8px 30px rgba(139, 111, 71, 0.12);
+    box-shadow: var(--shadow-md);
     border: 2px solid rgba(139, 111, 71, 0.08);
     animation: slideDown 0.8s ease;
 }
@@ -84,13 +106,13 @@ body::before {
     font-family: 'Pacifico', cursive;
     font-size: 1.6rem;
     font-weight: 600;
-    color: #8b6f47;
+    color: var(--primary);
     margin-bottom: 6px;
 }
 
 .user-name {
     font-size: 0.95rem;
-    color: #6d4c41;
+    color: var(--text-light);
     font-weight: 600;
 }
 
@@ -105,7 +127,7 @@ body::before {
 
 .total-label {
     font-size: 0.8rem;
-    color: #6d4c41;
+    color: var(--text-light);
     margin-bottom: 4px;
 }
 
@@ -137,7 +159,7 @@ body::before {
     backdrop-filter: blur(20px);
     border-radius: 18px;
     padding: 1.2rem;
-    box-shadow: 0 8px 30px rgba(139, 111, 71, 0.12);
+    box-shadow: var(--shadow-md);
     border: 2px solid rgba(139, 111, 71, 0.08);
     animation: fadeInUp 0.6s ease;
 }
@@ -151,7 +173,7 @@ body::before {
     font-family: 'Pacifico', cursive;
     font-size: 1.3rem;
     font-weight: 600;
-    color: #8b6f47;
+    color: var(--primary);
     margin-bottom: 1rem;
     padding-bottom: 8px;
     border-bottom: 2px solid rgba(139, 111, 71, 0.2);
@@ -175,12 +197,12 @@ body::before {
 }
 
 .pedido-itens::-webkit-scrollbar-thumb {
-    background: #8b6f47;
+    background: var(--primary);
     border-radius: 10px;
 }
 
 .pedido-itens::-webkit-scrollbar-thumb:hover {
-    background: #6d4c41;
+    background: var(--dark-brown);
 }
 
 .item-pedido {
@@ -193,7 +215,7 @@ body::before {
 }
 
 .item-pedido:hover {
-    background: linear-gradient(135deg, #faf8f3, #f5e6d3);
+    background: linear-gradient(135deg, var(--cream), var(--accent));
     border-radius: 12px;
 }
 
@@ -203,14 +225,14 @@ body::before {
 
 .item-info-nome {
     font-weight: 600;
-    color: #3e2723;
+    color: var(--text-dark);
     margin-bottom: 3px;
     font-size: 0.95rem;
 }
 
 .item-quantidade {
     font-size: 0.8rem;
-    color: #6d4c41;
+    color: var(--text-light);
 }
 
 .item-preco {
@@ -235,7 +257,7 @@ body::before {
     border-radius: 15px;
     padding: 1rem;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transition: var(--transition);
     position: relative;
     display: flex;
     align-items: center;
@@ -245,14 +267,14 @@ body::before {
 
 .forma-pagamento-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(139, 111, 71, 0.2);
-    border-color: #8b6f47;
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary);
 }
 
 .forma-pagamento-card.selected {
-    border-color: #8b6f47;
-    background: linear-gradient(135deg, #faf8f3, #f5e6d3);
-    box-shadow: 0 8px 25px rgba(139, 111, 71, 0.25);
+    border-color: var(--primary);
+    background: linear-gradient(135deg, var(--cream), var(--accent));
+    box-shadow: var(--shadow-md);
 }
 
 .forma-pagamento-card.selected::before {
@@ -287,7 +309,7 @@ body::before {
 .forma-nome {
     font-size: 0.95rem;
     font-weight: 600;
-    color: #3e2723;
+    color: var(--text-dark);
     text-align: left;
 }
 
@@ -376,7 +398,7 @@ body::before {
 .pix-container h3 {
     font-family: 'Pacifico', cursive;
     font-size: 1.8rem;
-    color: #8b6f47;
+    color: var(--primary);
     margin-bottom: 1rem;
 }
 
@@ -384,18 +406,18 @@ body::before {
     margin: 15px auto;
     max-width: 250px;
     border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(139, 111, 71, 0.2);
+    box-shadow: var(--shadow-md);
 }
 
 .pix-instrucoes {
     font-size: 0.95rem;
-    color: #6d4c41;
+    color: var(--text-light);
     margin: 15px 0;
     font-weight: 500;
 }
 
 .btn-copiar-pix {
-    background: linear-gradient(135deg, #8b6f47, #d4a574);
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
     color: white;
     border: none;
     padding: 1rem 2rem;
@@ -403,7 +425,7 @@ body::before {
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transition: var(--transition);
     margin-top: 15px;
     box-shadow: 0 5px 20px rgba(139, 111, 71, 0.3);
 }
@@ -415,11 +437,11 @@ body::before {
 
 .codigo-pix {
     font-size: 0.7rem;
-    color: #6d4c41;
+    color: var(--text-light);
     word-break: break-all;
     margin-top: 15px;
     padding: 12px;
-    background: linear-gradient(135deg, #faf8f3, #f5e6d3);
+    background: linear-gradient(135deg, var(--cream), var(--accent));
     border-radius: 12px;
     max-height: 80px;
     overflow-y: auto;
@@ -433,7 +455,7 @@ body::before {
 .cartao-container h3 {
     font-family: 'Pacifico', cursive;
     font-size: 1.8rem;
-    color: #8b6f47;
+    color: var(--primary);
     margin-bottom: 1.5rem;
     text-align: center;
 }
@@ -445,7 +467,7 @@ body::before {
 .form-label {
     display: block;
     font-weight: 600;
-    color: #8b6f47;
+    color: var(--primary);
     margin-bottom: 0.5rem;
     font-size: 0.9rem;
 }
@@ -462,7 +484,7 @@ body::before {
 
 .form-input:focus {
     outline: none;
-    border-color: #8b6f47;
+    border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(139, 111, 71, 0.1);
     background: white;
 }
@@ -488,7 +510,7 @@ body::before {
 .dinheiro-container h3 {
     font-family: 'Pacifico', cursive;
     font-size: 1.8rem;
-    color: #8b6f47;
+    color: var(--primary);
     margin-bottom: 1rem;
 }
 
@@ -506,7 +528,7 @@ body::before {
 .dinheiro-texto {
     font-size: 1.2rem;
     font-weight: 600;
-    color: #3e2723;
+    color: var(--text-dark);
     margin-bottom: 10px;
 }
 
@@ -546,7 +568,7 @@ body::before {
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transition: var(--transition);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -572,14 +594,14 @@ body::before {
 
 .btn-voltar {
     background: rgba(139, 111, 71, 0.1);
-    color: #6d4c41;
+    color: var(--text-light);
     border: 2px solid rgba(139, 111, 71, 0.2);
 }
 
 .btn-voltar:hover {
-    background: linear-gradient(135deg, #8b6f47, #d4a574);
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
     color: white;
-    border-color: #8b6f47;
+    border-color: var(--primary);
     transform: translateY(-2px) scale(1.02);
     box-shadow: 0 6px 25px rgba(139, 111, 71, 0.3);
 }
@@ -615,7 +637,7 @@ body::before {
     border-radius: 25px;
     padding: 50px 35px;
     text-align: center;
-    box-shadow: 0 10px 40px rgba(139, 111, 71, 0.15);
+    box-shadow: var(--shadow-lg);
     border: 2px solid rgba(139, 111, 71, 0.08);
     max-width: 450px;
     width: 100%;
@@ -625,7 +647,7 @@ body::before {
     width: 70px;
     height: 70px;
     border: 5px solid rgba(139, 111, 71, 0.2);
-    border-top: 5px solid #8b6f47;
+    border-top: 5px solid var(--primary);
     border-radius: 50%;
     margin: 0 auto 25px;
     animation: spin 1s linear infinite;
@@ -640,12 +662,12 @@ body::before {
     font-family: 'Pacifico', cursive;
     font-size: 1.6rem;
     font-weight: 600;
-    color: #8b6f47;
+    color: var(--primary);
     margin-bottom: 8px;
 }
 
 .loading-subtext {
-    color: #6d4c41;
+    color: var(--text-light);
     font-size: 0.95rem;
 }
 
@@ -691,7 +713,7 @@ body::before {
 }
 
 .sucesso-mensagem {
-    color: #6d4c41;
+    color: var(--text-light);
     margin-bottom: 10px;
     font-size: 1rem;
 }
@@ -762,13 +784,89 @@ body::before {
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transition: var(--transition);
     box-shadow: 0 5px 20px rgba(231, 76, 60, 0.3);
 }
 
 .btn-tentar-novamente:hover {
     transform: translateY(-3px) scale(1.05);
     box-shadow: 0 8px 30px rgba(231, 76, 60, 0.4);
+}
+
+/* ====== SELECT DE FORMAS DE PAGAMENTO ====== */
+.select-wrapper {
+    width: 100%;
+    position: relative;
+}
+
+.select-forma-pagamento {
+    width: 100%;
+    padding: 1.2rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+    color: var(--text-dark);
+    background: white;
+    border: 2px solid rgba(139, 111, 71, 0.2);
+    border-radius: 15px;
+    cursor: pointer;
+    transition: var(--transition);
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b6f47' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1.5rem;
+    padding-right: 3rem;
+}
+
+.select-forma-pagamento:hover {
+    border-color: var(--primary);
+    box-shadow: 0 5px 20px rgba(139, 111, 71, 0.15);
+    transform: translateY(-2px);
+}
+
+.select-forma-pagamento:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(139, 111, 71, 0.1);
+    background-color: var(--cream);
+}
+
+.select-forma-pagamento option {
+    padding: 1rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    background: white;
+}
+
+.select-forma-pagamento.selected {
+    border-color: #27ae60;
+    background: linear-gradient(135deg, var(--cream), var(--accent));
+    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
+}
+
+.select-wrapper::after {
+    content: '';
+    position: absolute;
+    right: 3.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.select-wrapper.has-selection::after {
+    content: '✓';
+    width: auto;
+    height: auto;
+    opacity: 1;
+    color: #27ae60;
+    font-weight: bold;
+    font-size: 1.2rem;
 }
 
 /* ====== RESPONSIVIDADE ====== */
@@ -825,98 +923,7 @@ body::before {
         width: 95%;
         padding: 1.5rem;
     }
-}
-/* ====== ESTILOS PARA SELECT DE FORMAS DE PAGAMENTO ====== */
-/* Adicione este código ao final do arquivo finalizacao.css */
 
-.select-wrapper {
-    width: 100%;
-    position: relative;
-}
-
-.select-forma-pagamento {
-    width: 100%;
-    padding: 1.2rem 1.5rem;
-    font-size: 1rem;
-    font-weight: 600;
-    font-family: 'Poppins', sans-serif;
-    color: #3e2723;
-    background: white;
-    border: 2px solid rgba(139, 111, 71, 0.2);
-    border-radius: 15px;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b6f47' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 1rem center;
-    background-size: 1.5rem;
-    padding-right: 3rem;
-}
-
-.select-forma-pagamento:hover {
-    border-color: #8b6f47;
-    box-shadow: 0 5px 20px rgba(139, 111, 71, 0.15);
-    transform: translateY(-2px);
-}
-
-.select-forma-pagamento:focus {
-    outline: none;
-    border-color: #8b6f47;
-    box-shadow: 0 0 0 4px rgba(139, 111, 71, 0.1);
-    background-color: #faf8f3;
-}
-
-.select-forma-pagamento option {
-    padding: 1rem;
-    font-weight: 600;
-    color: #3e2723;
-    background: white;
-}
-
-.select-forma-pagamento option:hover {
-    background: linear-gradient(135deg, #faf8f3, #f5e6d3);
-}
-
-.select-forma-pagamento option:disabled {
-    color: #95a5a6;
-    font-style: italic;
-}
-
-/* Animação ao selecionar */
-.select-forma-pagamento.selected {
-    border-color: #27ae60;
-    background: linear-gradient(135deg, #faf8f3, #f5e6d3);
-    box-shadow: 0 8px 25px rgba(39, 174, 96, 0.2);
-}
-
-/* Indicador visual de seleção */
-.select-wrapper::after {
-    content: '';
-    position: absolute;
-    right: 3.5rem;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 0;
-    height: 0;
-    opacity: 0;
-    transition: all 0.3s ease;
-}
-
-.select-wrapper.has-selection::after {
-    content: '✓';
-    width: auto;
-    height: auto;
-    opacity: 1;
-    color: #27ae60;
-    font-weight: bold;
-    font-size: 1.2rem;
-}
-
-/* Responsividade */
-@media (max-width: 768px) {
     .select-forma-pagamento {
         padding: 1rem 1.2rem;
         font-size: 0.95rem;

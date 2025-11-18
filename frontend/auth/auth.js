@@ -1,4 +1,4 @@
-// auth.js - Sistema de Autenticação com Debug
+// auth.js - Sistema de Autenticação com Debug e Logout Automático
 
 const API_URL = 'http://localhost:3001';
 
@@ -11,45 +11,30 @@ export function mostrarMensagem(elemento, texto, tipo) {
     console.log(`📢 Mensagem [${tipo}]:`, texto);
 }
 
-// Função para salvar dados no cookie
-function salvarCookie(nome, valor, dias = 7) {
-    const data = new Date();
-    data.setTime(data.getTime() + (dias * 24 * 60 * 60 * 1000));
-    const expira = "expires=" + data.toUTCString();
-    const cookie = `${nome}=${valor};${expira};path=/`;
-    document.cookie = cookie;
-    
-    console.log(`🍪 Cookie salvo: ${nome} = ${valor}`);
-    console.log(`📅 Expira em: ${expira}`);
-    console.log(`📋 Cookie completo:`, cookie);
+// Função para salvar dados no sessionStorage (ao invés de cookie com prazo longo)
+function salvarSessao(nome, valor) {
+    sessionStorage.setItem(nome, valor);
+    console.log(`💾 Sessão salva: ${nome} = ${valor}`);
 }
 
-// Função para ler cookie
-function lerCookie(nome) {
-    const nomeCookie = nome + "=";
-    const cookies = document.cookie.split(';');
-    
-    console.log(`🔍 Procurando cookie: ${nome}`);
-    console.log(`📋 Todos os cookies:`, document.cookie);
-    
-    for(let i = 0; i < cookies.length; i++) {
-        let cookie = cookies[i].trim();
-        if (cookie.indexOf(nomeCookie) === 0) {
-            const valor = cookie.substring(nomeCookie.length, cookie.length);
-            console.log(`✅ Cookie encontrado: ${nome} = ${valor}`);
-            return valor;
-        }
-    }
-    
-    console.log(`❌ Cookie não encontrado: ${nome}`);
-    return null;
+// Função para ler sessionStorage
+function lerSessao(nome) {
+    const valor = sessionStorage.getItem(nome);
+    console.log(`🔍 Lendo sessão: ${nome} = ${valor || 'null'}`);
+    return valor;
 }
 
-// Função para deletar cookie
-function deletarCookie(nome) {
-    console.log(`🗑️ Deletando cookie: ${nome}`);
-    document.cookie = `${nome}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-    console.log(`✅ Cookie ${nome} deletado`);
+// Função para deletar sessão
+function deletarSessao(nome) {
+    sessionStorage.removeItem(nome);
+    console.log(`🗑️ Sessão deletada: ${nome}`);
+}
+
+// Função para deletar todas as sessões
+function deletarTodasSessoes() {
+    console.log('🧹 Deletando todas as sessões...');
+    sessionStorage.clear();
+    console.log('✅ Todas as sessões deletadas!');
 }
 
 // Função de Login
@@ -63,7 +48,10 @@ export async function login(email, senha) {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ email, senha })
+            body: JSON.stringify({ 
+                email_usuario: email,
+                senha_usuario: senha
+            })
         });
 
         console.log('📡 Resposta do servidor:', response.status, response.statusText);
@@ -79,24 +67,25 @@ export async function login(email, senha) {
             console.log('✅ Login bem-sucedido!');
             console.log('👤 Usuário:', usuario);
             
-            // Salvar cookies
-            salvarCookie('token', usuario.token || 'no-token');
-            salvarCookie('userId', usuario.id || usuario.cpf);
-            salvarCookie('userName', usuario.nome);
-            salvarCookie('userEmail', usuario.email);
-            salvarCookie('userType', usuario.tipo || 'cliente');
-            salvarCookie('userCargo', usuario.cargo || '');
+            // Salvar na sessão (será apagado ao fechar o navegador)
+            salvarSessao('token', usuario.token || 'no-token');
+            salvarSessao('userId', usuario.id || usuario.cpf);
+            salvarSessao('userName', usuario.nome);
+            salvarSessao('userEmail', usuario.email);
+            salvarSessao('userType', usuario.is_funcionario ? 'funcionario' : 'cliente');
+            salvarSessao('userCargo', usuario.cargo || '');
             
-            console.log('🎉 Cookies salvos com sucesso!');
+            console.log('🎉 Sessão criada com sucesso!');
+            console.log('⚠️ A sessão será apagada ao fechar o navegador');
             
             // Verificar se foram salvos
-            console.log('🔍 Verificando cookies salvos:');
-            console.log('  - token:', lerCookie('token'));
-            console.log('  - userId:', lerCookie('userId'));
-            console.log('  - userName:', lerCookie('userName'));
-            console.log('  - userEmail:', lerCookie('userEmail'));
-            console.log('  - userType:', lerCookie('userType'));
-            console.log('  - userCargo:', lerCookie('userCargo'));
+            console.log('🔍 Verificando dados da sessão:');
+            console.log('  - token:', lerSessao('token'));
+            console.log('  - userId:', lerSessao('userId'));
+            console.log('  - userName:', lerSessao('userName'));
+            console.log('  - userEmail:', lerSessao('userEmail'));
+            console.log('  - userType:', lerSessao('userType'));
+            console.log('  - userCargo:', lerSessao('userCargo'));
             
             // Retornar no formato esperado
             return {
@@ -122,7 +111,7 @@ export async function registrar(user) {
     console.log('👤 Dados do usuário:', user);
     
     try {
-        const response = await fetch(`${API_URL}/auth/registrar`, {
+        const response = await fetch(`${API_URL}/auth/registro`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -139,22 +128,23 @@ export async function registrar(user) {
             console.log('✅ Cadastro bem-sucedido!');
             console.log('👤 Usuário:', data.user);
             
-            // Salvar cookies
-            salvarCookie('token', data.user.token || 'no-token');
-            salvarCookie('userId', data.user.id || data.user.cpf);
-            salvarCookie('userName', data.user.nome);
-            salvarCookie('userEmail', data.user.email);
-            salvarCookie('userType', data.user.tipo || 'cliente');
-            salvarCookie('userCargo', data.user.cargo || '');
+            // Salvar na sessão
+            salvarSessao('token', data.user.token || 'no-token');
+            salvarSessao('userId', data.user.id || data.user.cpf);
+            salvarSessao('userName', data.user.nome);
+            salvarSessao('userEmail', data.user.email);
+            salvarSessao('userType', data.user.tipo || 'cliente');
+            salvarSessao('userCargo', data.user.cargo || '');
             
-            console.log('🎉 Cookies salvos com sucesso!');
+            console.log('🎉 Sessão criada com sucesso!');
+            console.log('⚠️ A sessão será apagada ao fechar o navegador');
             
             // Verificar se foram salvos
-            console.log('🔍 Verificando cookies salvos:');
-            console.log('  - token:', lerCookie('token'));
-            console.log('  - userId:', lerCookie('userId'));
-            console.log('  - userName:', lerCookie('userName'));
-            console.log('  - userEmail:', lerCookie('userEmail'));
+            console.log('🔍 Verificando dados da sessão:');
+            console.log('  - token:', lerSessao('token'));
+            console.log('  - userId:', lerSessao('userId'));
+            console.log('  - userName:', lerSessao('userName'));
+            console.log('  - userEmail:', lerSessao('userEmail'));
             
             return data;
         } else {
@@ -171,9 +161,9 @@ export async function registrar(user) {
 export function verificarLogin() {
     console.log('🔍 Verificando login...');
     
-    const token = lerCookie('token');
-    const userId = lerCookie('userId');
-    const userName = lerCookie('userName');
+    const token = lerSessao('token');
+    const userId = lerSessao('userId');
+    const userName = lerSessao('userName');
     
     if (token && userId) {
         console.log('✅ Usuário está logado!');
@@ -195,16 +185,10 @@ export function verificarLogin() {
 export function logout() {
     console.log('👋 Realizando logout...');
     
-    deletarCookie('token');
-    deletarCookie('userId');
-    deletarCookie('userName');
-    deletarCookie('userEmail');
-    deletarCookie('userType');
-    deletarCookie('userCargo');
+    deletarTodasSessoes();
     
     console.log('✅ Logout realizado com sucesso!');
-    console.log('🔍 Cookies após logout:', document.cookie);
 }
 
 // Exportar funções auxiliares também
-export { lerCookie, salvarCookie, deletarCookie };
+export { lerSessao as lerCookie, salvarSessao as salvarCookie, deletarSessao as deletarCookie };

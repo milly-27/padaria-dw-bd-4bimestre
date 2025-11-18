@@ -4,6 +4,22 @@
 const API_BASE_URL = 'http://localhost:3001';
 
 // ========================================
+// FUNÇÕES DE COOKIES
+// ========================================
+function lerCookie(nome) {
+    const nomeCookie = nome + "=";
+    const cookies = document.cookie.split(';');
+    
+    for(let i = 0; i < cookies.length; i++) {
+        let cookie = cookies[i].trim();
+        if (cookie.indexOf(nomeCookie) === 0) {
+            return cookie.substring(nomeCookie.length, cookie.length);
+        }
+    }
+    return null;
+}
+
+// ========================================
 // CONFIGURAÇÃO DA CHAVE PIX
 // ========================================
 const MINHA_CHAVE_PIX = '02964990999';
@@ -40,55 +56,83 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ========================================
-// CARREGAR DADOS (Frontend)
+// CARREGAR DADOS - CORRIGIDO PARA COOKIES
 // ========================================
 async function carregarDados() {
     try {
         console.log('\n📥 [CARREGAR DADOS] Iniciando carregamento...\n');
         
-        // 1. VERIFICAR USUÁRIO LOGADO
+        // 1. VERIFICAR USUÁRIO LOGADO - PRIORIZAR COOKIES
         console.log('👤 [USUÁRIO] Verificando autenticação...');
-        const usuarioSession = sessionStorage.getItem('usuarioLogado');
         
-        if (usuarioSession) {
-            usuario = JSON.parse(usuarioSession);
-            console.log('✅ [USUÁRIO] Autenticado:', usuario.nome);
+        // PRIMEIRO: Tentar cookies
+        const userId = lerCookie('userId');
+        const userName = lerCookie('userName');
+        const userEmail = lerCookie('userEmail');
+        const userType = lerCookie('userType');
+        const userCargo = lerCookie('userCargo');
+        
+        console.log('🍪 [COOKIES] Dados encontrados:');
+        console.log('   - userId:', userId || '❌ Não encontrado');
+        console.log('   - userName:', userName || '❌ Não encontrado');
+        console.log('   - userEmail:', userEmail || '❌ Não encontrado');
+        console.log('   - userType:', userType || '❌ Não encontrado');
+        console.log('   - userCargo:', userCargo || '❌ Não encontrado');
+        
+        if (userId && userName) {
+            usuario = {
+                id: userId,
+                nome: userName,
+                email: userEmail || '',
+                tipo: userType || 'cliente',
+                cargo: userCargo || ''
+            };
+            console.log('✅ [USUÁRIO] Autenticado via cookies:', usuario.nome);
         } else {
-            console.log('🔍 [USUÁRIO] Consultando backend...');
-            try {
-                const respUsuario = await fetch(`${API_BASE_URL}/auth/verificar-login`, {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Cache-Control': 'no-cache'
+            // SEGUNDO: Tentar sessionStorage
+            console.log('🔍 [SESSÃO] Verificando sessionStorage...');
+            const usuarioSession = sessionStorage.getItem('usuarioLogado');
+            
+            if (usuarioSession) {
+                usuario = JSON.parse(usuarioSession);
+                console.log('✅ [USUÁRIO] Autenticado via sessionStorage:', usuario.nome);
+            } else {
+                // TERCEIRO: Tentar backend
+                console.log('🔍 [BACKEND] Consultando servidor...');
+                try {
+                    const respUsuario = await fetch(`${API_BASE_URL}/auth/verificar-login`, {
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Cache-Control': 'no-cache'
+                        }
+                    });
+                    const dataUsuario = await respUsuario.json();
+                    
+                    if (dataUsuario.status === 'ok' && dataUsuario.usuario) {
+                        usuario = {
+                            id: dataUsuario.usuario.id,
+                            nome: dataUsuario.usuario.nome,
+                            email: dataUsuario.usuario.email,
+                            tipo: dataUsuario.usuario.tipo
+                        };
+                        console.log('✅ [USUÁRIO] Autenticado via backend:', usuario.nome);
                     }
-                });
-                const dataUsuario = await respUsuario.json();
-                
-                if (dataUsuario.status === 'ok' && dataUsuario.usuario) {
-                    usuario = {
-                        id: dataUsuario.usuario.id,
-                        nome: dataUsuario.usuario.nome,
-                        email: dataUsuario.usuario.email,
-                        tipo: dataUsuario.usuario.tipo
-                    };
-                    sessionStorage.setItem('usuarioLogado', JSON.stringify(usuario));
-                    console.log('✅ [USUÁRIO] Autenticado via backend:', usuario.nome);
+                } catch (error) {
+                    console.error('❌ [BACKEND] Erro ao verificar:', error);
                 }
-            } catch (error) {
-                console.error('❌ [USUÁRIO] Erro ao verificar backend:', error);
             }
         }
         
         if (!usuario) {
             console.log('❌ [USUÁRIO] Não autenticado! Redirecionando...');
             mostrarErro('Você precisa estar logado para finalizar a compra');
-            setTimeout(() => window.location.href = '../login/login.html', 2000);
+            setTimeout(() => window.location.href = '../auth/login.html', 2000);
             return;
         }
 
-        // 2. CARREGAR CARRINHO DO LOCALSTORAGE (Frontend)
+        // 2. CARREGAR CARRINHO DO LOCALSTORAGE
         console.log('\n🛒 [CARRINHO] Carregando do LocalStorage...');
         const carrinhoLocal = localStorage.getItem('carrinho');
         
@@ -105,7 +149,7 @@ async function carregarDados() {
             console.log(`   ${i+1}. ${item.nome_produto} - Qtd: ${item.quantidade} - R$ ${item.preco}`);
         });
 
-        // 3. BUSCAR FORMAS DE PAGAMENTO DO BANCO DE DADOS
+        // 3. BUSCAR FORMAS DE PAGAMENTO DO BANCO
         console.log('\n💳 [FORMAS PAGAMENTO] Buscando do banco de dados...');
         await carregarFormasPagamento();
 
@@ -163,7 +207,6 @@ async function carregarFormasPagamento() {
 // ========================================
 function processarFormasPagamento(data) {
     console.log('🔍 [PROCESSAR] Resposta recebida:', typeof data);
-    console.log('📊 [PROCESSAR] Dados:', JSON.stringify(data, null, 2));
     
     // Extrair array da resposta
     let formasArray = Array.isArray(data) ? data : (data.rows || data.data || data.formas || []);
@@ -305,7 +348,7 @@ function renderizarSelectFormasPagamento() {
         select.appendChild(option);
     });
     
-    // Container para dados de pagamento (criado aqui)
+    // Container para dados de pagamento
     const dadosContainer = document.createElement('div');
     dadosContainer.id = 'dadosPagamentoContainer';
     dadosContainer.style.cssText = 'margin-top: 20px;';
@@ -348,7 +391,6 @@ function renderizarSelectFormasPagamento() {
     container.appendChild(wrapperDiv);
     
     console.log('✅ [SELECT] Renderizado com', select.options.length - 1, 'opções');
-    console.log('✅ [CONTAINER] Container dadosPagamentoContainer criado');
 }
 
 // ========================================
@@ -392,7 +434,6 @@ function renderizarDadosPagamento() {
                 </div>
             </div>
         `;
-        console.log('✅ [DADOS PAGAMENTO] PIX renderizado');
     } else if (nome.includes('cartão') || nome.includes('cartao') || nome.includes('crédito') || nome.includes('credito') || nome.includes('débito') || nome.includes('debito')) {
         container.innerHTML = `
             <div class="dados-pagamento">
@@ -421,7 +462,6 @@ function renderizarDadosPagamento() {
                 </div>
             </div>
         `;
-        console.log('✅ [DADOS PAGAMENTO] Cartão renderizado');
     } else if (nome.includes('dinheiro')) {
         const total = calcularTotal();
         container.innerHTML = `
@@ -435,28 +475,6 @@ function renderizarDadosPagamento() {
                 </div>
             </div>
         `;
-        console.log('✅ [DADOS PAGAMENTO] Dinheiro renderizado');
-    } else if (nome.includes('transferência') || nome.includes('transferencia')) {
-        const total = calcularTotal();
-        container.innerHTML = `
-            <div class="dados-pagamento">
-                <h3 class="section-title">🏦 Transferência Bancária</h3>
-                <div class="pix-container">
-                    <div class="dinheiro-icon">🏦</div>
-                    <p class="dinheiro-texto">Total a pagar:</p>
-                    <p class="dinheiro-valor">${formatarMoeda(total)}</p>
-                    <div style="margin-top: 20px; text-align: left; background: white; padding: 15px; border-radius: 10px;">
-                        <p style="margin: 5px 0;"><strong>Banco:</strong> Banco do Brasil</p>
-                        <p style="margin: 5px 0;"><strong>Agência:</strong> 0001-X</p>
-                        <p style="margin: 5px 0;"><strong>Conta:</strong> 12345-6</p>
-                        <p style="margin: 5px 0;"><strong>Titular:</strong> ${NOME_RECEBEDOR}</p>
-                        <p style="margin: 5px 0;"><strong>CPF:</strong> ${MINHA_CHAVE_PIX}</p>
-                    </div>
-                    <p class="pix-instrucoes" style="margin-top: 15px;">Envie o comprovante para confirmação do pedido</p>
-                </div>
-            </div>
-        `;
-        console.log('✅ [DADOS PAGAMENTO] Transferência renderizada');
     } else {
         // Forma genérica
         const total = calcularTotal();
@@ -471,7 +489,6 @@ function renderizarDadosPagamento() {
                 </div>
             </div>
         `;
-        console.log('✅ [DADOS PAGAMENTO] Forma genérica renderizada');
     }
 }
 
@@ -516,7 +533,7 @@ function calcularCRC16(str) {
 }
 
 // ========================================
-// CONFIRMAR PAGAMENTO - TRANSAÇÃO NO BANCO (CORRIGIDO)
+// CONFIRMAR PAGAMENTO
 // ========================================
 async function confirmarPagamento() {
     if (!formaSelecionada) {
@@ -559,141 +576,125 @@ async function confirmarPagamento() {
     try {
         const total = calcularTotal();
 
-        // OBTER DATA ATUAL AUTOMATICAMENTE (UMA VEZ)
+        // OBTER DATA ATUAL
         const hoje = new Date();
         const ano = hoje.getFullYear();
         const mes = String(hoje.getMonth() + 1).padStart(2, '0');
         const dia = String(hoje.getDate()).padStart(2, '0');
         const dataAtual = `${ano}-${mes}-${dia}`;
 
-        // Preparar dados do pedido
-        const pedidoData = {
+        console.log('\n📋 [DADOS] Preparando pedido...');
+        console.log('   CPF:', usuario.id);
+        console.log('   Data:', dataAtual);
+        console.log('   Total:', total);
+
+        const pedidoPayload = {
             cpf: usuario.id,
             data_pedido: dataAtual,
-            valor_total: total,
-            itens: carrinho.map(item => ({
-                id_produto: item.id_produto,
-                quantidade: item.quantidade,
-                preco_unitario: item.preco
-            }))
+            valor_total: total
         };
 
-        console.log('📦 [PEDIDO] Criando no banco...');
-        console.log('   CPF:', pedidoData.cpf);
-        console.log('   Data (automática):', pedidoData.data_pedido);
-        console.log('   Valor:', pedidoData.valor_total);
-        console.log('   Itens:', pedidoData.itens.length);
-        console.log('   Payload completo:', JSON.stringify({
-            cpf: pedidoData.cpf,
-            data_pedido: pedidoData.data_pedido,
-            valor_total: pedidoData.valor_total
-        }, null, 2));
-
-        // CRIAR PEDIDO
+        console.log('\n🚀 [API] POST /pedido');
+        
         const respPedido = await fetch(`${API_BASE_URL}/pedido`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
             credentials: 'include',
-            body: JSON.stringify({
-                cpf: pedidoData.cpf,
-                data_pedido: pedidoData.data_pedido,
-                valor_total: pedidoData.valor_total
-            })
+            body: JSON.stringify(pedidoPayload)
         });
 
-        console.log('📨 [PEDIDO] Status da resposta:', respPedido.status);
+        console.log('📨 [PEDIDO] Status:', respPedido.status);
 
         if (!respPedido.ok) {
-            let errorData;
-            try {
-                errorData = await respPedido.json();
-                console.error('❌ [PEDIDO] Erro do servidor:', errorData);
-            } catch (e) {
-                const errorText = await respPedido.text();
-                console.error('❌ [PEDIDO] Resposta de erro:', errorText);
-                throw new Error(`Erro ao criar pedido: ${respPedido.status} - ${errorText}`);
-            }
-            throw new Error(errorData.error || errorData.message || 'Erro ao criar pedido');
+            const errorText = await respPedido.text();
+            console.error('❌ [PEDIDO] Erro:', errorText);
+            throw new Error(`Erro ao criar pedido: ${respPedido.status}`);
         }
         
         const pedido = await respPedido.json();
         pedidoId = pedido.id_pedido;
-        console.log('✅ [PEDIDO] Criado com sucesso! ID:', pedidoId);
+        console.log('✅ [PEDIDO] Criado! ID:', pedidoId);
 
         // INSERIR ITENS DO PEDIDO
-        console.log('📦 [ITENS] Inserindo itens do pedido...');
-        for (const item of pedidoData.itens) {
+        console.log('\n📦 [ITENS] Inserindo itens...');
+        for (const item of carrinho) {
+            const itemPayload = {
+                id_pedido: pedidoId,
+                id_produto: item.id_produto,
+                quantidade: item.quantidade,
+                preco_unitario: item.preco
+            };
+
             const itemResp = await fetch(`${API_BASE_URL}/pedidoproduto`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({
-                    id_pedido: pedidoId,
-                    id_produto: item.id_produto,
-                    quantidade: item.quantidade,
-                    preco_unitario: item.preco_unitario
-                })
+                body: JSON.stringify(itemPayload)
             });
 
             if (!itemResp.ok) {
-                const errorData = await itemResp.json().catch(() => ({}));
-                throw new Error(errorData.message || `Erro ao inserir item ${item.id_produto}`);
+                throw new Error(`Erro ao inserir item ${item.id_produto}`);
             }
             console.log(`   ✅ Item ${item.id_produto} inserido`);
         }
 
         // CRIAR PAGAMENTO
-        console.log('💰 [PAGAMENTO] Criando registro de pagamento...');
+        console.log('\n💰 [PAGAMENTO] Criando registro...');
         
+        const pagamentoPayload = {
+            id_pedido: pedidoId,
+            data_pagamento: dataAtual,
+            valor_total: total
+        };
+
         const pagamentoResp = await fetch(`${API_BASE_URL}/pagamento`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({
-                id_pedido: pedidoId,
-                data_pagamento: dataAtual, // Usar a mesma data
-                valor_total: total
-            })
+            body: JSON.stringify(pagamentoPayload)
         });
 
         if (!pagamentoResp.ok) {
-            const errorData = await pagamentoResp.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Erro ao criar registro de pagamento');
+            throw new Error('Erro ao criar pagamento');
         }
 
         const pagamento = await pagamentoResp.json();
         const idPagamento = pagamento.id_pagamento;
-        console.log('✅ [PAGAMENTO] Registro criado! ID:', idPagamento);
+        console.log('✅ [PAGAMENTO] Criado! ID:', idPagamento);
 
         // RELACIONAR FORMA DE PAGAMENTO
-        console.log('🔗 [FORMA PAGAMENTO] Relacionando forma de pagamento...');
+        console.log('\n🔗 [FORMA PAGAMENTO] Relacionando...');
         
+        const formaPagPayload = {
+            id_pagamento: idPagamento,
+            id_forma_pagamento: formaSelecionada.id_forma_pagamento,
+            valor_pago: total
+        };
+
         const formaPagResp = await fetch(`${API_BASE_URL}/pagamento_has_formapagamentos`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({
-                id_pagamento: idPagamento,
-                id_forma_pagamento: formaSelecionada.id_forma_pagamento,
-                valor_pago: total
-            })
+            body: JSON.stringify(formaPagPayload)
         });
 
         if (!formaPagResp.ok) {
-            const errorData = await formaPagResp.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Erro ao relacionar forma de pagamento');
+            throw new Error('Erro ao relacionar forma de pagamento');
         }
 
-        console.log('✅ [PAGAMENTO] Pagamento processado com sucesso!');
+        console.log('✅ [PAGAMENTO] Completo!');
 
-        // SUCESSO - Mostrar tela de confirmação
+        // SUCESSO
         document.getElementById('processingScreen').style.display = 'none';
         document.getElementById('successScreen').style.display = 'flex';
         document.getElementById('pedidoNumero').textContent = pedidoId;
 
-        // LIMPAR CARRINHO DO LOCALSTORAGE
+        // LIMPAR CARRINHO
         localStorage.removeItem('carrinho');
-        console.log('🗑️ [CARRINHO] Limpo do LocalStorage');
+        console.log('🗑️ [CARRINHO] Limpo');
 
         // Redirecionar após 5 segundos
         setTimeout(() => {
@@ -701,7 +702,9 @@ async function confirmarPagamento() {
         }, 5000);
 
     } catch (error) {
-        console.error('\n❌ [ERRO] Falha no pagamento:', error);
+        console.error('\n❌ [ERRO FATAL]:', error);
+        console.error('   Mensagem:', error.message);
+        
         document.getElementById('processingScreen').style.display = 'none';
         document.getElementById('errorScreen').style.display = 'flex';
         document.getElementById('errorMessage').textContent = error.message || 'Erro ao processar pagamento';
@@ -811,36 +814,6 @@ function mostrarErro(mensagem) {
 }
 
 console.log('✅ Sistema de pagamento carregado!');
-// ========================================
-// FUNÇÃO AUXILIAR: OBTER PRÓXIMO ID DO PEDIDO
-// ========================================
-async function obterProximoIdPedido() {
-    try {
-        console.log('🔢 [ID] Buscando próximo ID disponível...');
-        const response = await fetch(`${API_BASE_URL}/pedido`, {
-            method: 'GET',
-            credentials: 'include'
-        });
-        
-        if (response.ok) {
-            const pedidos = await response.json();
-            if (pedidos.length > 0) {
-                const maxId = Math.max(...pedidos.map(p => p.id_pedido || 0));
-                const proximoId = maxId + 1;
-                console.log('   Último ID:', maxId);
-                console.log('   Próximo ID:', proximoId);
-                return proximoId;
-            }
-        }
-        console.log('   Nenhum pedido encontrado, usando ID 1');
-        return 1;
-    } catch (error) {
-        console.error('❌ [ID] Erro ao obter próximo ID:', error);
-        const timestamp = Date.now();
-        console.log('   Fallback: usando timestamp:', timestamp);
-        return timestamp;
-    }
-}
 
 // ========================================
 // CONFIRMAR PAGAMENTO - VERSÃO SIMPLIFICADA E CORRIGIDA
@@ -1053,24 +1026,3 @@ async function confirmarPagamento() {
         document.getElementById('errorMessage').textContent = error.message || 'Erro ao processar pagamento';
     }
 }
-
-// ========================================
-// INSTRUÇÕES DE USO
-// ========================================
-/*
-SUBSTITUA a função confirmarPagamento() no arquivo finalizacao.js
-pela versão acima.
-
-ESTA VERSÃO:
-✅ Envia APENAS os 3 campos obrigatórios: cpf, data_pedido, valor_total
-✅ Faz UMA ÚNICA tentativa (não há fallback)
-✅ Logs detalhados em cada etapa
-✅ Tratamento de erro claro
-✅ Remove as estratégias 1, 2, 3, 4 que estavam confundindo
-
-APÓS APLICAR:
-1. Salve o arquivo
-2. Recarregue a página (F5)
-3. Tente finalizar o pedido novamente
-4. Verifique o console do navegador para logs detalhados
-*/

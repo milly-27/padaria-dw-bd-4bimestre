@@ -1,4 +1,32 @@
-/* Reset e configurações básicas */
+/*
+ * CSS PADRONIZADO REFINADO - PESSOA
+ * Estilo elegante de CRUD, totalmente consistente com menu.css.
+ */
+
+/* Importando fontes modernas do Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Pacifico&display=swap');
+
+/* Variáveis de Cor e Estilo do Menu */
+:root {
+    --primary: #8b6f47; /* Marrom/Dourado Principal */
+    --secondary: #d4a574; /* Marrom Claro/Bronze */
+    --accent: #f5e6d3; /* Bege Claro */
+    --dark-brown: #5d4037; /* Marrom Escuro */
+    --cream: #faf8f3; /* Fundo Creme */
+    --gold: #c9a961; /* Dourado */
+    --bg-light: #fff;
+    --text-dark: #3e2723; /* Texto Escuro */
+    --text-light: #6d4c41; /* Texto Claro */
+    --shadow-color: rgba(139, 111, 71, 0.15);
+    --shadow-sm: 0 4px 15px var(--shadow-color);
+    --shadow-md: 0 8px 25px var(--shadow-color);
+    --shadow-lg: 0 15px 50px rgba(139, 111, 71, 0.2);
+    --radius-md: 15px;
+    --radius-lg: 25px;
+    --transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Reset e configurações base */
 * {
     margin: 0;
     padding: 0;
@@ -6,26 +34,39 @@
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f9f4ef; /* bege claro */
-    color: #4e342e; /* marrom escuro */
-    line-height: 1.0;
+    font-family: 'Poppins', sans-serif;
+    /* Fundo elegante de padaria */
+    background: linear-gradient(135deg, var(--cream) 0%, var(--accent) 50%, #e8d5bf 100%);
+    background-size: 400% 400%;
+    animation: gradientDance 20s ease infinite;
+    color: var(--text-dark);
+    line-height: 1.7;
     min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
 }
 
-/* Header */
+@keyframes gradientDance {
+    0%, 100% { background-position: 0% 50%; }
+    25% { background-position: 50% 25%; }
+    50% { background-position: 100% 50%; }
+    75% { background-position: 50% 75%; }
+}
+
+/* Header (Para páginas sem o menu completo) */
 header {
-    background: linear-gradient(135deg, #6d4c41, #4e342e); /* degradê marrom médio */
+    background: linear-gradient(135deg, var(--primary), var(--dark-brown));
     color: white;
     text-align: center;
     padding: 2rem 0;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
 }
 
 header h1 {
-    font-size: 1.5rem;
+    font-family: 'Pacifico', cursive;
+    font-size: 2.5rem;
     font-weight: 600;
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.25);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Main container */
@@ -37,164 +78,187 @@ main {
     gap: 2rem;
 }
 
-/* Sections */
-section {
-    background: #f2ebe5; /* bege médio */
-    border-radius: 12px;
-    padding: 2rem;
-    box-shadow: 0 4px 15px rgba(78, 52, 46, 0.08); /* sombra marrom suave */
-    border: 1px solid #e6dfd8; /* borda bege */
+/* Sections (Containers principais) */
+.form-section, .list-section {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-lg);
+    padding: 3rem;
+    box-shadow: var(--shadow-lg);
+    border: 2px solid rgba(139, 111, 71, 0.1);
+    animation: popIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
-section h2 {
-    color: #4e342e;
+@keyframes popIn {
+    from { 
+        opacity: 0; 
+        transform: scale(0.95) translateY(20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: scale(1) translateY(0); 
+    }
+}
+
+.form-section h2, .list-section h2 {
+    font-family: 'Pacifico', cursive;
+    color: var(--primary);
     margin-bottom: 1.5rem;
-    font-size: 1.8rem;
-    border-bottom: 3px solid #d7a86e; /* detalhe bege queimado */
+    font-size: 2rem;
+    border-bottom: 3px solid var(--secondary);
     padding-bottom: 0.5rem;
+    font-weight: 600;
 }
 
-/* Form styles */
+/* Form styles - Search/Action Group */
 .search-container {
-    background: #f9f4ef;
+    background: var(--accent);
     padding: 1.5rem;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     margin-bottom: 2rem;
-    border: 2px solid #e6dfd8;
+    border: 2px solid var(--secondary);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
 .search-container label {
-    display: block;
-    margin-bottom: 0.5rem;
     font-weight: 600;
-    color: #4e342e;
-}
-
-.search-input-group input,
-.search-input-group button {
-    height: 42px;
+    color: var(--text-dark);
 }
 
 .search-input-group {
     display: flex;
-    gap: 1rem;
+    gap: 0.8rem;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .search-input-group input {
     flex: 1;
-    max-width: 200px;
+    min-width: 150px;
+    padding: 0.8rem;
+    border: 2px solid var(--secondary);
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: var(--transition);
+    background: white;
+    color: var(--text-dark);
 }
 
+/* Fieldset e Form Groups */
 fieldset {
-    border: 1px solid #d7a86e;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    background: #fffefc;
+    border: 1px solid var(--secondary);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    background: var(--cream);
 }
 
 fieldset legend {
-    font-weight: 600;
-    color: #4e342e;
+    font-weight: 700;
+    color: var(--primary);
     padding: 0 0.5rem;
-    font-size: 1rem;
+    font-size: 1.2rem;
 }
 
 .form-group {
-    margin-bottom: 1rem;
+    margin-bottom: 1.2rem;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 0.2rem;
-    font-weight: 600;
-    color: #4e342e;
+    margin-bottom: 0.4rem;
+    font-weight: 500;
+    color: var(--text-light);
 }
 
 .form-group input,
 .form-group select {
     width: 100%;
     padding: 0.8rem;
-    border: 2px solid #e6dfd8;
-    border-radius: 6px;
+    border: 2px solid var(--accent);
+    border-radius: 8px;
     font-size: 1rem;
-    transition: all 0.3s ease;
+    transition: var(--transition);
     background: white;
+    color: var(--text-dark);
 }
 
 .form-group input:focus,
 .form-group select:focus {
     outline: none;
-    border-color: #d7a86e;
-    box-shadow: 0 0 0 3px rgba(215, 168, 110, 0.25);
-    background: #fefcf9;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(139, 111, 71, 0.2);
+    background: var(--cream);
 }
 
-/* Button styles */
-.button-group {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-top: 1rem;
-}
-
+/* Button styles - Padronizado com o menu */
 button {
-    padding: 0.8rem 2rem;
+    padding: 0.8rem 1.5rem;
     border: none;
-    border-radius: 6px;
-    font-size: 1rem;
+    border-radius: 50px;
+    font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: var(--transition);
     min-width: 100px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
-.btn-primary {
-    background: linear-gradient(135deg, #eacda3, #d7a86e);
-    color: #4e342e;
+button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(139, 111, 71, 0.4);
 }
 
-.btn-primary:hover {
-    background: linear-gradient(135deg, #d7a86e, #c69758);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(215, 168, 110, 0.35);
-}
-
-.btn-secondary {
-    background: linear-gradient(135deg, #8d6e63, #6d4c41);
+/* Botões CRUD */
+.btn-primary { /* Incluir */
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
     color: white;
 }
 
-.btn-secondary:hover {
-    background: linear-gradient(135deg, #6d4c41, #4e342e);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(109, 76, 65, 0.4);
+.btn-secondary { /* Alterar */
+    background: linear-gradient(135deg, var(--gold), var(--secondary));
+    color: var(--text-dark);
 }
 
-.btn-save {
-    background: linear-gradient(135deg, #a1887f, #bcaaa4);
+.btn-save { /* Salvar */
+    background: linear-gradient(135deg, #4CAF50, #66BB6A); /* Verde de sucesso */
     color: white;
 }
 
-.btn-danger {
-    background: linear-gradient(135deg, #c62828, #8e0000);
+.btn-danger { /* Excluir */
+    background: linear-gradient(135deg, #E53935, #EF5350); /* Vermelho de perigo */
     color: white;
 }
 
-.btn-cancel {
-    background: linear-gradient(135deg, #9e9e9e, #757575);
+.btn-cancel { /* Cancelar */
+    background: var(--text-light);
     color: white;
+    box-shadow: 0 5px 15px rgba(109, 76, 65, 0.2);
+}
+
+.btn-cancel:hover {
+    background: var(--dark-brown);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(109, 76, 65, 0.4);
 }
 
 /* Table styles */
 .table-container {
-    max-height: 400px;
+    max-height: 500px;
     overflow-y: auto;
-    border: 2px solid #e6dfd8;
-    border-radius: 8px;
+    border: 2px solid var(--accent);
+    border-radius: var(--radius-md);
     background: white;
+    box-shadow: var(--shadow-md);
 }
 
 table {
@@ -204,7 +268,7 @@ table {
 }
 
 table thead {
-    background: linear-gradient(135deg, #6d4c41, #4e342e);
+    background: var(--dark-brown);
     color: white;
     position: sticky;
     top: 0;
@@ -215,79 +279,66 @@ table th,
 table td {
     padding: 1rem;
     text-align: left;
-    border-bottom: 1px solid #e6dfd8;
+    border-bottom: 1px solid var(--accent);
+}
+
+table th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+}
+
+table tbody tr {
+    transition: background-color 0.2s ease;
 }
 
 table tbody tr:hover {
-    background-color: #f9f4ef;
+    background-color: var(--accent);
 }
 
 table tbody tr:nth-child(even) {
-    background-color: #fefcf9;
+    background-color: var(--cream);
 }
 
-/* Message styles */
-.message.success {
-    background: linear-gradient(135deg, #e6dfd8, #f9f4ef);
-    color: #4e342e;
-    border: 1px solid #d7a86e;
+table tbody tr:nth-child(even):hover {
+    background-color: var(--accent);
 }
 
-.message.error {
-    background: linear-gradient(135deg, #f8d7da, #f5c6cb);
-    color: #6d1a1a;
-    border: 1px solid #f5c6cb;
+/* Estilos Específicos de Pessoa */
+
+/* Campo de Senha com Ícone */
+.password-container {
+    position: relative;
+    display: flex;
+    align-items: center;
 }
 
-.message.warning {
-    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
-    color: #856404;
-    border: 1px solid #ffeaa7;
+.password-container input {
+    padding-right: 40px; /* Espaço para o ícone */
 }
 
-.message.info {
-    background: linear-gradient(135deg, #e0dede, #f9f4ef);
-    color: #3e2723;
-    border: 1px solid #d7ccc8;
+.password-container .toggle-password {
+    position: absolute;
+    right: 15px; /* Posição do ícone */
+    cursor: pointer;
+    color: var(--text-light);
+    font-size: 1.2rem;
+    transition: var(--transition);
 }
 
-/* Footer */
-footer {
-    background: #4e342e;
-    color: white;
-    text-align: center;
-    padding: 1.5rem;
-    margin-top: 1rem;
+.password-container .toggle-password:hover {
+    color: var(--primary);
 }
 
-/* parte do 1 para 1 */
-.professor {
-    background-color: #f2ebe5;
-    border: 1px solid #e6dfd8;
-}
-
-.avaliador {
-    background-color: #e6dfd8;
-    border: 1px solid #d7ccc8;
-}
-
-.avaliado {
-    background-color: #d7ccc8;
-    border: 1px solid #bcaaa4;
-}
-
-/* Estilos para checkbox section */
+/* Checkbox Section */
 .checkbox-section {
     margin-top: 20px;
-    padding: 20px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border: 2px solid #e9ecef;
-}
-
-.funcionario-section,
-.cliente-section {
-    margin-bottom: 20px;
+    padding: 1.5rem;
+    background: var(--accent);
+    border-radius: var(--radius-md);
+    border: 2px solid var(--secondary);
+    box-shadow: var(--shadow-sm);
 }
 
 .checkbox-group {
@@ -301,21 +352,23 @@ footer {
     width: 18px;
     height: 18px;
     cursor: pointer;
+    accent-color: var(--primary); /* Cor do checkbox */
 }
 
 .checkbox-group label {
     font-weight: 600;
-    color: #495057;
+    color: var(--text-dark);
     cursor: pointer;
     margin: 0;
 }
 
 .funcionario-fields {
     margin-left: 30px;
-    padding: 15px;
+    padding: 1.5rem;
     background: white;
-    border-radius: 6px;
-    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    border: 1px solid var(--accent);
+    box-shadow: var(--shadow-sm);
     animation: slideDown 0.3s ease;
 }
 
@@ -323,138 +376,111 @@ footer {
     from {
         opacity: 0;
         max-height: 0;
-        padding: 0 15px;
+        padding: 0 1.5rem;
     }
     to {
         opacity: 1;
-        max-height: 200px;
-        padding: 15px;
+        max-height: 300px;
+        padding: 1.5rem;
     }
 }
 
-.funcionario-fields .form-group {
-    margin-bottom: 15px;
+/* Message styles (Repetido para garantir que está no arquivo) */
+.message-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
 }
 
-.funcionario-fields .form-group:last-child {
-    margin-bottom: 0;
-}
-
-/* Melhorar estilos da tabela */
-.table-container {
-    overflow-x: auto;
-    margin-top: 20px;
-}
-
-#pessoasTable {
-    width: 100%;
-    min-width: 800px;
-}
-
-#pessoasTable th,
-#pessoasTable td {
-    padding: 12px 8px;
-    text-align: left;
-    border-bottom: 1px solid #dee2e6;
-    font-size: 14px;
-}
-
-#pessoasTable th {
-    background: #f8f9fa;
+.message {
+    padding: 1rem 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 0.5rem;
     font-weight: 600;
-    color: #495057;
-    white-space: nowrap;
+    box-shadow: var(--shadow-sm);
+    animation: slideIn 0.3s ease;
 }
 
-#pessoasTable td {
-    vertical-align: middle;
+.message.success {
+    background: #e6ffe6;
+    color: #1e8449;
+    border: 1px solid #1e8449;
 }
 
-.btn-id {
-    background: #007bff;
+.message.error {
+    background: #ffe6e6;
+    color: #c0392b;
+    border: 1px solid #c0392b;
+}
+
+.message.warning {
+    background: #fff8e1;
+    color: #f39c12;
+    border: 1px solid #f39c12;
+}
+
+.message.info {
+    background: var(--accent);
+    color: var(--text-dark);
+    border: 1px solid var(--secondary);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Footer (Repetido para garantir que está no arquivo) */
+footer {
+    background: var(--dark-brown);
     color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 600;
-    transition: background-color 0.2s ease;
-}
-
-.btn-id:hover {
-    background: #0056b3;
+    text-align: center;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.1);
 }
 
 /* Responsividade */
 @media (max-width: 768px) {
+    main {
+        padding: 0 1rem;
+    }
+    
+    .form-section, .list-section {
+        padding: 2rem 1.5rem;
+    }
+    
+    .search-input-group {
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+    
+    .search-input-group input {
+        max-width: 100%;
+    }
+    
+    .search-input-group button {
+        width: 100%;
+    }
+    
+    .search-container {
+        align-items: stretch;
+    }
+    
     .funcionario-fields {
         margin-left: 0;
         margin-top: 15px;
     }
     
     .checkbox-group {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 5px;
-    }
-    
-    #pessoasTable {
-        font-size: 12px;
-    }
-    
-    #pessoasTable th,
-    #pessoasTable td {
-        padding: 8px 4px;
+        flex-direction: row; /* Mantém a linha para melhor uso em mobile */
+        justify-content: flex-start;
     }
 }
-
-
-/* Adicione este novo estilo ao final do seu arquivo CSS */
-
-/* NOVO: Container para o campo de senha e o ícone */
-.password-container {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-/* Ajusta o input de senha para não sobrepor o ícone */
-.password-container input {
-    padding-right: 40px; /* Adiciona espaço à direita para o ícone */
-}
-
-/* Estilo para o ícone do olho */
-.password-container .toggle-password {
-    position: absolute;
-    right: 10px; /* Posição do ícone */
-    cursor: pointer;
-    color: #6d4c41; /* Cor do ícone */
-    font-size: 1.2rem;
-}
-
-
-
-/* Adicione este novo estilo ao final do seu arquivo CSS */
-
-/* NOVO: Container para o campo de senha e o ícone */
-.password-container {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-/* Ajusta o input de senha para não sobrepor o ícone */
-.password-container input {
-    padding-right: 40px; /* Adiciona espaço à direita para o ícone */
-}
-
-/* Estilo para o ícone do olho */
-.password-container .toggle-password {
-    position: absolute;
-    right: 10px; /* Posição do ícone */
-    cursor: pointer;
-    color: #6d4c41; /* Cor do ícone */
-    font-size: 1.2rem;
-}
-

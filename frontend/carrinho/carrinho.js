@@ -15,50 +15,66 @@ const btnFinalizarPagamento = document.getElementById('btnFinalizarPagamento');
 let carrinho = [];
 let usuarioLogado = null;
 
-// Inicialização
+// ========================================
+// INICIALIZAÇÃO - ORDEM CORRETA
+// ========================================
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        console.log('🚀 Inicializando carrinho...');
+        console.log('🚀 [CARRINHO] Inicializando...');
         
-        // Verificar usuário logado
+        // 1. LIMPAR sessionStorage antigo (CRÍTICO!)
+        console.log('🧹 [LIMPEZA] Verificando sessionStorage...');
+        const sessionUser = sessionStorage.getItem('usuarioLogado');
+        if (sessionUser) {
+            console.log('⚠️ [LIMPEZA] sessionStorage com dados antigos detectado!');
+            console.log('   Dados antigos:', JSON.parse(sessionUser).nome);
+            console.log('   🗑️ Removendo...');
+            sessionStorage.removeItem('usuarioLogado');
+        }
+        
+        // 2. VERIFICAR USUÁRIO - SEMPRE DO BACKEND PRIMEIRO
         await verificarUsuarioLogado();
         
-        // Carregar carrinho
+        // 3. SE NÃO ESTÁ LOGADO, REDIRECIONAR
+        if (!usuarioLogado) {
+            console.log('❌ [AUTH] Usuário não autenticado!');
+            mostrarMensagem('Você precisa estar logado para acessar o carrinho', 'error');
+            setTimeout(() => {
+                window.location.href = '../auth/login.html';
+            }, 2000);
+            return;
+        }
+        
+        // 4. CARREGAR CARRINHO
         carregarCarrinho();
         
-        // Atualizar interface
+        // 5. ATUALIZAR INTERFACE
         atualizarInterface();
         
-        // Configurar event listeners
+        // 6. CONFIGURAR EVENT LISTENERS
         configurarEventListeners();
         
-        console.log('✅ Carrinho inicializado com sucesso!', carrinho);
+        console.log('✅ [CARRINHO] Inicializado com sucesso!');
+        console.log('👤 [USUÁRIO ATUAL]:', usuarioLogado.nome);
+        
     } catch (error) {
-        console.error('❌ Erro ao inicializar o carrinho:', error);
-        mostrarMensagem('Erro ao carregar o carrinho. Por favor, recarregue a página.', 'error');
+        console.error('❌ [ERRO FATAL] Erro ao inicializar:', error);
+        mostrarMensagem('Erro ao carregar o carrinho', 'error');
     }
 });
 
 // ========================================
-// VERIFICAR USUÁRIO LOGADO
+// VERIFICAR USUÁRIO LOGADO - VERSÃO ROBUSTA
 // ========================================
 async function verificarUsuarioLogado() {
     try {
-        console.log('🔍 Verificando usuário logado...');
+        console.log('\n🔍 [AUTH] Verificando autenticação...');
+        console.log('════════════════════════════════════════');
         
-        // PRIMEIRO: Verificar sessionStorage (compatível com Live Server)
-        const usuarioSession = sessionStorage.getItem('usuarioLogado');
+        // SEMPRE BUSCAR DO BACKEND PRIMEIRO (fonte única da verdade)
+        console.log('📡 [BACKEND] Consultando servidor...');
         
-        if (usuarioSession) {
-            usuarioLogado = JSON.parse(usuarioSession);
-            console.log('✅ Usuário encontrado no sessionStorage:', usuarioLogado.nome);
-            atualizarHeaderUsuario();
-            return;
-        }
-        
-        // SEGUNDO: Tentar verificar no backend via cookies
-        console.log('🔍 Verificando no backend...');
-        const response = await fetch(`${API_BASE_URL}/auth/verificar-login`, {
+        const response = await fetch(`${API_BASE_URL}/auth/user`, {
             method: 'GET',
             credentials: 'include',
             headers: {
@@ -67,31 +83,53 @@ async function verificarUsuarioLogado() {
             }
         });
         
-        const data = await response.json();
-        console.log('📨 Resposta do backend:', data);
+        console.log('📨 [BACKEND] Status:', response.status);
         
-        if (data.status === 'ok' && data.usuario) {
+        if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('📦 [BACKEND] Dados recebidos:', JSON.stringify(data, null, 2));
+        
+        // Verificar se está logado
+        if (data.logged && data.cpf && data.nome) {
             usuarioLogado = {
-                id: data.usuario.id,
-                nome: data.usuario.nome,
-                email: data.usuario.email,
-                tipo: data.usuario.tipo,
-                cargo: data.usuario.cargo,
-                isGerente: data.usuario.isGerente
+                id: data.cpf,
+                nome: data.nome,
+                email: data.email || '',
+                tipo: data.is_funcionario ? 'funcionario' : 'cliente',
+                cargo: data.cargo || null,
+                isGerente: data.cargo === 'gerente'
             };
             
-            // Salvar no sessionStorage para próximas verificações
+            console.log('✅ [AUTH] Usuário autenticado!');
+            console.log('   👤 Nome:', usuarioLogado.nome);
+            console.log('   🆔 CPF:', usuarioLogado.id);
+            console.log('   🏷️ Tipo:', usuarioLogado.tipo);
+            console.log('════════════════════════════════════════\n');
+            
+            // SALVAR NO sessionStorage (apenas para cache local)
             sessionStorage.setItem('usuarioLogado', JSON.stringify(usuarioLogado));
             
-            console.log('✅ Usuário autenticado:', usuarioLogado.nome);
+            // ATUALIZAR HEADER
             atualizarHeaderUsuario();
+            
+            return true;
         } else {
-            console.log('❌ Usuário não autenticado');
+            console.log('❌ [AUTH] Usuário não autenticado');
+            console.log('════════════════════════════════════════\n');
             usuarioLogado = null;
+            sessionStorage.removeItem('usuarioLogado');
+            return false;
         }
+        
     } catch (error) {
-        console.error('❌ Erro ao verificar usuário logado:', error);
+        console.error('❌ [AUTH] Erro ao verificar usuário:', error);
+        console.log('════════════════════════════════════════\n');
         usuarioLogado = null;
+        sessionStorage.removeItem('usuarioLogado');
+        return false;
     }
 }
 
@@ -101,7 +139,13 @@ async function verificarUsuarioLogado() {
 function atualizarHeaderUsuario() {
     const headerElement = document.querySelector('.header h1');
     if (headerElement && usuarioLogado) {
-        // Adicionar informação do usuário no header
+        // Remover info antiga se existir
+        const existingUserInfo = document.querySelector('.user-info-header');
+        if (existingUserInfo) {
+            existingUserInfo.remove();
+        }
+        
+        // Criar nova info
         const userInfoDiv = document.createElement('div');
         userInfoDiv.className = 'user-info-header';
         userInfoDiv.style.cssText = 'font-size: 0.9rem; color: #666; margin-top: 0.5rem;';
@@ -112,14 +156,66 @@ function atualizarHeaderUsuario() {
                 : ''}
         `;
         
-        // Verificar se já existe e substituir
-        const existingUserInfo = document.querySelector('.user-info-header');
-        if (existingUserInfo) {
-            existingUserInfo.replaceWith(userInfoDiv);
-        } else {
-            headerElement.after(userInfoDiv);
+        headerElement.after(userInfoDiv);
+        
+        console.log('✅ [HEADER] Atualizado com:', usuarioLogado.nome);
+    }
+}
+
+// ========================================
+// FINALIZAR PAGAMENTO - VERSÃO ROBUSTA
+// ========================================
+function finalizarPagamento() {
+    console.log('\n💳 [FINALIZAR] Iniciando...');
+    console.log('════════════════════════════════════════');
+    
+    // 1. VERIFICAR CARRINHO
+    if (!carrinho || carrinho.length === 0) {
+        console.log('❌ [FINALIZAR] Carrinho vazio!');
+        mostrarMensagem('Seu carrinho está vazio!', 'error');
+        return;
+    }
+    console.log('✅ [FINALIZAR] Carrinho OK:', carrinho.length, 'itens');
+    
+    // 2. VERIFICAR USUÁRIO
+    console.log('🔍 [FINALIZAR] Verificando usuário...');
+    console.log('   usuarioLogado (variável global):', usuarioLogado);
+    console.log('   sessionStorage:', sessionStorage.getItem('usuarioLogado'));
+    
+    if (!usuarioLogado) {
+        console.log('⚠️ [FINALIZAR] usuarioLogado é null! Tentando recuperar...');
+        
+        // Tentar recuperar do sessionStorage
+        const sessionUser = sessionStorage.getItem('usuarioLogado');
+        if (sessionUser) {
+            try {
+                usuarioLogado = JSON.parse(sessionUser);
+                console.log('✅ [FINALIZAR] Usuário recuperado do sessionStorage:', usuarioLogado.nome);
+            } catch (e) {
+                console.error('❌ [FINALIZAR] Erro ao parsear sessionStorage:', e);
+            }
         }
     }
+    
+    // 3. SE AINDA NÃO TEM USUÁRIO, REDIRECIONAR
+    if (!usuarioLogado || !usuarioLogado.id || !usuarioLogado.nome) {
+        console.log('❌ [FINALIZAR] Sem usuário válido! Redirecionando...');
+        console.log('════════════════════════════════════════\n');
+        mostrarMensagem('Sessão expirada. Faça login novamente.', 'error');
+        setTimeout(() => {
+            window.location.href = '../auth/login.html';
+        }, 2000);
+        return;
+    }
+    
+    console.log('✅ [FINALIZAR] Usuário verificado:', usuarioLogado.nome);
+    console.log('════════════════════════════════════════\n');
+    
+    // 4. SALVAR CARRINHO E REDIRECIONAR
+    salvarCarrinho();
+    
+    console.log('🚀 [FINALIZAR] Redirecionando para finalização...');
+    window.location.href = '../finalizacao/finalizacao.html';
 }
 
 // Event Listeners
@@ -286,26 +382,15 @@ function criarElementoItem(item) {
     itemElement.className = 'item-carrinho';
     
     try {
-        // CORREÇÃO: Ajustar caminho da imagem
         let imagemUrl = 'https://via.placeholder.com/80?text=Sem+Imagem';
         
-        console.log('🖼️ Processando imagem do produto:', item.nome_produto);
-        console.log('   Imagem original:', item.imagem_produto);
-        
         if (item.imagem_produto) {
-            // Se a imagem já é uma URL completa
             if (item.imagem_produto.startsWith('http')) {
                 imagemUrl = item.imagem_produto;
-                console.log('   ✅ URL completa:', imagemUrl);
             } else {
-                // Se é um caminho relativo, ajustar para o servidor
-                // Remove barras iniciais se existirem
                 const caminhoLimpo = item.imagem_produto.replace(/^\/+/, '');
-                imagemUrl = `${API_BASE_URL}/uploads/${caminhoLimpo}`;
-                console.log('   ✅ URL montada:', imagemUrl);
+                imagemUrl = `${API_BASE_URL}/${caminhoLimpo}`;
             }
-        } else {
-            console.log('   ⚠️ Sem imagem definida, usando placeholder');
         }
         
         const nomeProduto = item.nome_produto || 'Produto sem nome';
@@ -383,45 +468,6 @@ function atualizarResumo() {
     if (totalElement) {
         totalElement.textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
     }
-}
-
-// ========================================
-// FINALIZAR PAGAMENTO - CORRIGIDO
-// ========================================
-function finalizarPagamento() {
-    console.log('💳 Iniciando finalização de pagamento...');
-    console.log('👤 Usuário logado:', usuarioLogado);
-    
-    if (carrinho.length === 0) {
-        mostrarMensagem('Seu carrinho está vazio!', 'error');
-        return;
-    }
-    
-    // CORREÇÃO: Verificar sessionStorage também
-    if (!usuarioLogado) {
-        const usuarioSession = sessionStorage.getItem('usuarioLogado');
-        if (usuarioSession) {
-            usuarioLogado = JSON.parse(usuarioSession);
-            console.log('✅ Usuário recuperado do sessionStorage:', usuarioLogado.nome);
-        }
-    }
-    
-    if (!usuarioLogado) {
-        console.log('❌ Usuário não autenticado');
-        mostrarMensagem('Você precisa estar logado para finalizar a compra!', 'error');
-        setTimeout(() => {
-            window.location.href = '../login/login.html';
-        }, 2000);
-        return;
-    }
-    
-    console.log('✅ Usuário autenticado, redirecionando...');
-    
-    // Salvar carrinho antes de redirecionar
-    salvarCarrinho();
-    
-    // Redirecionar para página de finalização
-    window.location.href = '../finalizacao/finalizacao.html';
 }
 
 // Exportar funções globalmente

@@ -16,14 +16,31 @@ exports.listarPagamentos = async (req, res) => {
   }
 }
 
+// ========================================
+// CRIAR PAGAMENTO - VERSÃO CORRIGIDA
+// ========================================
 exports.criarPagamento = async (req, res) => {
   try {
     console.log('\n💳 [PAGAMENTO CONTROLLER] Criando pagamento...');
     console.log('   Body recebido:', JSON.stringify(req.body, null, 2));
     
-    let { id_pagamento, id_pedido, data_pagamento, valor_total } = req.body;
+    let { id_pedido, data_pagamento, valor_total } = req.body;
 
-    // Validação básica
+    // ============================================
+    // BUSCAR PRÓXIMO ID DISPONÍVEL (CRÍTICO!)
+    // ============================================
+    console.log('🔢 [ID] Buscando próximo ID disponível...');
+    
+    const maxIdResult = await query('SELECT MAX(id_pagamento) as max_id FROM pagamento');
+    const maxId = maxIdResult.rows[0].max_id || 0;
+    const proximoId = maxId + 1;
+    
+    console.log(`   Último ID no banco: ${maxId}`);
+    console.log(`   Próximo ID será: ${proximoId}`);
+
+    // ============================================
+    // VALIDAÇÃO
+    // ============================================
     if (!id_pedido || !valor_total) {
       console.error('❌ [PAGAMENTO] id_pedido ou valor_total não fornecidos');
       return res.status(400).json({
@@ -31,7 +48,9 @@ exports.criarPagamento = async (req, res) => {
       });
     }
 
-    // PUXAR DATA AUTOMÁTICA SE NÃO VIER DO FRONTEND
+    // ============================================
+    // GERAR DATA AUTOMÁTICA SE NECESSÁRIO
+    // ============================================
     if (!data_pagamento) {
       const hoje = new Date();
       const ano = hoje.getFullYear();
@@ -44,15 +63,19 @@ exports.criarPagamento = async (req, res) => {
       console.log('   ℹ️ Data fornecida:', data_pagamento);
     }
 
-    console.log('   Valores:');
+    console.log('   Valores finais:');
+    console.log('   - id_pagamento:', proximoId);
     console.log('   - id_pedido:', id_pedido);
     console.log('   - data_pagamento:', data_pagamento);
     console.log('   - valor_total:', valor_total);
 
-    console.log('🔍 [PAGAMENTO] Executando INSERT...');
+    // ============================================
+    // INSERT COM ID EXPLÍCITO
+    // ============================================
+    console.log('🔍 [PAGAMENTO] Executando INSERT com ID explícito...');
     const result = await query(
-      'INSERT INTO pagamento (id_pedido, data_pagamento, valor_total) VALUES ($1, $2, $3) RETURNING *',
-      [id_pedido, data_pagamento, valor_total]
+      'INSERT INTO pagamento (id_pagamento, id_pedido, data_pagamento, valor_total) VALUES ($1, $2, $3, $4) RETURNING *',
+      [proximoId, id_pedido, data_pagamento, valor_total]
     );
 
     const pagamentoCriado = result.rows[0];
@@ -61,6 +84,7 @@ exports.criarPagamento = async (req, res) => {
     console.log('   Resposta:', JSON.stringify(pagamentoCriado, null, 2));
 
     res.status(201).json(pagamentoCriado);
+    
   } catch (error) {
     console.error('\n❌ [PAGAMENTO] Erro ao criar pagamento:', error);
     console.error('   Mensagem:', error.message);
@@ -81,7 +105,18 @@ exports.criarPagamento = async (req, res) => {
       });
     }
 
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    if (error.code === '23505') {
+      return res.status(400).json({
+        error: 'ID duplicado',
+        message: 'Já existe um pagamento com este ID. Tente novamente.',
+        detail: error.detail
+      });
+    }
+
+    res.status(500).json({ 
+      error: 'Erro interno do servidor',
+      message: error.message 
+    });
   }
 }
 
