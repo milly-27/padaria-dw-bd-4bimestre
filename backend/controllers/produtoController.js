@@ -37,9 +37,12 @@ exports.listarProdutos = async (req, res) => {
   }
 };
 
+// ============================================
+// CRIAR PRODUTO - VERSÃO COM ID.PNG
+// ============================================
 exports.criarProduto = async (req, res) => {
-  console.log("REQ.BODY:", req.body); // <--- mostra o que chegou do frontend
-  console.log("REQ.FILE:", req.file); // <--- mostra o arquivo enviado
+  console.log("REQ.BODY:", req.body);
+  console.log("REQ.FILE:", req.file);
   
   try {
     const { nome_produto, preco, quantidade_estoque, id_categoria } = req.body;
@@ -60,36 +63,76 @@ exports.criarProduto = async (req, res) => {
       return res.status(400).json({ error: "ID da categoria é obrigatório e deve ser um número válido" });
     }
 
+    // ============================================
+    // BUSCAR PRÓXIMO ID DISPONÍVEL
+    // ============================================
+    console.log('🔢 Buscando próximo ID disponível...');
+    const maxIdResult = await query('SELECT MAX(id_produto) as max_id FROM produto');
+    const maxId = maxIdResult.rows[0].max_id || 0;
+    const proximoId = maxId + 1;
+    
+    console.log(`   Último ID no banco: ${maxId}`);
+    console.log(`   Próximo ID será: ${proximoId}`);
+
     let imagemProduto = null;
 
-    // Se há arquivo de imagem, processar o upload
+    // ============================================
+    // PROCESSAR IMAGEM COM NOME: ID.PNG
+    // ============================================
     if (req.file) {
-      // Gerar nome único para a imagem
-      const timestamp = Date.now();
-      const extensao = path.extname(req.file.originalname);
-      const novoNomeArquivo = `produto_${timestamp}${extensao}`;
+      console.log('📸 Processando imagem...');
+      
+      // Nome do arquivo: ID.png
+      const novoNomeArquivo = `${proximoId}.png`;
       const caminhoAntigo = req.file.path;
       const caminhoNovo = path.join(__dirname, '../uploads/images', novoNomeArquivo);
+      
+      console.log(`   Renomeando: ${path.basename(caminhoAntigo)} → ${novoNomeArquivo}`);
+      
+      // Verificar se já existe arquivo com esse nome e remover
+      if (fs.existsSync(caminhoNovo)) {
+        console.log(`   ⚠️ Arquivo ${novoNomeArquivo} já existe, removendo...`);
+        fs.unlinkSync(caminhoNovo);
+      }
       
       // Renomear e mover o arquivo
       fs.renameSync(caminhoAntigo, caminhoNovo);
       imagemProduto = `/uploads/images/${novoNomeArquivo}`;
+      
+      console.log(`   ✅ Imagem salva: ${imagemProduto}`);
     }
 
-    // Criar produto com imagem
+    // ============================================
+    // INSERIR PRODUTO COM ID EXPLÍCITO
+    // ============================================
+    console.log('💾 Inserindo produto no banco...');
     const result = await query(
-      "INSERT INTO produto (nome_produto, preco, quantidade_estoque, id_categoria, imagem_produto) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-      [nome_produto, preco, quantidade_estoque, id_categoria, imagemProduto]
+      "INSERT INTO produto (id_produto, nome_produto, preco, quantidade_estoque, id_categoria, imagem_produto) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+      [proximoId, nome_produto, preco, quantidade_estoque, id_categoria, imagemProduto]
     );
+
+    console.log('✅ Produto criado com sucesso!');
+    console.log(`   ID: ${proximoId}`);
+    console.log(`   Nome: ${nome_produto}`);
+    console.log(`   Imagem: ${imagemProduto || 'Sem imagem'}`);
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error("Erro ao criar produto:", error);
+    console.error("❌ Erro ao criar produto:", error);
 
     // Verifica se é erro de violação de constraint NOT NULL
     if (error.code === "23502") {
       return res.status(400).json({
         error: "Dados obrigatórios não fornecidos",
+      });
+    }
+
+    // Verifica se é erro de ID duplicado
+    if (error.code === '23505') {
+      return res.status(400).json({
+        error: 'ID duplicado',
+        message: 'Já existe um produto com este ID. Tente novamente.',
+        detail: error.detail
       });
     }
 
@@ -121,9 +164,12 @@ exports.obterProduto = async (req, res) => {
   }
 };
 
+// ============================================
+// ATUALIZAR PRODUTO - VERSÃO COM ID.PNG
+// ============================================
 exports.atualizarProduto = async (req, res) => {
-  console.log("REQ.BODY:", req.body); // <--- mostra o que chegou do frontend
-  console.log("REQ.FILE:", req.file); // <--- mostra o arquivo enviado
+  console.log("REQ.BODY:", req.body);
+  console.log("REQ.FILE:", req.file);
   
   try {
     const id = parseInt(req.params.id);
@@ -158,26 +204,39 @@ exports.atualizarProduto = async (req, res) => {
       imagem_produto: currentProduct.imagem_produto
     };
 
-    // Se há arquivo de imagem, processar o upload
+    // ============================================
+    // PROCESSAR NOVA IMAGEM COM NOME: ID.PNG
+    // ============================================
     if (req.file) {
-      // Remover imagem antiga se existir
+      console.log('📸 Processando nova imagem...');
+      
+      // Nome do arquivo: ID.png (usa o ID do produto)
+      const novoNomeArquivo = `${id}.png`;
+      const caminhoAntigo = req.file.path;
+      const caminhoNovo = path.join(__dirname, '../uploads/images', novoNomeArquivo);
+      
+      console.log(`   Renomeando: ${path.basename(caminhoAntigo)} → ${novoNomeArquivo}`);
+      
+      // Remover imagem antiga se existir (com qualquer extensão)
       if (currentProduct.imagem_produto) {
         const caminhoImagemAntiga = path.join(__dirname, '..', currentProduct.imagem_produto);
         if (fs.existsSync(caminhoImagemAntiga)) {
+          console.log(`   🗑️ Removendo imagem antiga: ${path.basename(caminhoImagemAntiga)}`);
           fs.unlinkSync(caminhoImagemAntiga);
         }
       }
       
-      // Gerar nome único para a nova imagem
-      const timestamp = Date.now();
-      const extensao = path.extname(req.file.originalname);
-      const novoNomeArquivo = `produto_${id}_${timestamp}${extensao}`;
-      const caminhoAntigo = req.file.path;
-      const caminhoNovo = path.join(__dirname, '../uploads/images', novoNomeArquivo);
+      // Verificar se já existe arquivo com esse nome e remover
+      if (fs.existsSync(caminhoNovo)) {
+        console.log(`   ⚠️ Arquivo ${novoNomeArquivo} já existe, removendo...`);
+        fs.unlinkSync(caminhoNovo);
+      }
       
       // Renomear e mover o arquivo
       fs.renameSync(caminhoAntigo, caminhoNovo);
       updatedFields.imagem_produto = `/uploads/images/${novoNomeArquivo}`;
+      
+      console.log(`   ✅ Nova imagem salva: ${updatedFields.imagem_produto}`);
     }
 
     // Atualiza o produto
@@ -189,9 +248,13 @@ exports.atualizarProduto = async (req, res) => {
        updatedFields.id_categoria, updatedFields.imagem_produto, id]
     );
 
+    console.log('✅ Produto atualizado com sucesso!');
+    console.log(`   ID: ${id}`);
+    console.log(`   Imagem: ${updatedFields.imagem_produto || 'Sem alteração'}`);
+
     res.json(updateResult.rows[0]);
   } catch (error) {
-    console.error("Erro ao atualizar produto:", error);
+    console.error("❌ Erro ao atualizar produto:", error);
     res.status(500).json({ error: "Erro interno do servidor" });
   }
 };
@@ -209,9 +272,20 @@ exports.deletarProduto = async (req, res) => {
       return res.status(404).json({ error: "Produto não encontrada" });
     }
 
+    // Remover imagem se existir
+    const produto = existingPersonResult.rows[0];
+    if (produto.imagem_produto) {
+      const caminhoImagem = path.join(__dirname, '..', produto.imagem_produto);
+      if (fs.existsSync(caminhoImagem)) {
+        console.log(`🗑️ Removendo imagem: ${path.basename(caminhoImagem)}`);
+        fs.unlinkSync(caminhoImagem);
+      }
+    }
+
     // Deleta a produto (as constraints CASCADE cuidarão das dependências)
     await query("DELETE FROM produto WHERE id_produto = $1", [id]);
 
+    console.log(`✅ Produto ${id} deletado com sucesso!`);
     res.status(204).send();
   } catch (error) {
     console.error("Erro ao deletar produto:", error);
@@ -226,4 +300,3 @@ exports.deletarProduto = async (req, res) => {
     res.status(500).json({ error: "Erro interno do servidor" });
   }
 };
-
