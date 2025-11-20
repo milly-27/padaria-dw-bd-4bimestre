@@ -374,6 +374,26 @@ function renderizarItens() {
     });
 }
 
+// ========================================
+// FUNÇÃO CORRIGIDA - CONSTRUIR URL DA IMAGEM
+// ========================================
+function construirUrlImagem(idProduto) {
+    // A imagem está salva fisicamente em: backend/uploads/images/{id_produto}.png
+    // URL completa: http://localhost:3001/uploads/images/{id_produto}.png
+    
+    if (!idProduto) {
+        console.log('❌ ID do produto inválido');
+        return 'https://via.placeholder.com/80?text=Sem+Imagem';
+    }
+    
+    // Construir URL da imagem usando o ID do produto
+    const urlImagem = `${API_BASE_URL}/uploads/images/${idProduto}.png`;
+    
+    console.log(`🖼️ URL da imagem construída: ${urlImagem}`);
+    
+    return urlImagem;
+}
+
 // Função para criar elemento de item
 function criarElementoItem(item) {
     if (!item) return document.createElement('div');
@@ -382,16 +402,8 @@ function criarElementoItem(item) {
     itemElement.className = 'item-carrinho';
     
     try {
-        let imagemUrl = 'https://via.placeholder.com/80?text=Sem+Imagem';
-        
-        if (item.imagem_produto) {
-            if (item.imagem_produto.startsWith('http')) {
-                imagemUrl = item.imagem_produto;
-            } else {
-                const caminhoLimpo = item.imagem_produto.replace(/^\/+/, '');
-                imagemUrl = `${API_BASE_URL}/${caminhoLimpo}`;
-            }
-        }
+        // USAR A NOVA FUNÇÃO QUE CONSTRÓI A URL CORRETAMENTE
+        const imagemUrl = construirUrlImagem(item.id_produto);
         
         const nomeProduto = item.nome_produto || 'Produto sem nome';
         const preco = parseFloat(item.preco) || 0;
@@ -400,7 +412,9 @@ function criarElementoItem(item) {
         
         itemElement.innerHTML = `
             <div class="item-imagem">
-                <img src="${imagemUrl}" alt="${nomeProduto}" onerror="this.src='https://via.placeholder.com/80?text=Sem+Imagem';">
+                <img src="${imagemUrl}" 
+                     alt="${nomeProduto}" 
+                     onerror="this.onerror=null; this.src='https://via.placeholder.com/80?text=Sem+Imagem';">
             </div>
             <div class="item-info">
                 <h4>${nomeProduto}</h4>
@@ -481,7 +495,6 @@ window.adicionarAoCarrinho = (produto, quantidade = 1) => {
             id_produto: produto.id_produto,
             nome_produto: produto.nome_produto,
             preco: produto.preco,
-            imagem_produto: produto.imagem_produto,
             quantidade: quantidade
         });
     }
