@@ -1,3 +1,26 @@
-# .gitignore
-.env
+# Node modules
 node_modules/
+backend/node_modules/
+
+# Variáveis de ambiente (NUNCA enviar para o Git!)
+.env
+backend/.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build
+dist/
+build/
+
+# Uploads (se não quiser versionar)
+backend/uploads/
