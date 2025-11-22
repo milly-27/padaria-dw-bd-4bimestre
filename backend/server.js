@@ -1,3 +1,6 @@
+// IMPORTANTE: dotenv deve ser a PRIMEIRA linha
+require('dotenv').config({ path: __dirname + '/.env' });
+
 const express = require('express');
 const app = express();
 const path = require('path');
@@ -33,16 +36,13 @@ const corsOptions = {
       'http://127.0.0.1:5500',
       'http://localhost:5500'
     ];
-    
-    // Em desenvolvimento, permitir qualquer origem
     if (process.env.NODE_ENV === 'development' || !origin) {
       return callback(null, true);
     }
-    
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(null, true); // Permitir mesmo assim em desenvolvimento
+      callback(null, true);
     }
   },
   credentials: true,
@@ -64,14 +64,11 @@ const corsOptions = {
   optionsSuccessStatus: 204
 };
 
-// Aplicar o CORS
 app.use(cors(corsOptions));
 
 // 4. Middleware CORS manual adicional
 app.use((req, res, next) => {
   const origin = req.headers.origin || req.headers.host;
-  
-  // Configurar cabeçalhos CORS manualmente
   if (origin) {
     res.header('Access-Control-Allow-Origin', origin);
   }
@@ -79,15 +76,13 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Access-Token, x-access-token, Cache-Control, Pragma, Expires');
   res.header('Access-Control-Expose-Headers', 'Content-Range, X-Content-Range, Set-Cookie');
-  
-  // Se for uma requisição OPTIONS, responder imediatamente
   if (req.method === 'OPTIONS') {
     console.log('🛫 Resposta a preflight CORS');
     return res.status(204).end();
   }
-  
   next();
 });
+
 // 5. Arquivos estáticos
 const caminhoFrontend = path.join(__dirname, '../frontend');
 console.log('Caminho frontend:', caminhoFrontend);
@@ -139,7 +134,6 @@ app.use('/funcionarios', funcionarioRoutes);
 const clienteRoutes = require('./routes/clienteRoutes');
 app.use('/clientes', clienteRoutes);
 
-// Rotas de relatórios
 const relatorioRoutes = require('./routes/relatorioRoutes');
 app.use('/api/relatorios', relatorioRoutes);
 
@@ -179,7 +173,6 @@ app.get('/', (req, res) => {
 app.get('/health', async (req, res) => {
   try {
     const connectionTest = await db.testConnection();
-
     if (connectionTest) {
       res.status(200).json({
         status: 'OK',
@@ -235,7 +228,6 @@ const startServer = async () => {
   try {
     console.log('Testando conexão com PostgreSQL...');
     const connectionTest = await db.testConnection();
-
     if (connectionTest === 'mock') {
       console.log('🔄 Usando dados mockados para desenvolvimento');
       const mockData = require('./mockData');
@@ -247,9 +239,7 @@ const startServer = async () => {
     } else {
       console.log('✅ PostgreSQL conectado com sucesso');
     }
-
     const PORT = process.env.PORT || PORT_FIXA;
-
     app.listen(PORT, () => {
       console.log(`🚀 Servidor rodando em http://${HOST}:${PORT}`);
       console.log(`📊 Health check disponível em http://${HOST}:${PORT}/health`);
@@ -257,7 +247,6 @@ const startServer = async () => {
       console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
       console.log(`✅ CORS configurado para aceitar todas as origens (desenvolvimento)`);
     });
-
   } catch (error) {
     console.error('❌ Erro ao iniciar o servidor:', error);
     process.exit(1);

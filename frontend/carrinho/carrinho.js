@@ -134,7 +134,7 @@ async function verificarUsuarioLogado() {
 }
 
 // ========================================
-// ATUALIZAR HEADER COM INFO DO USUÁRIO
+// ATUALIZAR HEADER COM INFO DO USUÁRIO - VERSÃO BONITA
 // ========================================
 function atualizarHeaderUsuario() {
     const headerElement = document.querySelector('.header h1');
@@ -145,20 +145,34 @@ function atualizarHeaderUsuario() {
             existingUserInfo.remove();
         }
         
-        // Criar nova info
+        // Criar wrapper do lado esquerdo do header se não existir
+        let headerLeft = document.querySelector('.header-left');
+        if (!headerLeft) {
+            headerLeft = document.createElement('div');
+            headerLeft.className = 'header-left';
+            headerElement.parentNode.insertBefore(headerLeft, headerElement);
+            headerLeft.appendChild(headerElement);
+        }
+        
+        // Criar nova info bonita
         const userInfoDiv = document.createElement('div');
         userInfoDiv.className = 'user-info-header';
-        userInfoDiv.style.cssText = 'font-size: 0.9rem; color: #666; margin-top: 0.5rem;';
+        
+        let badgeHTML = '';
+        // Mostrar badge APENAS se for gerente
+        if (usuarioLogado.tipo === 'funcionario' && usuarioLogado.cargo && usuarioLogado.cargo.toLowerCase() === 'gerente') {
+            badgeHTML = `<span class="user-badge">👑 Gerente</span>`;
+        }
+        
         userInfoDiv.innerHTML = `
-            <span style="font-weight: 500;">Olá, <span style="color: #667eea; font-weight: 600;">${usuarioLogado.nome}</span></span>
-            ${usuarioLogado.tipo === 'funcionario' && usuarioLogado.cargo ? 
-                `<span style="margin-left: 10px; padding: 2px 8px; background: #f0f0f0; border-radius: 4px; font-size: 0.8rem;">${usuarioLogado.cargo}</span>` 
-                : ''}
+            <span class="user-greeting">Olá,</span>
+            <span class="user-name-display">${usuarioLogado.nome}</span>
+            ${badgeHTML}
         `;
         
-        headerElement.after(userInfoDiv);
+        headerLeft.appendChild(userInfoDiv);
         
-        console.log('✅ [HEADER] Atualizado com:', usuarioLogado.nome);
+        console.log('✅ [HEADER] Atualizado com:', usuarioLogado.nome, usuarioLogado.cargo || '');
     }
 }
 

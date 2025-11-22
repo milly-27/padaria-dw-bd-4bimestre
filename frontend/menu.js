@@ -22,6 +22,96 @@ function deletarTodasSessoes() {
 }
 
 // ========================================
+// MODAIS BONITOS
+// ========================================
+
+function criarModalConfirmacao(titulo, mensagem, onConfirm) {
+    // Remover modal existente se houver
+    const modalExistente = document.getElementById('customModal');
+    if (modalExistente) {
+        modalExistente.remove();
+    }
+    
+    // Criar modal
+    const modalHTML = `
+        <div id="customModal" class="custom-modal-overlay">
+            <div class="custom-modal-content">
+                <div class="custom-modal-icon">🚪</div>
+                <h3 class="custom-modal-title">${titulo}</h3>
+                <p class="custom-modal-message">${mensagem}</p>
+                <div class="custom-modal-actions">
+                    <button class="custom-modal-btn custom-modal-btn-cancel" onclick="fecharModalConfirmacao()">
+                        Cancelar
+                    </button>
+                    <button class="custom-modal-btn custom-modal-btn-confirm" onclick="confirmarModalConfirmacao()">
+                        Sim, deslogar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Animar entrada
+    setTimeout(() => {
+        document.getElementById('customModal').classList.add('show');
+    }, 10);
+    
+    // Guardar callback
+    window.modalConfirmCallback = onConfirm;
+}
+
+function fecharModalConfirmacao() {
+    const modal = document.getElementById('customModal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.remove();
+        }, 300);
+    }
+    window.modalConfirmCallback = null;
+}
+
+function confirmarModalConfirmacao() {
+    if (window.modalConfirmCallback) {
+        window.modalConfirmCallback();
+    }
+    fecharModalConfirmacao();
+}
+
+function mostrarModalSucesso(titulo, mensagem) {
+    // Remover modal existente se houver
+    const modalExistente = document.getElementById('customModal');
+    if (modalExistente) {
+        modalExistente.remove();
+    }
+    
+    // Criar modal de sucesso
+    const modalHTML = `
+        <div id="customModal" class="custom-modal-overlay">
+            <div class="custom-modal-content success">
+                <div class="custom-modal-icon success">✅</div>
+                <h3 class="custom-modal-title">${titulo}</h3>
+                <p class="custom-modal-message">${mensagem}</p>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Animar entrada
+    setTimeout(() => {
+        document.getElementById('customModal').classList.add('show');
+    }, 10);
+    
+    // Fechar automaticamente após 2 segundos
+    setTimeout(() => {
+        fecharModalConfirmacao();
+    }, 2000);
+}
+
+// ========================================
 // CONTROLE DE VISIBILIDADE DOS MENUS
 // ========================================
 
@@ -43,9 +133,8 @@ function controlarMenus(isGerente) {
 }
 
 // ========================================
-// ATUALIZAR INTERFACE DO USUÁRIO
+// ATUALIZAR INTERFACE DO USUÁRIO - VERSÃO CORRIGIDA
 // ========================================
-
 function atualizarInterfaceUsuario(userData = null) {
     console.log('🔄 Atualizando interface do usuário:', userData);
     
@@ -72,26 +161,31 @@ function atualizarInterfaceUsuario(userData = null) {
         if (loginPrompt) loginPrompt.style.display = 'none';
         
         // Limpar conteúdo anterior
-        userName.textContent = '';
+        userName.innerHTML = '';
         
-        // Adicionar nome do usuário
+        // Criar nome do usuário
         const nomeSpan = document.createElement('span');
         nomeSpan.textContent = userData.nome;
+        nomeSpan.style.cssText = 'font-weight: 600; color: var(--text-dark);';
         userName.appendChild(nomeSpan);
         
-        // Adicionar tipo/cargo
-        const tipoUsuarioSpan = document.createElement('span');
-        tipoUsuarioSpan.style.cssText = 'font-size: 0.85em; color: #999; margin-left: 10px;';
-        
+        // Adicionar badge APENAS se for GERENTE
         if (userData.isGerente) {
-            tipoUsuarioSpan.textContent = '(Gerente)';
-        } else if (userData.tipo === 'funcionario' && userData.cargo) {
-            tipoUsuarioSpan.textContent = `(${userData.cargo})`;
-        } else {
-            tipoUsuarioSpan.textContent = '(Cliente)';
+            const badgeSpan = document.createElement('span');
+            badgeSpan.textContent = '👑 Gerente';
+            badgeSpan.style.cssText = `
+                font-size: 0.75rem;
+                font-weight: 600;
+                margin-left: 10px;
+                padding: 4px 10px;
+                background: linear-gradient(135deg, var(--primary), var(--secondary));
+                color: white;
+                border-radius: 15px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            `;
+            userName.appendChild(badgeSpan);
         }
-        
-        userName.appendChild(tipoUsuarioSpan);
         
         // Configurar userInfo para logout
         userInfo.style.cursor = 'pointer';
@@ -117,7 +211,7 @@ function atualizarInterfaceUsuario(userData = null) {
         btnLogin.classList.remove('hidden');
         userInfo.classList.add('hidden');
         if (loginPrompt) loginPrompt.style.display = 'block';
-        if (userName) userName.textContent = '';
+        if (userName) userName.innerHTML = '';
         
         // Mensagem padrão
         if (welcomeTitle) welcomeTitle.textContent = 'Tradição e Sabor';
@@ -196,50 +290,59 @@ function verificarSeUsuarioEstaLogado() {
 }
 
 // ========================================
-// LOGOUT
+// LOGOUT COM MODAIS BONITOS
 // ========================================
 
 async function logout() {
-    if (!confirm('Deseja realmente sair do sistema?')) {
-        return;
-    }
+    console.log('🚪 Solicitação de logout...');
     
-    console.log('🚪 Iniciando logout...');
-    
-    try {
-        // Tentar logout no servidor
-        const response = await fetch(`${API_BASE_URL}/auth/logout`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json'
+    // Mostrar modal de confirmação
+    criarModalConfirmacao(
+        'Deseja sair?',
+        'Tem certeza que deseja encerrar sua sessão?',
+        async () => {
+            console.log('🚪 Confirmado! Iniciando logout...');
+            
+            try {
+                // Tentar logout no servidor
+                const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                console.log('📨 Resposta logout:', result);
+                
+                if (result.logged === false || result.status === 'deslogado') {
+                    console.log('✅ Logout realizado com sucesso no servidor!');
+                }
+            } catch (error) {
+                console.warn('⚠️ Erro ao fazer logout no servidor:', error);
+                console.log('➡️ Continuando com logout local...');
             }
-        });
-        
-        const result = await response.json();
-        console.log('📨 Resposta logout:', result);
-        
-        if (result.logged === false || result.status === 'deslogado') {
-            console.log('✅ Logout realizado com sucesso no servidor!');
+            
+            // Limpar tudo (independente da resposta do servidor)
+            console.log('🧹 Limpando dados locais...');
+            deletarTodasSessoes();
+            
+            // Atualizar interface
+            atualizarInterfaceUsuario(null);
+            
+            // Mostrar modal de sucesso
+            mostrarModalSucesso(
+                'Logout realizado!',
+                'Até logo! Você será redirecionado...'
+            );
+            
+            // Redirecionar após 2 segundos
+            setTimeout(() => {
+                window.location.href = './auth/login.html';
+            }, 2000);
         }
-    } catch (error) {
-        console.warn('⚠️ Erro ao fazer logout no servidor:', error);
-        console.log('➡️ Continuando com logout local...');
-    }
-    
-    // Limpar tudo (independente da resposta do servidor)
-    console.log('🧹 Limpando dados locais...');
-    deletarTodasSessoes();
-    
-    // Atualizar interface
-    atualizarInterfaceUsuario(null);
-    
-    // Notificar e redirecionar
-    alert('Logout realizado com sucesso!');
-    
-    setTimeout(() => {
-        window.location.href = './auth/login.html';
-    }, 500);
+    );
 }
 
 // ========================================
@@ -288,6 +391,13 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+// ESC para fechar modais
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        fecharModalConfirmacao();
+    }
+});
+
 // ========================================
 // EXPORTAR FUNÇÕES GLOBALMENTE
 // ========================================
@@ -295,3 +405,5 @@ document.addEventListener('keydown', (e) => {
 window.logout = logout;
 window.redirecionarLogin = redirecionarLogin;
 window.verificarSeUsuarioEstaLogado = verificarSeUsuarioEstaLogado;
+window.fecharModalConfirmacao = fecharModalConfirmacao;
+window.confirmarModalConfirmacao = confirmarModalConfirmacao;

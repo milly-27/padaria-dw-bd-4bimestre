@@ -1,5 +1,6 @@
 const db = require('../database');
-
+// No início do arquivo authController.js, adicione esta linha:
+const { enviarEmailRecuperacao } = require('../config/emailConfig');
 // ======================================
 // REGISTRO DE NOVO USUÁRIO
 // ======================================
@@ -347,5 +348,273 @@ exports.atualizarSenha = async (req, res) => {
   } catch (err) {
     console.error('❌ Erro ao atualizar senha:', err);
     res.status(500).json({ error: 'Erro ao atualizar senha.' });
+  }
+};
+// ======================================
+// ADICIONE ESTE CÓDIGO NO FINAL DO SEU authController.js
+// ANTES DO ÚLTIMO }; OU module.exports
+// ======================================
+
+// Armazenamento temporário de códigos (em produção, use Redis ou banco)
+const codigosRecuperacao = new Map();
+
+// Função para gerar código de 6 dígitos
+function gerarCodigo() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Substitua a função exports.solicitarRecuperacao por esta versão:
+
+// ======================================
+// SOLICITAR RECUPERAÇÃO DE SENHA - COM EMAIL REAL
+// ======================================
+exports.solicitarRecuperacao = async (req, res) => {
+  const { email } = req.body;
+
+  console.log('\n📧 [RECUPERAÇÃO] Solicitação para:', email);
+
+  if (!email) {
+    return res.status(400).json({ 
+      success: false,
+      error: 'Email é obrigatório' 
+    });
+  }
+
+  try {
+    // Verificar se o email existe no banco
+    const result = await db.query(
+      'SELECT cpf, nome_pessoa, email_pessoa FROM pessoa WHERE email_pessoa = $1',
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      console.log('❌ Email não encontrado:', email);
+      return res.status(404).json({ 
+        success: false,
+        error: 'Email não cadastrado no sistema' 
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Gerar código de 6 dígitos
+    const codigo = gerarCodigo();
+    
+    // Armazenar código com timestamp (válido por 10 minutos)
+    codigosRecuperacao.set(email, {
+      codigo: codigo,
+      timestamp: Date.now(),
+      tentativas: 0
+    });
+
+    console.log('✅ Código gerado:', codigo);
+    console.log('⏰ Válido por 10 minutos');
+
+    // ═══════════════════════════════════════
+    // ENVIAR EMAIL REAL
+    // ═══════════════════════════════════════
+    console.log('📨 Enviando email para:', email);
+    
+    const emailResult = await enviarEmailRecuperacao(
+      user.email_pessoa,
+      user.nome_pessoa,
+      codigo
+    );
+
+    if (emailResult.success) {
+      console.log('✅ Email enviado com sucesso!');
+      
+      // Agendar remoção do código após 10 minutos
+      setTimeout(() => {
+        if (codigosRecuperacao.has(email)) {
+          codigosRecuperacao.delete(email);
+          console.log('🗑️ Código expirado removido para:', email);
+        }
+      }, 10 * 60 * 1000);
+
+      res.json({
+        success: true,
+        message: 'Código enviado para o email cadastrado'
+      });
+    } else {
+      console.error('❌ Falha ao enviar email:', emailResult.error);
+      
+      // Mesmo que o email falhe, ainda deixar o código disponível para teste
+      console.log('⚠️ MODO FALLBACK - Código disponível no console');
+      console.log('\n═══════════════════════════════════════');
+      console.log('📨 CÓDIGO DE RECUPERAÇÃO (FALLBACK)');
+      console.log('═══════════════════════════════════════');
+      console.log('Para:', user.nome_pessoa, `<${email}>`);
+      console.log('Código:', codigo);
+      console.log('═══════════════════════════════════════\n');
+      
+      res.json({
+        success: true,
+        message: 'Erro ao enviar email, mas o código está disponível. Verifique o console do servidor.',
+        warning: 'Email não enviado - verifique a configuração SMTP'
+      });
+    }
+
+  } catch (err) {
+    console.error('❌ Erro ao solicitar recuperação:', err);
+    res.status(500).json({ 
+      success: false,
+      error: 'Erro ao processar solicitação' 
+    });
+  }
+};
+
+// ======================================
+// VERIFICAR CÓDIGO DE RECUPERAÇÃO
+// ======================================
+exports.verificarCodigo = async (req, res) => {
+  const { email, code } = req.body;
+
+  console.log('\n🔍 [VERIFICAÇÃO] Email:', email, '| Código:', code);
+
+  if (!email || !code) {
+    return res.status(400).json({ 
+      success: false,
+      error: 'Email e código são obrigatórios' 
+    });
+  }
+
+  try {
+    // Verificar se existe código para este email
+    const codigoData = codigosRecuperacao.get(email);
+
+    if (!codigoData) {
+      console.log('❌ Nenhum código encontrado para:', email);
+      return res.status(404).json({ 
+        success: false,
+        error: 'Código não encontrado ou expirado. Solicite um novo código.' 
+      });
+    }
+
+    // Verificar se o código expirou (10 minutos)
+    const tempoDecorrido = Date.now() - codigoData.timestamp;
+    const minutosDecorridos = Math.floor(tempoDecorrido / 60000);
+    
+    if (tempoDecorrido > 10 * 60 * 1000) {
+      codigosRecuperacao.delete(email);
+      console.log('❌ Código expirado para:', email);
+      return res.status(400).json({ 
+        success: false,
+        error: 'Código expirado. Solicite um novo código.' 
+      });
+    }
+
+    console.log(`⏰ Tempo decorrido: ${minutosDecorridos} minuto(s)`);
+
+    // Limitar tentativas
+    if (codigoData.tentativas >= 5) {
+      codigosRecuperacao.delete(email);
+      console.log('❌ Muitas tentativas para:', email);
+      return res.status(429).json({ 
+        success: false,
+        error: 'Muitas tentativas. Solicite um novo código.' 
+      });
+    }
+
+    // Verificar se o código está correto
+    if (codigoData.codigo !== code) {
+      codigoData.tentativas++;
+      const tentativasRestantes = 5 - codigoData.tentativas;
+      console.log(`❌ Código incorreto (Tentativa ${codigoData.tentativas}/5)`);
+      return res.status(400).json({ 
+        success: false,
+        error: `Código incorreto. ${tentativasRestantes} tentativa(s) restante(s).` 
+      });
+    }
+
+    console.log('✅ Código verificado com sucesso!');
+
+    res.json({
+      success: true,
+      message: 'Código verificado com sucesso'
+    });
+
+  } catch (err) {
+    console.error('❌ Erro ao verificar código:', err);
+    res.status(500).json({ 
+      success: false,
+      error: 'Erro ao verificar código' 
+    });
+  }
+};
+
+// ======================================
+// REDEFINIR SENHA
+// ======================================
+exports.redefinirSenha = async (req, res) => {
+  const { email, code, nova_senha } = req.body;
+
+  console.log('\n🔑 [REDEFINIR] Alterando senha para:', email);
+
+  if (!email || !code || !nova_senha) {
+    return res.status(400).json({ 
+      success: false,
+      error: 'Email, código e nova senha são obrigatórios' 
+    });
+  }
+
+  // Validar senha
+  if (nova_senha.length < 6 || nova_senha.length > 20) {
+    return res.status(400).json({ 
+      success: false,
+      error: 'A senha deve ter entre 6 e 20 caracteres' 
+    });
+  }
+
+  try {
+    // Verificar código novamente (segurança)
+    const codigoData = codigosRecuperacao.get(email);
+
+    if (!codigoData || codigoData.codigo !== code) {
+      console.log('❌ Código inválido ao redefinir senha');
+      return res.status(400).json({ 
+        success: false,
+        error: 'Código inválido ou expirado' 
+      });
+    }
+
+    // Verificar se o usuário existe
+    const checkUser = await db.query(
+      'SELECT cpf, nome_pessoa FROM pessoa WHERE email_pessoa = $1',
+      [email]
+    );
+
+    if (checkUser.rows.length === 0) {
+      console.log('❌ Usuário não encontrado');
+      return res.status(404).json({ 
+        success: false,
+        error: 'Usuário não encontrado' 
+      });
+    }
+
+    const user = checkUser.rows[0];
+
+    // Atualizar senha no banco
+    await db.query(
+      'UPDATE pessoa SET senha_pessoa = $1 WHERE email_pessoa = $2',
+      [nova_senha, email]
+    );
+
+    // Remover código usado
+    codigosRecuperacao.delete(email);
+
+    console.log('✅ Senha redefinida com sucesso para:', user.nome_pessoa);
+
+    res.json({
+      success: true,
+      message: 'Senha alterada com sucesso'
+    });
+
+  } catch (err) {
+    console.error('❌ Erro ao redefinir senha:', err);
+    res.status(500).json({ 
+      success: false,
+      error: 'Erro ao redefinir senha' 
+    });
   }
 };

@@ -15,39 +15,55 @@
     </header>
 
     <main>
-        <section class="contact-info">
-            <h2>Nossos Contatos</h2>
-            <p>Seja para fazer um pedido especial, dar um feedback ou apenas dizer um olá, estamos à disposição.</p>
-            <ul>
-                <li><strong>Endereço:</strong> Rua dos Pães Frescos, 123 - Bairro Saboroso, Cidade Doce - SP</li>
-                <li><strong>Telefone:</strong> (11) 1234-5678</li>
-                <li><strong>Email:</strong> contato@padariadocesabor.com.br</li>
-                <li><strong>Horário de Funcionamento:</strong> Segunda a Sábado, das 7h às 19h</li>
-            </ul>
-        </section>
+        <div class="contact-container">
+            <!-- COLUNA ESQUERDA: Informações de Contato -->
+            <section class="contact-info">
+                <h2>Nossos Contatos</h2>
+                <p>Seja para fazer um pedido especial, dar um feedback ou apenas dizer um olá, estamos à disposição.</p>
+                <ul>
+                    <li>
+                        <strong>📍 Endereço</strong>
+                        <span>Rua dos Pães Frescos, 123<br>Bairro Saboroso, Cidade Doce - SP</span>
+                    </li>
+                    <li>
+                        <strong>📞 Telefone</strong>
+                        <span>(11) 1234-5678</span>
+                    </li>
+                    <li>
+                        <strong>📧 Email</strong>
+                        <span>contato@padariadocesabor.com.br</span>
+                    </li>
+                    <li>
+                        <strong>🕒 Horário de Funcionamento</strong>
+                        <span>Segunda a Sábado, das 7h às 19h</span>
+                    </li>
+                </ul>
+            </section>
 
-        <section class="contact-form-section">
-            <h2>Envie-nos uma Mensagem</h2>
-            <form id="contactForm" class="contact-form">
-                <div class="form-group">
-                    <label for="name">Seu Nome:</label>
-                    <input type="text" id="name" name="name" required>
-                </div>
-                <div class="form-group">
-                    <label for="email">Seu Email:</label>
-                    <input type="email" id="email" name="email" required>
-                </div>
-                <div class="form-group">
-                    <label for="subject">Assunto:</label>
-                    <input type="text" id="subject" name="subject">
-                </div>
-                <div class="form-group">
-                    <label for="message">Sua Mensagem:</label>
-                    <textarea id="message" name="message" rows="6" required></textarea>
-                </div>
-                <button type="submit" class="btn-submit">Enviar Mensagem</button>
-            </form>
-        </section>
+            <!-- COLUNA DIREITA: Formulário de Contato -->
+            <section class="contact-form-section">
+                <h2>Envie sua Mensagem</h2>
+                <form id="contactForm" class="contact-form">
+                    <div class="form-group">
+                        <label for="name">Seu Nome:</label>
+                        <input type="text" id="name" name="name" required placeholder="Digite seu nome completo">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Seu Email:</label>
+                        <input type="email" id="email" name="email" required placeholder="seu@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="subject">Assunto:</label>
+                        <input type="text" id="subject" name="subject" placeholder="Sobre o que você quer falar?">
+                    </div>
+                    <div class="form-group">
+                        <label for="message">Sua Mensagem:</label>
+                        <textarea id="message" name="message" rows="6" required placeholder="Escreva sua mensagem aqui..."></textarea>
+                    </div>
+                    <button type="submit" class="btn-submit">Enviar Mensagem</button>
+                </form>
+            </section>
+        </div>
     </main>
 
     <footer>
@@ -60,4 +76,3 @@
 </body>
 
 </html>
-

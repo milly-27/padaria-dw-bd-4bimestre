@@ -111,15 +111,21 @@ header p {
     opacity: 0.9;
 }
 
-/* Conteúdo principal */
+/* Conteúdo principal - GRID 2 COLUNAS */
 main {
     padding: 4rem 2rem;
     position: relative;
     z-index: 2;
     max-width: 1200px;
     margin: 0 auto;
+}
+
+/* GRID DE 2 COLUNAS: Info à esquerda, Formulário à direita */
+.contact-container {
     display: grid;
-    gap: 3rem;
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem;
+    animation: popIn 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 /* Section styles */
@@ -130,7 +136,6 @@ section {
     padding: 3rem;
     box-shadow: var(--shadow-md);
     border: 2px solid rgba(139, 111, 71, 0.1);
-    animation: popIn 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 section h2 {
@@ -146,27 +151,47 @@ section p {
     margin-bottom: 1.5rem;
 }
 
-/* Contact Info */
+/* Contact Info - COLUNA ESQUERDA */
 .contact-info ul {
     list-style: none;
     padding: 0;
 }
 
 .contact-info li {
-    margin-bottom: 1.2rem;
-    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
     color: var(--text-dark);
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, var(--cream), rgba(255, 255, 255, 0.8));
+    border-radius: 15px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.contact-info li:hover {
+    border-color: var(--primary);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-sm);
 }
 
 .contact-info li strong {
     color: var(--primary);
-    min-width: 120px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-/* Contact Form */
+.contact-info li span {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--text-dark);
+}
+
+/* Contact Form - COLUNA DIREITA */
 .contact-form .form-group {
     margin-bottom: 1.5rem;
 }
@@ -312,6 +337,13 @@ footer {
 }
 
 /* Responsividade */
+@media (max-width: 1024px) {
+    .contact-container {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+}
+
 @media (max-width: 768px) {
     header h1 {
         font-size: 2.2rem;
@@ -334,13 +366,8 @@ footer {
     }
 
     .contact-info li {
-        font-size: 1rem;
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .contact-info li strong {
-        min-width: auto;
+        font-size: 0.95rem;
+        padding: 0.8rem;
     }
 
     .btn-submit {
