@@ -26,13 +26,11 @@ function deletarTodasSessoes() {
 // ========================================
 
 function criarModalConfirmacao(titulo, mensagem, onConfirm) {
-    // Remover modal existente se houver
     const modalExistente = document.getElementById('customModal');
     if (modalExistente) {
         modalExistente.remove();
     }
     
-    // Criar modal
     const modalHTML = `
         <div id="customModal" class="custom-modal-overlay">
             <div class="custom-modal-content">
@@ -53,12 +51,10 @@ function criarModalConfirmacao(titulo, mensagem, onConfirm) {
     
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     
-    // Animar entrada
     setTimeout(() => {
         document.getElementById('customModal').classList.add('show');
     }, 10);
     
-    // Guardar callback
     window.modalConfirmCallback = onConfirm;
 }
 
@@ -81,13 +77,11 @@ function confirmarModalConfirmacao() {
 }
 
 function mostrarModalSucesso(titulo, mensagem) {
-    // Remover modal existente se houver
     const modalExistente = document.getElementById('customModal');
     if (modalExistente) {
         modalExistente.remove();
     }
     
-    // Criar modal de sucesso
     const modalHTML = `
         <div id="customModal" class="custom-modal-overlay">
             <div class="custom-modal-content success">
@@ -100,12 +94,10 @@ function mostrarModalSucesso(titulo, mensagem) {
     
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     
-    // Animar entrada
     setTimeout(() => {
         document.getElementById('customModal').classList.add('show');
     }, 10);
     
-    // Fechar automaticamente após 2 segundos
     setTimeout(() => {
         fecharModalConfirmacao();
     }, 2000);
@@ -115,12 +107,14 @@ function mostrarModalSucesso(titulo, mensagem) {
 // CONTROLE DE VISIBILIDADE DOS MENUS
 // ========================================
 
-function controlarMenus(isGerente) {
+function controlarMenus(isGerente, isLogado) {
     const menuCadastros = document.getElementById('menuCadastros');
     const menuRelatorios = document.getElementById('menuRelatorios');
+    const menuMinhasCompras = document.getElementById('menuMinhasCompras');
     
-    console.log('🔐 Controlando menus - É gerente?', isGerente);
+    console.log('🔐 Controlando menus - É gerente?', isGerente, '- Está logado?', isLogado);
     
+    // Menus de Cadastros e Relatórios - só para gerente
     if (isGerente) {
         if (menuCadastros) menuCadastros.style.display = 'block';
         if (menuRelatorios) menuRelatorios.style.display = 'block';
@@ -130,10 +124,19 @@ function controlarMenus(isGerente) {
         if (menuRelatorios) menuRelatorios.style.display = 'none';
         console.log('🔒 Menus de Cadastros e Relatórios BLOQUEADOS');
     }
+    
+    // Menu Minhas Compras - para qualquer usuário logado
+    if (isLogado) {
+        if (menuMinhasCompras) menuMinhasCompras.style.display = 'block';
+        console.log('✅ Menu Minhas Compras LIBERADO');
+    } else {
+        if (menuMinhasCompras) menuMinhasCompras.style.display = 'none';
+        console.log('🔒 Menu Minhas Compras BLOQUEADO');
+    }
 }
 
 // ========================================
-// ATUALIZAR INTERFACE DO USUÁRIO - VERSÃO CORRIGIDA
+// ATUALIZAR INTERFACE DO USUÁRIO
 // ========================================
 function atualizarInterfaceUsuario(userData = null) {
     console.log('🔄 Atualizando interface do usuário:', userData);
@@ -155,21 +158,17 @@ function atualizarInterfaceUsuario(userData = null) {
         console.log('👤 Usuário logado:', userData.nome);
         console.log('🔰 É gerente?', userData.isGerente);
         
-        // Atualizar visibilidade
         btnLogin.classList.add('hidden');
         userInfo.classList.remove('hidden');
         if (loginPrompt) loginPrompt.style.display = 'none';
         
-        // Limpar conteúdo anterior
         userName.innerHTML = '';
         
-        // Criar nome do usuário
         const nomeSpan = document.createElement('span');
         nomeSpan.textContent = userData.nome;
         nomeSpan.style.cssText = 'font-weight: 600; color: var(--text-dark);';
         userName.appendChild(nomeSpan);
         
-        // Adicionar badge APENAS se for GERENTE
         if (userData.isGerente) {
             const badgeSpan = document.createElement('span');
             badgeSpan.textContent = '👑 Gerente';
@@ -187,22 +186,20 @@ function atualizarInterfaceUsuario(userData = null) {
             userName.appendChild(badgeSpan);
         }
         
-        // Configurar userInfo para logout
         userInfo.style.cursor = 'pointer';
         userInfo.title = 'Clique para fazer logout';
         userInfo.onclick = logout;
         
-        // Atualizar mensagem de boas-vindas
         if (userData.isGerente) {
             if (welcomeTitle) welcomeTitle.textContent = `Bem-vindo gerente, ${userData.nome}! 🍞`;
             if (welcomeMessage) welcomeMessage.textContent = 'Você tem acesso total ao sistema. Use o menu acima para gerenciar cadastros e visualizar relatórios.';
         } else {
             if (welcomeTitle) welcomeTitle.textContent = `Seja bem-vindo, ${userData.nome}! 🍞`;
-            if (welcomeMessage) welcomeMessage.textContent = 'Explore nosso cardápio e faça seus pedidos.';
+            if (welcomeMessage) welcomeMessage.textContent = 'Explore nosso cardápio e faça seus pedidos. Acesse "Minhas Compras" para ver seu histórico.';
         }
         
-        // Controlar menus baseado em permissões
-        controlarMenus(userData.isGerente);
+        // Controlar menus - passa isGerente e isLogado=true
+        controlarMenus(userData.isGerente, true);
         
     } else {
         // Usuário não está logado
@@ -213,12 +210,11 @@ function atualizarInterfaceUsuario(userData = null) {
         if (loginPrompt) loginPrompt.style.display = 'block';
         if (userName) userName.innerHTML = '';
         
-        // Mensagem padrão
         if (welcomeTitle) welcomeTitle.textContent = 'Tradição e Sabor';
         if (welcomeMessage) welcomeMessage.textContent = 'Feito com carinho, assado com amor. Experimente o melhor da confeitaria artesanal.';
         
-        // Ocultar menus restritos
-        controlarMenus(false);
+        // Ocultar todos os menus restritos
+        controlarMenus(false, false);
     }
 }
 
@@ -231,7 +227,6 @@ function verificarSeUsuarioEstaLogado() {
     console.log('══════════════════════════════════════');
     
     try {
-        // Ler sessões
         const userId = lerSessao('userId');
         const userName = lerSessao('userName');
         const userEmail = lerSessao('userEmail');
@@ -254,7 +249,6 @@ function verificarSeUsuarioEstaLogado() {
             return null;
         }
         
-        // Determinar se é gerente (CASE INSENSITIVE - corrigido)
         const isGerente = userType === 'funcionario' && 
                          userCargo && 
                          userCargo.toLowerCase() === 'gerente';
@@ -275,7 +269,6 @@ function verificarSeUsuarioEstaLogado() {
         console.log(`   - É gerente? ${userData.isGerente ? '✅ Sim' : '❌ Não'}`);
         console.log('══════════════════════════════════════');
         
-        // Atualizar interface
         atualizarInterfaceUsuario(userData);
         
         return userData;
@@ -296,7 +289,6 @@ function verificarSeUsuarioEstaLogado() {
 async function logout() {
     console.log('🚪 Solicitação de logout...');
     
-    // Mostrar modal de confirmação
     criarModalConfirmacao(
         'Deseja sair?',
         'Tem certeza que deseja encerrar sua sessão?',
@@ -304,7 +296,6 @@ async function logout() {
             console.log('🚪 Confirmado! Iniciando logout...');
             
             try {
-                // Tentar logout no servidor
                 const response = await fetch(`${API_BASE_URL}/auth/logout`, {
                     method: 'POST',
                     credentials: 'include',
@@ -324,20 +315,16 @@ async function logout() {
                 console.log('➡️ Continuando com logout local...');
             }
             
-            // Limpar tudo (independente da resposta do servidor)
             console.log('🧹 Limpando dados locais...');
             deletarTodasSessoes();
             
-            // Atualizar interface
             atualizarInterfaceUsuario(null);
             
-            // Mostrar modal de sucesso
             mostrarModalSucesso(
                 'Logout realizado!',
                 'Até logo! Você será redirecionado...'
             );
             
-            // Redirecionar após 2 segundos
             setTimeout(() => {
                 window.location.href = './auth/login.html';
             }, 2000);
@@ -361,10 +348,8 @@ function redirecionarLogin() {
 function inicializarMenu() {
     console.log('🚀 Menu carregado, inicializando...');
     
-    // Verificar login no sessionStorage
     verificarSeUsuarioEstaLogado();
     
-    // Configurar botão de login
     const btnLogin = document.getElementById('btnLogin');
     if (btnLogin) {
         btnLogin.onclick = redirecionarLogin;
@@ -378,7 +363,6 @@ function inicializarMenu() {
 
 document.addEventListener('DOMContentLoaded', inicializarMenu);
 
-// Atalho de desenvolvimento: CTRL + L para ver sessão
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'l') {
         e.preventDefault();
@@ -391,7 +375,6 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// ESC para fechar modais
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         fecharModalConfirmacao();

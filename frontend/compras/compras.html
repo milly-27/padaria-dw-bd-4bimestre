@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minhas Compras - PARDARIA</title>
+    <link rel="stylesheet" href="compras.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>🛍️ Minhas Compras</h1>
+            <p class="subtitle">Histórico de pedidos realizados</p>
+        </div>
+        <a href="../menu.html" class="btn-voltar">← Voltar ao Menu</a>
+    </header>
+
+    <main>
+        <!-- Resumo do usuário -->
+        <section class="user-summary">
+            <div class="user-info-card">
+                <div class="user-avatar">👤</div>
+                <div class="user-details">
+                    <h3 id="userName">Carregando...</h3>
+                    <p id="userEmail">-</p>
+                </div>
+            </div>
+            <div class="stats-container">
+                <div class="stat-card">
+                    <span class="stat-number" id="totalPedidos">0</span>
+                    <span class="stat-label">Pedidos</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="totalGasto">R$ 0,00</span>
+                    <span class="stat-label">Total Gasto</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Filtros -->
+        <section class="filters-section">
+            <h2>📋 Histórico de Pedidos</h2>
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="filterData">Filtrar por data:</label>
+                    <input type="month" id="filterData">
+                </div>
+                <button id="btnLimparFiltro" class="btn-secondary">Limpar Filtro</button>
+            </div>
+        </section>
+
+        <!-- Lista de pedidos -->
+        <section class="pedidos-section">
+            <div id="pedidosContainer" class="pedidos-container">
+                <!-- Pedidos serão carregados aqui -->
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Carregando seus pedidos...</p>
+                </div>
+            </div>
+
+            <!-- Mensagem quando não há pedidos -->
+            <div id="emptyState" class="empty-state hidden">
+                <div class="empty-icon">📦</div>
+                <h3>Nenhum pedido encontrado</h3>
+                <p>Você ainda não realizou nenhuma compra.</p>
+                <a href="../cardapio/cardapio.html" class="btn-primary">Ver Cardápio</a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal de detalhes do pedido -->
+    <div id="modalDetalhes" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="modal-close" onclick="fecharModal()">&times;</button>
+            <h2>📋 Detalhes do Pedido #<span id="modalPedidoId"></span></h2>
+            <div class="modal-body">
+                <div class="pedido-info">
+                    <p><strong>Data:</strong> <span id="modalData"></span></p>
+                    <p><strong>Status:</strong> <span id="modalStatus" class="status-badge"></span></p>
+                </div>
+                <h3>Itens do Pedido</h3>
+                <div id="modalItens" class="modal-itens">
+                    <!-- Itens serão carregados aqui -->
+                </div>
+                <div class="modal-total">
+                    <span>Total:</span>
+                    <span id="modalTotal">R$ 0,00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 PARDARIA - Padaria Artesanal</p>
+    </footer>
+
+    <script src="compras.js"></script>
+</body>
+</html>

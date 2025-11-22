@@ -333,7 +333,7 @@ exports.getPedidoDetalhes = async (req, res) => {
 };
 
 // ================================
-// Listar pedidos (com filtros opcionais)
+// Listar pedidos (com filtros opcionais) - VERSÃO CORRIGIDA
 // ================================
 exports.listarPedidos = async (req, res) => {
   try {
@@ -343,10 +343,15 @@ exports.listarPedidos = async (req, res) => {
     let query = `
       SELECT p.id_pedido, p.cpf, p.data_pedido, p.valor_total,
              pe.nome_pessoa,
-             COUNT(pp.id_produto) as total_itens
+             COUNT(pp.id_produto) as total_itens,
+             CASE 
+               WHEN pg.id_pagamento IS NOT NULL THEN 'Pago'
+               ELSE 'Pendente'
+             END as status_pagamento
       FROM pedido p
       LEFT JOIN pessoa pe ON p.cpf = pe.cpf
       LEFT JOIN pedidoproduto pp ON p.id_pedido = pp.id_pedido
+      LEFT JOIN pagamento pg ON p.id_pedido = pg.id_pedido
     `;
 
     const conditions = [];
@@ -375,7 +380,8 @@ exports.listarPedidos = async (req, res) => {
       query += ' WHERE ' + conditions.join(' AND ');
     }
 
-    query += ' GROUP BY p.id_pedido, p.cpf, p.data_pedido, p.valor_total, pe.nome_pessoa';
+    // IMPORTANTE: Adicionar pg.id_pagamento no GROUP BY
+    query += ' GROUP BY p.id_pedido, p.cpf, p.data_pedido, p.valor_total, pe.nome_pessoa, pg.id_pagamento';
     query += ' ORDER BY p.data_pedido DESC, p.id_pedido DESC';
 
     const result = await db.query(query, params);
