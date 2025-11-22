@@ -14,15 +14,27 @@
 <p>Confira nossos deliciosos produtos</p>
 </div>
 <div class="header-filter">
-<label for="filtroCategoria">🔍</label>
+<div class="filter-row">
+<div class="filter-group">
+<label for="filtroCategoria">🏷️ Categoria</label>
 <select id="filtroCategoria">
 <option value="todas">Todas as Categorias</option>
 </select>
-<button id="btnFiltrar" class="btn-filter">Filtrar</button>
+</div>
+<div class="filter-group">
+<label for="buscarProduto">🔍 Produto</label>
+<input type="text" id="buscarProduto" placeholder="Digite o nome...">
+</div>
+</div>
+<div class="filter-actions">
+<button id="btnBuscar" class="btn-filter btn-buscar">Buscar</button>
+<button id="btnLimpar" class="btn-filter btn-limpar">Limpar</button>
+</div>
 </div>
 <div class="header-actions">
 <button onclick="window.location.href='../carrinho/carrinho.html'" class="btn-carrinho">
-                    🛒 Carrinho (<span id="carrinhoCount">0</span>)
+<span class="carrinho-icon">🛒</span>
+<span class="carrinho-badge" id="carrinhoCount">0</span>
 </button>
 <button onclick="window.location.href='../menu.html'" class="btn-menu">
                     🏠 Menu
