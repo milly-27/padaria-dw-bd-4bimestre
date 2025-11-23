@@ -266,3 +266,194 @@ exports.getProdutosMaisVendidos = async (req, res) => {
         console.log('🔒 Conexão liberada');
     }
 };
+/**
+ * Relatório de Clientes que Mais Compram
+ */
+exports.getClientesMaisCompram = async (req, res) => {
+    console.log('🔍 Iniciando getClientesMaisCompram');
+    console.log('📥 Query params recebidos:', req.query);
+    
+    const client = await pool.connect();
+    console.log('✅ Conexão com o banco de dados estabelecida');
+    
+    try {
+        const { 
+            dataInicio, 
+            dataFim, 
+            limite = 20,
+            cpf,
+            nome,
+            ordenar = 'total_compras',
+            direcao = 'desc'
+        } = req.query;
+        
+        // Validar limite
+        const limiteNum = Math.min(parseInt(limite) || 20, 100);
+        
+        // Construir condições WHERE
+        const whereConditions = [];
+        const params = [];
+        let paramIndex = 1;
+        
+        // Filtro de data início
+        if (dataInicio && dataInicio.trim() !== '') {
+            if (!isValidDate(dataInicio)) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Data de início inválida. Use o formato YYYY-MM-DD.',
+                    timestamp: new Date().toISOString()
+                });
+            }
+            whereConditions.push(`p.data_pedido >= $${paramIndex}::date`);
+            params.push(dataInicio);
+            paramIndex++;
+            console.log(`📅 Filtro data início: ${dataInicio}`);
+        }
+        
+        // Filtro de data fim
+        if (dataFim && dataFim.trim() !== '') {
+            if (!isValidDate(dataFim)) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Data de fim inválida. Use o formato YYYY-MM-DD.',
+                    timestamp: new Date().toISOString()
+                });
+            }
+            whereConditions.push(`p.data_pedido <= ($${paramIndex}::date + INTERVAL '1 day' - INTERVAL '1 second')`);
+            params.push(dataFim);
+            paramIndex++;
+            console.log(`📅 Filtro data fim: ${dataFim}`);
+        }
+        
+        // Filtro por CPF
+        if (cpf && cpf.trim() !== '') {
+            // Remove caracteres especiais do CPF
+            const cpfLimpo = cpf.replace(/[^\d]/g, '');
+            if (cpfLimpo.length === 11) {
+                whereConditions.push(`c.cpf = $${paramIndex}`);
+                params.push(cpfLimpo);
+                paramIndex++;
+                console.log(`🔍 Filtro CPF: ${cpfLimpo}`);
+            }
+        }
+        
+        // Filtro por nome (busca parcial)
+        if (nome && nome.trim() !== '') {
+            whereConditions.push(`LOWER(c.nome) LIKE LOWER($${paramIndex})`);
+            params.push(`%${nome.trim()}%`);
+            paramIndex++;
+            console.log(`🔍 Filtro nome: ${nome}`);
+        }
+        
+        const whereClause = whereConditions.length > 0 
+            ? 'WHERE ' + whereConditions.join(' AND ')
+            : '';
+        
+        console.log('🔍 WHERE Clause:', whereClause);
+        console.log('🔍 Parâmetros:', params);
+        
+        // Mapeamento de ordenação
+        const orderByMap = {
+            'total_compras': 'total_compras',
+            'quantidade_pedidos': 'quantidade_pedidos',
+            'ticket_medio': 'ticket_medio',
+            'ultima_compra': 'ultima_compra',
+            'nome': 'c.nome'
+        };
+        
+        const orderBy = orderByMap[ordenar] || 'total_compras';
+        const orderDirection = direcao === 'asc' ? 'ASC' : 'DESC';
+        
+        // Query principal
+        const query = `
+            SELECT 
+                c.id_cliente,
+                c.nome,
+                c.cpf,
+                c.telefone,
+                c.email,
+                c.data_cadastro,
+                COALESCE(COUNT(DISTINCT p.id_pedido), 0) as quantidade_pedidos,
+                COALESCE(SUM(p.valor_total), 0) as total_compras,
+                CASE 
+                    WHEN COUNT(DISTINCT p.id_pedido) > 0 
+                    THEN COALESCE(SUM(p.valor_total), 0) / COUNT(DISTINCT p.id_pedido)
+                    ELSE 0 
+                END as ticket_medio,
+                MAX(p.data_pedido) as ultima_compra,
+                MIN(p.data_pedido) as primeira_compra
+            FROM cliente c
+            LEFT JOIN pedido p ON c.id_cliente = p.id_cliente
+            ${whereClause}
+            GROUP BY c.id_cliente, c.nome, c.cpf, c.telefone, c.email, c.data_cadastro
+            HAVING COUNT(DISTINCT p.id_pedido) > 0
+            ORDER BY ${orderBy} ${orderDirection}
+            LIMIT $${paramIndex}
+        `;
+        
+        params.push(limiteNum);
+        
+        console.log('🔍 Executando query...');
+        const result = await client.query(query, params);
+        
+        console.log(`📊 Resultado: ${result.rowCount} clientes encontrados`);
+        
+        // Processar resultados
+        const clientes = result.rows.map(row => ({
+            id_cliente: parseInt(row.id_cliente),
+            nome: row.nome || 'Cliente sem nome',
+            cpf: row.cpf ? row.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : 'N/A',
+            telefone: row.telefone || 'N/A',
+            email: row.email || 'N/A',
+            data_cadastro: row.data_cadastro,
+            quantidade_pedidos: parseInt(row.quantidade_pedidos) || 0,
+            total_compras: parseFloat(row.total_compras) || 0,
+            ticket_medio: parseFloat(row.ticket_medio) || 0,
+            ultima_compra: row.ultima_compra,
+            primeira_compra: row.primeira_compra
+        }));
+        
+        // Calcular estatísticas gerais
+        const totais = {
+            total_clientes: clientes.length,
+            total_pedidos: clientes.reduce((sum, c) => sum + c.quantidade_pedidos, 0),
+            total_vendas: clientes.reduce((sum, c) => sum + c.total_compras, 0),
+            ticket_medio_geral: 0
+        };
+        
+        if (totais.total_pedidos > 0) {
+            totais.ticket_medio_geral = parseFloat((totais.total_vendas / totais.total_pedidos).toFixed(2));
+        }
+        
+        console.log(`✅ ${clientes.length} clientes processados com sucesso`);
+        if (clientes.length > 0) {
+            console.log('👤 Primeiro cliente:', clientes[0]);
+        }
+        
+        res.status(200).json({
+            status: 'success',
+            data: clientes,
+            meta: {
+                total: clientes.length,
+                periodo: {
+                    dataInicio: dataInicio || null,
+                    dataFim: dataFim || null,
+                    limite: limiteNum
+                },
+                filtros: {
+                    cpf: cpf || null,
+                    nome: nome || null
+                },
+                totais: totais,
+                timestamp: new Date().toISOString()
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro completo:', error);
+        handleError(res, error, 'Erro ao processar o relatório de clientes que mais compram');
+    } finally {
+        client.release();
+        console.log('🔒 Conexão liberada');
+    }
+};
