@@ -1,6 +1,6 @@
 /* ============================================
    CSS UNIVERSAL PARA TODOS OS RELATÓRIOS
-   Salve como: frontend/css/relatorios-style.css
+   Sistema AVAP - Versão Unificada
    ============================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Pacifico&display=swap');
@@ -64,7 +64,8 @@ body {
     to { opacity: 1; transform: translateX(0); }
 }
 
-.container {
+.container,
+.report-container {
     max-width: 1400px;
     margin: 0 auto;
     padding: 2rem 1.5rem;
@@ -98,7 +99,8 @@ body {
     min-width: 250px;
 }
 
-.report-header h1 {
+.report-header h1,
+.report-title {
     font-family: 'Pacifico', cursive;
     font-size: 2.2rem;
     color: var(--primary);
@@ -118,7 +120,8 @@ body {
     font-size: 1.1rem;
 }
 
-.action-buttons {
+.action-buttons,
+.actions {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -192,6 +195,56 @@ body {
 .btn-primary:hover {
     transform: translateY(-3px);
     box-shadow: 0 10px 30px rgba(139, 111, 71, 0.4);
+}
+
+.btn-export {
+    background: linear-gradient(135deg, #27ae60, #229954);
+    color: white;
+}
+
+.btn-export:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(39, 174, 96, 0.4);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, var(--success-color), #43a047);
+    color: white;
+}
+
+.btn-success:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(102, 187, 106, 0.4);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, var(--danger-color), #d32f2f);
+    color: white;
+}
+
+.btn-danger:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(239, 83, 80, 0.4);
+}
+
+.btn-info {
+    background: linear-gradient(135deg, var(--info-color), #0288d1);
+    color: white;
+}
+
+.btn-info:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(41, 182, 246, 0.4);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #757575, #616161);
+    color: white;
+}
+
+.btn-secondary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(117, 117, 117, 0.4);
 }
 
 .filters {
@@ -343,7 +396,8 @@ body {
     font-size: 1.5rem;
 }
 
-.chart-container canvas {
+.chart-container canvas,
+.chart-wrapper {
     width: 100% !important;
     max-height: 400px;
 }
@@ -381,6 +435,14 @@ th {
     letter-spacing: 1px;
 }
 
+thead {
+    background: linear-gradient(135deg, var(--primary), var(--dark-brown));
+}
+
+thead th {
+    color: white;
+}
+
 tbody tr {
     transition: all 0.3s ease;
 }
@@ -397,7 +459,8 @@ tbody tr:nth-child(even) {
     text-align: center !important;
 }
 
-.text-end {
+.text-end,
+.text-right {
     text-align: right !important;
 }
 
@@ -406,7 +469,16 @@ tbody tr:nth-child(even) {
     opacity: 0.8;
 }
 
-.message {
+.text-success {
+    color: var(--success-color);
+}
+
+.text-danger {
+    color: var(--danger-color);
+}
+
+.message,
+.alert {
     padding: 1.2rem 1.5rem;
     border-radius: 20px;
     margin-bottom: 1.5rem;
@@ -418,22 +490,32 @@ tbody tr:nth-child(even) {
     animation: slideIn 0.5s ease;
 }
 
-.message-success {
+.message-success,
+.alert-success {
     background: linear-gradient(135deg, #ebfbee, #d3f9d8);
     color: #2b8a3e;
     border: 2px solid #8ce99a;
 }
 
-.message-error {
+.message-error,
+.alert-danger {
     background: linear-gradient(135deg, #fff5f5, #ffe3e3);
     color: #c92a2a;
     border: 2px solid #ffa8a8;
 }
 
-.message-info {
+.message-info,
+.alert-info {
     background: linear-gradient(135deg, #e7f5ff, #d0ebff);
     color: #1864ab;
     border: 2px solid #74c0fc;
+}
+
+.message-warning,
+.alert-warning {
+    background: linear-gradient(135deg, #fff4e6, #ffe8cc);
+    color: #e67700;
+    border: 2px solid #ffc078;
 }
 
 .loading-overlay {
@@ -454,14 +536,16 @@ tbody tr:nth-child(even) {
     display: flex;
 }
 
-.loading-overlay p {
+.loading-overlay p,
+.loading-content {
     color: white;
     font-size: 1.2rem;
     margin-top: 1rem;
     font-weight: 500;
 }
 
-.spinner {
+.spinner,
+.spinner-border {
     width: 50px;
     height: 50px;
     border: 4px solid rgba(139, 111, 71, 0.3);
@@ -491,8 +575,65 @@ tbody tr:nth-child(even) {
     font-size: 1.1rem;
 }
 
+.product-name {
+    font-weight: 500;
+    color: var(--text-dark);
+}
+
+.product-category {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin-top: 0.2rem;
+}
+
+.py-4 {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+}
+
+.mb-3 {
+    margin-bottom: 1rem !important;
+}
+
+.mb-0 {
+    margin-bottom: 0 !important;
+}
+
+.d-flex {
+    display: flex !important;
+}
+
+.justify-content-between {
+    justify-content: space-between !important;
+}
+
+.align-items-center {
+    align-items: center !important;
+}
+
+.align-items-start {
+    align-items: flex-start !important;
+}
+
+.gap-2 {
+    gap: 0.5rem !important;
+}
+
+.gap-3 {
+    gap: 1rem !important;
+}
+
+.align-self-end {
+    align-self: flex-end !important;
+}
+
+.w-100 {
+    width: 100% !important;
+}
+
 @media (max-width: 992px) {
-    .container {
+    .container,
+    .report-container {
         padding: 1.5rem 1rem;
     }
     
@@ -512,7 +653,8 @@ tbody tr:nth-child(even) {
         flex-direction: column;
     }
     
-    .action-buttons {
+    .action-buttons,
+    .actions {
         width: 100%;
     }
     
@@ -531,7 +673,8 @@ tbody tr:nth-child(even) {
         padding: 1.5rem;
     }
     
-    .report-header h1 {
+    .report-header h1,
+    .report-title {
         font-size: 1.8rem;
     }
     
@@ -561,7 +704,10 @@ tbody tr:nth-child(even) {
     .action-buttons,
     .button-group,
     .filters,
-    .loading-overlay {
+    .loading-overlay,
+    .alert-container,
+    .actions,
+    #loadingOverlay {
         display: none !important;
     }
     
@@ -580,6 +726,11 @@ tbody tr:nth-child(even) {
     
     table thead,
     .table thead {
+        background: #f8f9fa !important;
+        color: black !important;
+    }
+    
+    th {
         background: #f8f9fa !important;
         color: black !important;
     }

@@ -3,89 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Produtos Mais Vendidos - Padaria DW</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Roboto', sans-serif; background: #f5f5f5; padding: 20px; }
-        .container { max-width: 1400px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .report-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 3px solid #3498db; padding-bottom: 20px; }
-        .report-header h1 { color: #2c3e50; font-size: 28px; }
-        .actions { display: flex; gap: 10px; }
-        .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: all 0.3s; }
-        .btn-print { background: #3498db; color: white; }
-        .btn-print:hover { background: #2980b9; }
-        .btn-export { background: #27ae60; color: white; }
-        .btn-export:hover { background: #229954; }
-        .btn-primary { background: #3498db; color: white; }
-        .btn-primary:hover { background: #2980b9; }
-        .filters { display: flex; gap: 15px; align-items: flex-end; margin-bottom: 30px; padding: 20px; background: #ecf0f1; border-radius: 8px; }
-        .filter-group { display: flex; flex-direction: column; gap: 5px; }
-        .filter-group label { font-size: 14px; color: #2c3e50; font-weight: 500; }
-        .form-control { padding: 8px 12px; border: 1px solid #bdc3c7; border-radius: 5px; font-size: 14px; }
-        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .summary-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 10px; display: flex; align-items: center; gap: 20px; }
-        .summary-card:nth-child(2) { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-        .summary-card:nth-child(3) { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-        .card-icon { font-size: 40px; }
-        .card-content h3 { font-size: 14px; margin-bottom: 10px; opacity: 0.9; }
-        .card-content p { font-size: 28px; font-weight: bold; }
-        .chart-container { margin-bottom: 30px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .chart-header { margin-bottom: 20px; }
-        .chart-header h2 { color: #2c3e50; font-size: 20px; }
-        .chart-wrapper { position: relative; height: 400px; }
-        .table-responsive { overflow-x: auto; }
-        .table { width: 100%; border-collapse: collapse; }
-        .table thead { background: #34495e; color: white; }
-        .table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid #ecf0f1; }
-        .table tbody tr:hover { background: #f8f9fa; }
-        .text-center { text-align: center; }
-        .text-right, .text-end { text-align: right; }
-        .py-4 { padding: 2rem 0; }
-        .mb-3 { margin-bottom: 1rem; }
-        .text-muted { color: #7f8c8d; }
-        .product-name { font-weight: 500; color: #2c3e50; }
-        .product-category { font-size: 0.85rem; color: #7f8c8d; margin-top: 0.2rem; }
-        .empty-state { text-align: center; padding: 40px; }
-        .loading-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; color: white; }
-        .loading-overlay.active { display: flex; }
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 20px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @media print {
-            .filters, .btn, .actions { display: none; }
-            body { background: white; }
-        }
-    </style>
+    <title>Produtos Mais Vendidos - Sistema AVAP</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/relatorios.css">
 </head>
 <body>
+    <div id="messages-container" class="position-fixed top-0 end-0 p-3" style="z-index: 11"></div>
+    
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p id="loadingMessage">Carregando...</p>
+    </div>
+    
     <div class="container">
         <header class="report-header">
-            <h1><i class="fas fa-chart-pie"></i> Relatório de Produtos Mais Vendidos</h1>
-            <div class="actions">
-                <button id="printBtn" class="btn btn-print"><i class="fas fa-print"></i> Imprimir</button>
-                <button id="exportPdfBtn" class="btn btn-export"><i class="far fa-file-pdf"></i> PDF</button>
-                <button id="exportExcelBtn" class="btn btn-export"><i class="far fa-file-excel"></i> Excel</button>
+            <div class="header-content">
+                <div class="header-titles">
+                    <h1><i class="bi bi-box-seam"></i> Produtos Mais Vendidos</h1>
+                    <p class="report-subtitle">Análise de desempenho dos produtos</p>
+                </div>
+                
+                <div class="action-buttons">
+                    <div class="button-group">
+                        <button id="exportExcel" class="btn-action btn-excel">
+                            <i class="bi bi-file-earmark-excel"></i> Excel
+                        </button>
+                        <button id="exportPdf" class="btn-action btn-pdf">
+                            <i class="bi bi-file-pdf"></i> PDF
+                        </button>
+                        <button id="printReport" class="btn-action btn-print">
+                            <i class="bi bi-printer"></i> Imprimir
+                        </button>
+                    </div>
+                </div>
             </div>
         </header>
-
-        <div class="filters">
+        
+        <section class="filters">
             <div class="filter-group">
-                <label for="dataInicio"><i class="far fa-calendar-alt"></i> Data Inicial</label>
+                <label for="dataInicio"><i class="bi bi-calendar"></i> Data Inicial</label>
                 <input type="date" id="dataInicio" class="form-control">
             </div>
+            
             <div class="filter-group">
-                <label for="dataFim"><i class="far fa-calendar-alt"></i> Data Final</label>
+                <label for="dataFim"><i class="bi bi-calendar"></i> Data Final</label>
                 <input type="date" id="dataFim" class="form-control">
             </div>
+            
             <div class="filter-group">
-                <label for="limite"><i class="fas fa-list-ol"></i> Limite</label>
+                <label for="limite"><i class="bi bi-list-ol"></i> Limite</label>
                 <select id="limite" class="form-control">
                     <option value="5">Top 5</option>
                     <option value="10" selected>Top 10</option>
@@ -94,83 +60,100 @@
                     <option value="100">Top 100</option>
                 </select>
             </div>
-            <button id="filtrarBtn" class="btn btn-primary"><i class="fas fa-filter"></i> Aplicar Filtros</button>
-        </div>
-
-        <div class="summary-cards">
+            
+            <div class="filter-group">
+                <label>&nbsp;</label>
+                <button id="filtrarBtn" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel"></i> Aplicar Filtros
+                </button>
+            </div>
+        </section>
+        
+        <section class="summary-cards">
             <div class="summary-card">
-                <div class="card-icon"><i class="fas fa-boxes"></i></div>
+                <div class="card-icon">
+                    <i class="bi bi-boxes"></i>
+                </div>
                 <div class="card-content">
                     <h3>Total de Produtos</h3>
                     <p id="totalProdutos">0</p>
                 </div>
             </div>
+            
             <div class="summary-card">
-                <div class="card-icon"><i class="fas fa-shopping-cart"></i></div>
+                <div class="card-icon">
+                    <i class="bi bi-cart-check"></i>
+                </div>
                 <div class="card-content">
                     <h3>Itens Vendidos</h3>
                     <p id="totalItensVendidos">0</p>
                 </div>
             </div>
+            
             <div class="summary-card">
-                <div class="card-icon"><i class="fas fa-dollar-sign"></i></div>
+                <div class="card-icon">
+                    <i class="bi bi-currency-dollar"></i>
+                </div>
                 <div class="card-content">
                     <h3>Faturamento Total</h3>
                     <p id="faturamentoTotal">R$ 0,00</p>
                 </div>
             </div>
-        </div>
-
-        <div class="chart-container">
+            
+            <div class="summary-card">
+                <div class="card-icon">
+                    <i class="bi bi-trophy"></i>
+                </div>
+                <div class="card-content">
+                    <h3>Top Produto</h3>
+                    <p id="topProduto">-</p>
+                </div>
+            </div>
+        </section>
+        
+        <section class="chart-container">
             <div class="chart-header">
-                <h2><i class="fas fa-chart-bar"></i> Desempenho dos Produtos</h2>
+                <h2 class="chart-title">Top 10 Produtos</h2>
             </div>
-            <div class="chart-wrapper">
-                <canvas id="produtosChart"></canvas>
-            </div>
-        </div>
-
-        <div class="table-responsive">
-            <table id="tabelaProdutos" class="table">
+            <canvas id="produtosChart"></canvas>
+        </section>
+        
+        <section class="table-container">
+            <table class="table">
                 <thead>
                     <tr>
                         <th>#</th>
                         <th>Produto</th>
                         <th>Categoria</th>
                         <th class="text-center">Quantidade</th>
-                        <th class="text-right">Valor Total</th>
-                        <th class="text-right">Preço Médio</th>
+                        <th class="text-end">Valor Total</th>
+                        <th class="text-end">Preço Médio</th>
                     </tr>
                 </thead>
                 <tbody id="tabelaProdutosBody">
                     <tr>
                         <td colspan="6" class="text-center py-4">
                             <div class="empty-state">
-                                <i class="fas fa-box-open fa-3x mb-3 text-muted"></i>
+                                <i class="bi bi-hourglass-split"></i>
                                 <p>Carregando dados...</p>
                             </div>
                         </td>
                     </tr>
                 </tbody>
             </table>
-        </div>
+        </section>
     </div>
-
-    <div id="loading" class="loading-overlay">
-        <div class="spinner"></div>
-        <h3>Processando seu relatório...</h3>
-    </div>
-
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    
     <script>
         let produtosChart = null;
         let dadosGlobais = [];
-        
-        // URL base da API (mesmo padrão do relatório de vendas mensais)
         const API_BASE_URL = 'http://localhost:3001';
         
-        console.log('🌐 API Base URL:', API_BASE_URL);
-        
-        // Funções auxiliares
         function formatCurrency(value) {
             return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
         }
@@ -179,62 +162,28 @@
             return new Intl.NumberFormat('pt-BR').format(value || 0);
         }
         
-        function showLoading() {
-            document.getElementById('loading').classList.add('active');
+        function showLoading(message = 'Carregando...') {
+            document.getElementById('loadingMessage').textContent = message;
+            document.getElementById('loadingOverlay').classList.add('active');
         }
         
         function hideLoading() {
-            document.getElementById('loading').classList.remove('active');
+            document.getElementById('loadingOverlay').classList.remove('active');
         }
         
-        function showError(message) {
-            // Cria um alerta visual melhor
-            const alertDiv = document.createElement('div');
-            alertDiv.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: #e74c3c;
-                color: white;
-                padding: 15px 20px;
-                border-radius: 5px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-                z-index: 10000;
-                max-width: 400px;
-            `;
-            alertDiv.innerHTML = `<strong>Erro:</strong> ${message}`;
-            document.body.appendChild(alertDiv);
+        function showMessage(message, type = 'info') {
+            const container = document.getElementById('messages-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message message-${type}`;
+            messageDiv.innerHTML = message;
+            container.appendChild(messageDiv);
             
             setTimeout(() => {
-                alertDiv.remove();
+                messageDiv.style.opacity = '0';
+                setTimeout(() => messageDiv.remove(), 300);
             }, 5000);
-            
-            console.error('❌', message);
         }
         
-        function showSuccess(message) {
-            const alertDiv = document.createElement('div');
-            alertDiv.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: #27ae60;
-                color: white;
-                padding: 15px 20px;
-                border-radius: 5px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-                z-index: 10000;
-                max-width: 400px;
-            `;
-            alertDiv.innerHTML = `<strong>✓</strong> ${message}`;
-            document.body.appendChild(alertDiv);
-            
-            setTimeout(() => {
-                alertDiv.remove();
-            }, 3000);
-        }
-        
-        // Inicialização
         document.addEventListener('DOMContentLoaded', function() {
             const hoje = new Date();
             const trintaDiasAtras = new Date();
@@ -244,25 +193,20 @@
             document.getElementById('dataInicio').value = trintaDiasAtras.toISOString().split('T')[0];
             
             document.getElementById('filtrarBtn').addEventListener('click', carregarDados);
-            document.getElementById('printBtn').addEventListener('click', () => window.print());
-            document.getElementById('exportPdfBtn').addEventListener('click', exportarParaPDF);
-            document.getElementById('exportExcelBtn').addEventListener('click', exportarParaExcel);
+            document.getElementById('printReport').addEventListener('click', () => window.print());
+            document.getElementById('exportPdf').addEventListener('click', exportarParaPDF);
+            document.getElementById('exportExcel').addEventListener('click', exportarParaExcel);
             
             carregarDados();
         });
         
         async function carregarDados() {
             try {
-                showLoading();
-                console.log('🔍 Carregando dados...');
+                showLoading('Buscando dados dos produtos...');
                 
                 const dataInicio = document.getElementById('dataInicio').value;
                 const dataFim = document.getElementById('dataFim').value;
-                const limite = document.getElementById('limite').value || 10;
-                
-                if (dataInicio && dataFim && new Date(dataInicio) > new Date(dataFim)) {
-                    throw new Error('A data inicial não pode ser maior que a data final');
-                }
+                const limite = document.getElementById('limite').value;
                 
                 const params = new URLSearchParams();
                 if (dataInicio) params.append('dataInicio', dataInicio);
@@ -270,47 +214,32 @@
                 params.append('limite', limite);
                 
                 const url = `${API_BASE_URL}/api/relatorios/produtos-mais-vendidos?${params.toString()}`;
-                console.log('🌐 URL completa:', url);
+                console.log('🌐 Requisição:', url);
                 
                 const response = await fetch(url, {
                     method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                    headers: { 'Content-Type': 'application/json' }
                 });
                 
-                console.log('📥 Response status:', response.status);
-                
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('❌ Erro da API:', errorText);
-                    throw new Error(`Erro na API: ${response.status} - ${errorText}`);
+                    throw new Error(`Erro ${response.status}`);
                 }
                 
                 const result = await response.json();
-                console.log('✅ Dados recebidos:', result);
+                console.log('✅ Dados:', result);
                 
-                // Verifica se a resposta tem a estrutura esperada
                 if (result.status === 'success' && result.data) {
-                    const dados = result.data;
-                    dadosGlobais = dados;
-                    
-                    if (dados.length === 0) {
-                        console.warn('⚠️ Nenhum dado encontrado');
-                        atualizarInterface([]);
-                        showError('Nenhum dado encontrado para o período selecionado');
-                        return;
-                    }
-                    
-                    atualizarInterface(dados);
-                    showSuccess('Dados carregados com sucesso!');
+                    dadosGlobais = result.data;
+                    atualizarInterface(result.data);
+                    showMessage('Dados carregados com sucesso!', 'success');
                 } else {
                     throw new Error('Formato de resposta inválido');
                 }
                 
             } catch (error) {
                 console.error('❌ Erro:', error);
-                showError('Erro ao carregar dados: ' + error.message);
+                showMessage('Erro: ' + error.message, 'error');
+                dadosGlobais = [];
                 atualizarInterface([]);
             } finally {
                 hideLoading();
@@ -320,10 +249,12 @@
         function atualizarInterface(dados) {
             const totalItens = dados.reduce((acc, item) => acc + (parseInt(item.quantidade_vendida) || 0), 0);
             const totalFaturamento = dados.reduce((acc, item) => acc + (parseFloat(item.valor_total_vendido) || 0), 0);
+            const topProduto = dados.length > 0 ? dados[0].nome : '-';
             
             document.getElementById('totalProdutos').textContent = dados.length;
             document.getElementById('totalItensVendidos').textContent = formatNumber(totalItens);
             document.getElementById('faturamentoTotal').textContent = formatCurrency(totalFaturamento);
+            document.getElementById('topProduto').textContent = topProduto.length > 20 ? topProduto.substring(0, 20) + '...' : topProduto;
             
             atualizarTabela(dados);
             atualizarGrafico(dados);
@@ -335,14 +266,12 @@
             
             if (!dados || dados.length === 0) {
                 tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="text-center py-4">
-                            <div class="empty-state">
-                                <i class="fas fa-box-open fa-3x mb-3 text-muted"></i>
-                                <p>Nenhum dado disponível</p>
-                            </div>
-                        </td>
-                    </tr>`;
+                    <tr><td colspan="6" class="text-center py-4">
+                        <div class="empty-state">
+                            <i class="bi bi-inbox"></i>
+                            <p>Nenhum produto encontrado</p>
+                        </div>
+                    </td></tr>`;
                 return;
             }
             
@@ -355,9 +284,9 @@
                         ${item.descricao ? `<div class="product-category">${item.descricao}</div>` : ''}
                     </td>
                     <td>${item.categoria || 'Sem categoria'}</td>
-                    <td class="text-center">${formatNumber(item.quantidade_vendida || 0)}</td>
-                    <td class="text-right">${formatCurrency(item.valor_total_vendido || 0)}</td>
-                    <td class="text-right">${formatCurrency(item.preco_medio_venda || 0)}</td>
+                    <td class="text-center"><strong>${formatNumber(item.quantidade_vendida || 0)}</strong></td>
+                    <td class="text-end"><strong>${formatCurrency(item.valor_total_vendido || 0)}</strong></td>
+                    <td class="text-end">${formatCurrency(item.preco_medio_venda || 0)}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -370,12 +299,13 @@
                 produtosChart.destroy();
             }
             
-            if (!dados || dados.length === 0) {
-                return;
-            }
+            if (!dados || dados.length === 0) return;
             
             const dadosLimitados = dados.slice(0, 10);
-            const labels = dadosLimitados.map(item => item.nome || 'Sem nome');
+            const labels = dadosLimitados.map(item => {
+                const nome = item.nome || 'Sem nome';
+                return nome.length > 20 ? nome.substring(0, 20) + '...' : nome;
+            });
             const valores = dadosLimitados.map(item => parseFloat(item.valor_total_vendido) || 0);
             
             produtosChart = new Chart(ctx, {
@@ -385,26 +315,27 @@
                     datasets: [{
                         label: 'Valor Total (R$)',
                         data: valores,
-                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
+                        backgroundColor: 'rgba(139, 111, 71, 0.7)',
+                        borderColor: 'rgba(139, 111, 71, 1)',
+                        borderWidth: 2
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { position: 'top' },
-                        title: {
-                            display: true,
-                            text: 'Top 10 Produtos Mais Vendidos'
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => formatCurrency(context.parsed.y)
+                            }
                         }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
                             ticks: {
-                                callback: value => 'R$ ' + value.toLocaleString('pt-BR')
+                                callback: (value) => 'R$ ' + value.toLocaleString('pt-BR')
                             }
                         }
                     }
@@ -441,10 +372,10 @@
                 });
                 
                 doc.save(`produtos-${new Date().toISOString().split('T')[0]}.pdf`);
-                showSuccess('PDF exportado com sucesso!');
+                showMessage('PDF exportado com sucesso!', 'success');
             } catch (error) {
                 console.error('Erro PDF:', error);
-                showError('Erro ao gerar PDF: ' + error.message);
+                showMessage('Erro ao gerar PDF', 'error');
             }
         }
         
@@ -464,10 +395,10 @@
                 const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
                 XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
                 XLSX.writeFile(wb, `produtos-${new Date().toISOString().split('T')[0]}.xlsx`);
-                showSuccess('Excel exportado com sucesso!');
+                showMessage('Excel exportado com sucesso!', 'success');
             } catch (error) {
                 console.error('Erro Excel:', error);
-                showError('Erro ao gerar Excel: ' + error.message);
+                showMessage('Erro ao gerar Excel', 'error');
             }
         }
     </script>
