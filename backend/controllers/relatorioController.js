@@ -4,6 +4,7 @@ const { pool } = require('../database');
  * Valida se uma string é uma data válida no formato YYYY-MM-DD
  */
 const isValidDate = (dateString) => {
+    if (!dateString) return false;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return false;
     const date = new Date(dateString);
     return date instanceof Date && !isNaN(date);
@@ -11,11 +12,17 @@ const isValidDate = (dateString) => {
 
 // Função auxiliar para tratar erros
 const handleError = (res, error, message) => {
-    console.error(`${message}:`, error);
+    console.error(`❌ ${message}:`);
+    console.error('Mensagem:', error.message);
+    console.error('Stack:', error.stack);
+    console.error('Código:', error.code);
+    console.error('Detalhe:', error.detail);
+    
     res.status(500).json({ 
         status: 'error',
         message: message,
         details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        errorCode: error.code,
         timestamp: new Date().toISOString()
     });
 };
@@ -25,18 +32,19 @@ const handleError = (res, error, message) => {
  */
 exports.getVendasMensais = async (req, res) => {
     console.log('🔍 Iniciando getVendasMensais');
-    const client = await pool.connect();
-    console.log('✅ Conexão com o banco de dados estabelecida');
+    let client;
     
     try {
-        const { ano = new Date().getFullYear() } = req.query;
+        client = await pool.connect();
+        console.log('✅ Conexão estabelecida');
         
-        // Validar ano
+        const { ano = new Date().getFullYear() } = req.query;
         const anoNum = parseInt(ano);
+        
         if (isNaN(anoNum) || anoNum < 2000 || anoNum > 2100) {
             return res.status(400).json({
                 status: 'error',
-                message: 'Ano inválido. Forneça um ano entre 2000 e 2100.',
+                message: 'Ano inválido',
                 timestamp: new Date().toISOString()
             });
         }
@@ -80,10 +88,9 @@ exports.getVendasMensais = async (req, res) => {
             GROUP BY m.mes, EXTRACT(MONTH FROM m.mes), TO_CHAR(m.mes, 'TMMonth')
             ORDER BY ${orderBy} ${orderDirection}`;
             
-        console.log(`🔍 Executando consulta para o ano ${anoNum}...`);
+        console.log(`🔍 Executando para ano ${anoNum}...`);
         const result = await client.query(query, [`${anoNum}-01-01`]);
-        
-        console.log(`📊 Resultado: ${result.rowCount} meses encontrados`);
+        console.log(`📊 ${result.rowCount} meses encontrados`);
         
         const dados = result.rows.map(row => ({
             mes: row.mes_nome ? row.mes_nome.trim() : '',
@@ -133,72 +140,65 @@ exports.getVendasMensais = async (req, res) => {
         });
         
     } catch (error) {
-        handleError(res, error, 'Erro ao processar o relatório de vendas mensais');
+        handleError(res, error, 'Erro ao processar vendas mensais');
     } finally {
-        client.release();
-        console.log('🔒 Conexão liberada');
+        if (client) {
+            client.release();
+            console.log('🔒 Conexão liberada');
+        }
     }
 };
 
 /**
- * Relatório de Produtos Mais Vendidos - SIMPLIFICADO (padrão vendas mensais)
+ * Relatório de Produtos Mais Vendidos
  */
 exports.getProdutosMaisVendidos = async (req, res) => {
     console.log('🔍 Iniciando getProdutosMaisVendidos');
-    console.log('📥 Query params recebidos:', req.query);
+    console.log('📥 Params:', req.query);
     
-    const client = await pool.connect();
-    console.log('✅ Conexão com o banco de dados estabelecida');
+    let client;
     
     try {
-        const { dataInicio, dataFim, limite = 10 } = req.query;
+        client = await pool.connect();
+        console.log('✅ Conexão estabelecida');
         
-        // Validar limite
+        const { dataInicio, dataFim, limite = 10 } = req.query;
         const limiteNum = Math.min(parseInt(limite) || 10, 100);
         
-        // Construir condições WHERE
         const whereConditions = [];
         const params = [];
         let paramIndex = 1;
         
-        // Filtro de data início
         if (dataInicio && dataInicio.trim() !== '') {
             if (!isValidDate(dataInicio)) {
                 return res.status(400).json({
                     status: 'error',
-                    message: 'Data de início inválida. Use o formato YYYY-MM-DD.',
+                    message: 'Data de início inválida',
                     timestamp: new Date().toISOString()
                 });
             }
             whereConditions.push(`p.data_pedido >= $${paramIndex}::date`);
             params.push(dataInicio);
             paramIndex++;
-            console.log(`📅 Filtro data início: ${dataInicio}`);
         }
         
-        // Filtro de data fim
         if (dataFim && dataFim.trim() !== '') {
             if (!isValidDate(dataFim)) {
                 return res.status(400).json({
                     status: 'error',
-                    message: 'Data de fim inválida. Use o formato YYYY-MM-DD.',
+                    message: 'Data de fim inválida',
                     timestamp: new Date().toISOString()
                 });
             }
             whereConditions.push(`p.data_pedido <= ($${paramIndex}::date + INTERVAL '1 day' - INTERVAL '1 second')`);
             params.push(dataFim);
             paramIndex++;
-            console.log(`📅 Filtro data fim: ${dataFim}`);
         }
         
         const whereClause = whereConditions.length > 0 
             ? 'WHERE ' + whereConditions.join(' AND ')
             : '';
         
-        console.log('🔍 WHERE Clause:', whereClause);
-        console.log('🔍 Parâmetros:', params);
-        
-        // Query simplificada - mesmo padrão de vendas mensais
         const query = `
             SELECT 
                 pr.id_produto,
@@ -226,23 +226,16 @@ exports.getProdutosMaisVendidos = async (req, res) => {
         
         console.log('🔍 Executando query...');
         const result = await client.query(query, params);
+        console.log(`📊 ${result.rowCount} produtos encontrados`);
         
-        console.log(`📊 Resultado: ${result.rowCount} produtos encontrados`);
-        
-        // Processar resultados - formato consistente
         const produtos = result.rows.map(row => ({
             nome: row.nome || 'Produto sem nome',
-            descricao: '', // Campo não existe na estrutura atual
+            descricao: '',
             categoria: row.categoria,
             quantidade_vendida: parseInt(row.quantidade_vendida) || 0,
             valor_total_vendido: parseFloat(row.valor_total_vendido) || 0,
             preco_medio_venda: parseFloat(row.preco_medio_venda) || 0
         }));
-        
-        console.log(`✅ ${produtos.length} produtos processados com sucesso`);
-        if (produtos.length > 0) {
-            console.log('📦 Primeiro produto:', produtos[0]);
-        }
         
         res.status(200).json({
             status: 'success',
@@ -259,24 +252,33 @@ exports.getProdutosMaisVendidos = async (req, res) => {
         });
         
     } catch (error) {
-        console.error('❌ Erro completo:', error);
-        handleError(res, error, 'Erro ao processar o relatório de produtos mais vendidos');
+        handleError(res, error, 'Erro ao processar produtos mais vendidos');
     } finally {
-        client.release();
-        console.log('🔒 Conexão liberada');
+        if (client) {
+            client.release();
+            console.log('🔒 Conexão liberada');
+        }
     }
 };
+
 /**
- * Relatório de Clientes que Mais Compram
+ * Relatório de Clientes que Mais Compram - COM DEBUG COMPLETO
  */
 exports.getClientesMaisCompram = async (req, res) => {
-    console.log('🔍 Iniciando getClientesMaisCompram');
-    console.log('📥 Query params recebidos:', req.query);
+    console.log('\n═══════════════════════════════════════');
+    console.log('🔍 INICIANDO getClientesMaisCompram');
+    console.log('═══════════════════════════════════════');
+    console.log('📥 Query params:', JSON.stringify(req.query, null, 2));
     
-    const client = await pool.connect();
-    console.log('✅ Conexão com o banco de dados estabelecida');
+    let client;
     
     try {
+        // Conectar ao banco
+        console.log('🔌 Tentando conectar ao banco...');
+        client = await pool.connect();
+        console.log('✅ Conexão estabelecida com sucesso!');
+        
+        // Pegar parâmetros
         const { 
             dataInicio, 
             dataFim, 
@@ -287,72 +289,75 @@ exports.getClientesMaisCompram = async (req, res) => {
             direcao = 'desc'
         } = req.query;
         
-        // Validar limite
+        console.log('\n📋 Parâmetros processados:');
+        console.log('  - dataInicio:', dataInicio || 'não informada');
+        console.log('  - dataFim:', dataFim || 'não informada');
+        console.log('  - limite:', limite);
+        console.log('  - cpf:', cpf || 'não informado');
+        console.log('  - nome:', nome || 'não informado');
+        
         const limiteNum = Math.min(parseInt(limite) || 20, 100);
         
-        // Construir condições WHERE
+        // Construir WHERE
         const whereConditions = [];
         const params = [];
         let paramIndex = 1;
         
-        // Filtro de data início
         if (dataInicio && dataInicio.trim() !== '') {
             if (!isValidDate(dataInicio)) {
+                console.log('❌ Data início inválida:', dataInicio);
                 return res.status(400).json({
                     status: 'error',
-                    message: 'Data de início inválida. Use o formato YYYY-MM-DD.',
+                    message: 'Data de início inválida. Use YYYY-MM-DD.',
                     timestamp: new Date().toISOString()
                 });
             }
             whereConditions.push(`p.data_pedido >= $${paramIndex}::date`);
             params.push(dataInicio);
             paramIndex++;
-            console.log(`📅 Filtro data início: ${dataInicio}`);
+            console.log('✅ Filtro data início aplicado');
         }
         
-        // Filtro de data fim
         if (dataFim && dataFim.trim() !== '') {
             if (!isValidDate(dataFim)) {
+                console.log('❌ Data fim inválida:', dataFim);
                 return res.status(400).json({
                     status: 'error',
-                    message: 'Data de fim inválida. Use o formato YYYY-MM-DD.',
+                    message: 'Data de fim inválida. Use YYYY-MM-DD.',
                     timestamp: new Date().toISOString()
                 });
             }
             whereConditions.push(`p.data_pedido <= ($${paramIndex}::date + INTERVAL '1 day' - INTERVAL '1 second')`);
             params.push(dataFim);
             paramIndex++;
-            console.log(`📅 Filtro data fim: ${dataFim}`);
+            console.log('✅ Filtro data fim aplicado');
         }
         
-        // Filtro por CPF
         if (cpf && cpf.trim() !== '') {
-            // Remove caracteres especiais do CPF
             const cpfLimpo = cpf.replace(/[^\d]/g, '');
             if (cpfLimpo.length === 11) {
                 whereConditions.push(`c.cpf = $${paramIndex}`);
                 params.push(cpfLimpo);
                 paramIndex++;
-                console.log(`🔍 Filtro CPF: ${cpfLimpo}`);
+                console.log('✅ Filtro CPF aplicado:', cpfLimpo);
             }
         }
         
-        // Filtro por nome (busca parcial)
         if (nome && nome.trim() !== '') {
             whereConditions.push(`LOWER(c.nome) LIKE LOWER($${paramIndex})`);
             params.push(`%${nome.trim()}%`);
             paramIndex++;
-            console.log(`🔍 Filtro nome: ${nome}`);
+            console.log('✅ Filtro nome aplicado:', nome);
         }
         
         const whereClause = whereConditions.length > 0 
             ? 'WHERE ' + whereConditions.join(' AND ')
             : '';
         
-        console.log('🔍 WHERE Clause:', whereClause);
-        console.log('🔍 Parâmetros:', params);
+        console.log('\n🔍 WHERE clause:', whereClause || '(sem filtros)');
+        console.log('🔍 Parâmetros SQL:', params);
         
-        // Mapeamento de ordenação
+        // Ordenação
         const orderByMap = {
             'total_compras': 'total_compras',
             'quantidade_pedidos': 'quantidade_pedidos',
@@ -363,6 +368,8 @@ exports.getClientesMaisCompram = async (req, res) => {
         
         const orderBy = orderByMap[ordenar] || 'total_compras';
         const orderDirection = direcao === 'asc' ? 'ASC' : 'DESC';
+        
+        console.log('📊 Ordenação:', `${orderBy} ${orderDirection}`);
         
         // Query principal
         const query = `
@@ -393,10 +400,18 @@ exports.getClientesMaisCompram = async (req, res) => {
         
         params.push(limiteNum);
         
-        console.log('🔍 Executando query...');
-        const result = await client.query(query, params);
+        console.log('\n🔍 QUERY COMPLETA:');
+        console.log(query);
+        console.log('\n🔍 PARAMS:', params);
         
+        console.log('\n⏳ Executando query...');
+        const result = await client.query(query, params);
+        console.log(`✅ Query executada com sucesso!`);
         console.log(`📊 Resultado: ${result.rowCount} clientes encontrados`);
+        
+        if (result.rowCount > 0) {
+            console.log('📋 Primeiro resultado:', result.rows[0]);
+        }
         
         // Processar resultados
         const clientes = result.rows.map(row => ({
@@ -413,7 +428,7 @@ exports.getClientesMaisCompram = async (req, res) => {
             primeira_compra: row.primeira_compra
         }));
         
-        // Calcular estatísticas gerais
+        // Calcular totais
         const totais = {
             total_clientes: clientes.length,
             total_pedidos: clientes.reduce((sum, c) => sum + c.quantidade_pedidos, 0),
@@ -425,10 +440,11 @@ exports.getClientesMaisCompram = async (req, res) => {
             totais.ticket_medio_geral = parseFloat((totais.total_vendas / totais.total_pedidos).toFixed(2));
         }
         
-        console.log(`✅ ${clientes.length} clientes processados com sucesso`);
-        if (clientes.length > 0) {
-            console.log('👤 Primeiro cliente:', clientes[0]);
-        }
+        console.log('\n📊 TOTAIS CALCULADOS:');
+        console.log(JSON.stringify(totais, null, 2));
+        
+        console.log('\n✅ Retornando resposta com sucesso!');
+        console.log('═══════════════════════════════════════\n');
         
         res.status(200).json({
             status: 'success',
@@ -450,10 +466,19 @@ exports.getClientesMaisCompram = async (req, res) => {
         });
         
     } catch (error) {
-        console.error('❌ Erro completo:', error);
+        console.log('\n❌❌❌ ERRO DETECTADO ❌❌❌');
+        console.log('Mensagem:', error.message);
+        console.log('Código:', error.code);
+        console.log('Detalhe:', error.detail);
+        console.log('Hint:', error.hint);
+        console.log('Stack:', error.stack);
+        console.log('═══════════════════════════════════════\n');
+        
         handleError(res, error, 'Erro ao processar o relatório de clientes que mais compram');
     } finally {
-        client.release();
-        console.log('🔒 Conexão liberada');
+        if (client) {
+            client.release();
+            console.log('🔒 Conexão liberada');
+        }
     }
 };
