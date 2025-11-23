@@ -6,487 +6,7 @@
     <title>Clientes que Mais Compram - Sistema AVAP</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Pacifico&display=swap" rel="stylesheet">
-    
-    <style>
-        /* CSS INLINE - Evita problema MIME */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --primary: #8b6f47;
-            --secondary: #d4a574;
-            --accent: #f5e6d3;
-            --dark-brown: #5d4037;
-            --cream: #faf8f3;
-            --gold: #c9a961;
-            --bg-light: #fff;
-            --text-dark: #3e2723;
-            --text-light: #6d4c41;
-            --success-color: #66bb6a;
-            --danger-color: #ef5350;
-            --info-color: #29b6f6;
-            --warning-color: #ffa726;
-            --shadow-color: rgba(139, 111, 71, 0.15);
-            --shadow-sm: 0 4px 15px var(--shadow-color);
-            --shadow-md: 0 8px 25px var(--shadow-color);
-            --shadow-lg: 0 15px 50px rgba(139, 111, 71, 0.2);
-            --transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #faf8f3 0%, #f5e6d3 50%, #e8d5bf 100%);
-            background-size: 400% 400%;
-            animation: gradientDance 20s ease infinite;
-            color: var(--text-dark);
-            line-height: 1.7;
-            min-height: 100vh;
-            position: relative;
-            overflow-x: hidden;
-        }
-
-        @keyframes gradientDance {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes popIn {
-            from { opacity: 0; transform: scale(0.5); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(100px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem 1.5rem;
-            animation: fadeIn 0.5s ease-in-out;
-            position: relative;
-            z-index: 2;
-        }
-
-        .report-header {
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(20px);
-            color: var(--text-dark);
-            padding: 2rem;
-            border-radius: 30px;
-            box-shadow: 0 20px 60px rgba(139, 111, 71, 0.15);
-            margin-bottom: 2rem;
-            border: 2px solid rgba(139, 111, 71, 0.1);
-            animation: popIn 1s ease;
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            flex-wrap: wrap;
-            gap: 1.5rem;
-        }
-
-        .header-titles {
-            flex: 1;
-            min-width: 250px;
-        }
-
-        .report-header h1 {
-            font-family: 'Pacifico', cursive;
-            font-size: 2.2rem;
-            color: var(--primary);
-            margin: 0;
-            letter-spacing: 2px;
-        }
-
-        .report-subtitle {
-            color: var(--text-light);
-            margin: 0.5rem 0 0;
-            font-size: 1.1rem;
-        }
-
-        .action-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-
-        .btn-action {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 0.9rem;
-            padding: 0.7rem 1.5rem;
-            border: none;
-            border-radius: 50px;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .btn-action i {
-            margin-right: 6px;
-        }
-
-        .btn-excel {
-            background: linear-gradient(135deg, #1d6f42, #166534);
-            color: white;
-        }
-
-        .btn-excel:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(29, 111, 66, 0.4);
-        }
-
-        .btn-pdf {
-            background: linear-gradient(135deg, #b91c1c, #991b1b);
-            color: white;
-        }
-
-        .btn-pdf:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(185, 28, 28, 0.4);
-        }
-
-        .btn-print {
-            background: linear-gradient(135deg, #1d4ed8, #1e40af);
-            color: white;
-        }
-
-        .btn-print:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(29, 78, 216, 0.4);
-        }
-
-        .filters {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            padding: 1.5rem;
-            border-radius: 25px;
-            box-shadow: 0 20px 60px rgba(139, 111, 71, 0.15);
-            margin-bottom: 2.5rem;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1.5rem;
-            align-items: flex-end;
-            border: 2px solid rgba(139, 111, 71, 0.1);
-            animation: fadeIn 0.8s ease;
-        }
-
-        .filter-group {
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .filter-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: var(--text-dark);
-        }
-
-        .filter-group input,
-        .filter-group select,
-        .form-control {
-            width: 100%;
-            padding: 0.7rem 1rem;
-            border: 2px solid rgba(139, 111, 71, 0.2);
-            border-radius: 15px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            background: white;
-            font-family: 'Poppins', sans-serif;
-        }
-
-        .filter-group input:focus,
-        .filter-group select:focus,
-        .form-control:focus {
-            border-color: var(--primary);
-            outline: none;
-            box-shadow: 0 0 0 4px rgba(139, 111, 71, 0.1);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            padding: 0.7rem 1.5rem;
-            border-radius: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(139, 111, 71, 0.3);
-        }
-
-        .summary-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.8rem;
-            margin-bottom: 3rem;
-        }
-
-        .summary-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 25px;
-            padding: 2rem 1.5rem;
-            box-shadow: 0 20px 60px rgba(139, 111, 71, 0.15);
-            text-align: center;
-            transition: all 0.3s ease;
-            border: 2px solid rgba(139, 111, 71, 0.1);
-            animation: popIn 1s ease;
-        }
-
-        .summary-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-        }
-
-        .summary-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 25px 70px rgba(139, 111, 71, 0.2);
-        }
-
-        .summary-card .card-icon {
-            width: 70px;
-            height: 70px;
-            margin: 0 auto 1.2rem;
-            border-radius: 50%;
-            background: linear-gradient(135deg, rgba(139, 111, 71, 0.1), rgba(212, 165, 116, 0.1));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            color: var(--primary);
-        }
-
-        .summary-card .card-content h3 {
-            color: var(--text-light);
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .summary-card .card-content p {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--text-dark);
-            margin: 0.5rem 0 0;
-        }
-
-        .chart-container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 25px;
-            padding: 2rem;
-            box-shadow: 0 20px 60px rgba(139, 111, 71, 0.15);
-            margin-bottom: 2.5rem;
-            border: 2px solid rgba(139, 111, 71, 0.1);
-            animation: fadeIn 1s ease;
-        }
-
-        .chart-header {
-            margin-bottom: 1.5rem;
-        }
-
-        .chart-title {
-            font-family: 'Pacifico', cursive;
-            color: var(--primary);
-            margin: 0;
-            font-size: 1.5rem;
-        }
-
-        .chart-container canvas {
-            width: 100% !important;
-            max-height: 400px;
-        }
-
-        .table-container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 25px;
-            box-shadow: 0 20px 60px rgba(139, 111, 71, 0.15);
-            overflow: hidden;
-            margin-bottom: 2rem;
-            border: 2px solid rgba(139, 111, 71, 0.1);
-            animation: fadeIn 1.2s ease;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 1rem 1.5rem;
-            text-align: left;
-            border-bottom: 1px solid rgba(139, 111, 71, 0.1);
-        }
-
-        th {
-            background: linear-gradient(135deg, var(--primary), var(--dark-brown));
-            color: white;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 1px;
-        }
-
-        tbody tr:hover {
-            background: linear-gradient(135deg, rgba(139, 111, 71, 0.05), rgba(212, 165, 116, 0.05));
-        }
-
-        tbody tr:nth-child(even) {
-            background-color: rgba(250, 248, 243, 0.5);
-        }
-
-        .text-center {
-            text-align: center !important;
-        }
-
-        .text-end {
-            text-align: right !important;
-        }
-
-        .text-muted {
-            color: var(--text-light);
-            opacity: 0.8;
-        }
-
-        .message {
-            padding: 1.2rem 1.5rem;
-            border-radius: 20px;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 500;
-            box-shadow: var(--shadow-sm);
-            animation: slideIn 0.5s ease;
-        }
-
-        .message-success {
-            background: linear-gradient(135deg, #ebfbee, #d3f9d8);
-            color: #2b8a3e;
-            border: 2px solid #8ce99a;
-        }
-
-        .message-error {
-            background: linear-gradient(135deg, #fff5f5, #ffe3e3);
-            color: #c92a2a;
-            border: 2px solid #ffa8a8;
-        }
-
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-
-        .loading-overlay.active {
-            display: flex;
-        }
-
-        .loading-overlay p {
-            color: white;
-            font-size: 1.2rem;
-            margin-top: 1rem;
-            font-weight: 500;
-        }
-
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid rgba(139, 111, 71, 0.3);
-            border-radius: 50%;
-            border-top-color: var(--primary);
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-        }
-
-        .empty-state i {
-            font-size: 4rem;
-            color: var(--text-light);
-            opacity: 0.3;
-            margin-bottom: 1rem;
-        }
-
-        .empty-state p {
-            color: var(--text-light);
-            font-size: 1.1rem;
-        }
-
-        @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-            }
-            
-            .filters {
-                flex-direction: column;
-            }
-            
-            .filter-group {
-                width: 100%;
-            }
-            
-            .button-group {
-                width: 100%;
-                justify-content: stretch;
-            }
-            
-            .btn-action {
-                flex: 1;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="css/relatorios.css">
 </head>
 <body>
     <div id="messages-container" class="position-fixed top-0 end-0 p-3" style="z-index: 11"></div>
@@ -615,7 +135,6 @@
                         <th>#</th>
                         <th>Cliente</th>
                         <th>CPF</th>
-                        <th>Contato</th>
                         <th class="text-center">Pedidos</th>
                         <th class="text-end">Total Compras</th>
                         <th class="text-end">Ticket Médio</th>
@@ -624,7 +143,7 @@
                 </thead>
                 <tbody id="clientesTableBody">
                     <tr>
-                        <td colspan="8" class="text-center py-4">
+                        <td colspan="7" class="text-center py-4">
                             <div class="empty-state">
                                 <i class="bi bi-hourglass-split"></i>
                                 <p>Carregando dados...</p>
@@ -680,7 +199,6 @@
             }, 5000);
         }
         
-        // Máscara de CPF
         document.getElementById('cpf').addEventListener('input', function(e) {
             let value = e.target.value.replace(/\D/g, '');
             if (value.length > 11) value = value.slice(0, 11);
@@ -696,7 +214,6 @@
             e.target.value = value;
         });
         
-        // Inicialização
         document.addEventListener('DOMContentLoaded', function() {
             const hoje = new Date();
             const trintaDiasAtras = new Date();
@@ -782,7 +299,7 @@
             
             if (!dados || dados.length === 0) {
                 tbody.innerHTML = `
-                    <tr><td colspan="8" class="text-center py-4">
+                    <tr><td colspan="7" class="text-center py-4">
                         <div class="empty-state">
                             <i class="bi bi-inbox"></i>
                             <p>Nenhum cliente encontrado</p>
@@ -800,7 +317,6 @@
                         ${cliente.email && cliente.email !== 'N/A' ? `<br><small class="text-muted">${cliente.email}</small>` : ''}
                     </td>
                     <td>${cliente.cpf}</td>
-                    <td>${cliente.telefone}</td>
                     <td class="text-center"><strong>${cliente.quantidade_pedidos}</strong></td>
                     <td class="text-end"><strong>${formatCurrency(cliente.total_compras)}</strong></td>
                     <td class="text-end">${formatCurrency(cliente.ticket_medio)}</td>
@@ -897,13 +413,11 @@
         function exportarParaExcel() {
             try {
                 const wb = XLSX.utils.book_new();
-                const headers = ['#', 'Cliente', 'CPF', 'Telefone', 'Email', 'Pedidos', 'Total Compras', 'Ticket Medio', 'Ultima Compra'];
+                const headers = ['#', 'Cliente', 'CPF', 'Pedidos', 'Total Compras', 'Ticket Medio', 'Ultima Compra'];
                 const rows = dadosGlobais.map((c, i) => [
                     i + 1,
                     c.nome,
                     c.cpf,
-                    c.telefone,
-                    c.email,
                     c.quantidade_pedidos,
                     c.total_compras,
                     c.ticket_medio,

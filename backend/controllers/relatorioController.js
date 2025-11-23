@@ -1,8 +1,5 @@
 const { pool } = require('../database');
 
-/**
- * Valida se uma string é uma data válida no formato YYYY-MM-DD
- */
 const isValidDate = (dateString) => {
     if (!dateString) return false;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return false;
@@ -10,7 +7,6 @@ const isValidDate = (dateString) => {
     return date instanceof Date && !isNaN(date);
 };
 
-// Função auxiliar para tratar erros
 const handleError = (res, error, message) => {
     console.error(`❌ ${message}:`);
     console.error('Mensagem:', error.message);
@@ -27,9 +23,6 @@ const handleError = (res, error, message) => {
     });
 };
 
-/**
- * Relatório de Vendas Mensais
- */
 exports.getVendasMensais = async (req, res) => {
     console.log('🔍 Iniciando getVendasMensais');
     let client;
@@ -149,9 +142,6 @@ exports.getVendasMensais = async (req, res) => {
     }
 };
 
-/**
- * Relatório de Produtos Mais Vendidos
- */
 exports.getProdutosMaisVendidos = async (req, res) => {
     console.log('🔍 Iniciando getProdutosMaisVendidos');
     console.log('📥 Params:', req.query);
@@ -261,24 +251,16 @@ exports.getProdutosMaisVendidos = async (req, res) => {
     }
 };
 
-/**
- * Relatório de Clientes que Mais Compram - COM DEBUG COMPLETO
- */
 exports.getClientesMaisCompram = async (req, res) => {
-    console.log('\n═══════════════════════════════════════');
-    console.log('🔍 INICIANDO getClientesMaisCompram');
-    console.log('═══════════════════════════════════════');
-    console.log('📥 Query params:', JSON.stringify(req.query, null, 2));
+    console.log('🔍 Iniciando getClientesMaisCompram');
+    console.log('📥 Query params recebidos:', req.query);
     
     let client;
     
     try {
-        // Conectar ao banco
-        console.log('🔌 Tentando conectar ao banco...');
         client = await pool.connect();
-        console.log('✅ Conexão estabelecida com sucesso!');
+        console.log('✅ Conexão estabelecida');
         
-        // Pegar parâmetros
         const { 
             dataInicio, 
             dataFim, 
@@ -289,48 +271,38 @@ exports.getClientesMaisCompram = async (req, res) => {
             direcao = 'desc'
         } = req.query;
         
-        console.log('\n📋 Parâmetros processados:');
-        console.log('  - dataInicio:', dataInicio || 'não informada');
-        console.log('  - dataFim:', dataFim || 'não informada');
-        console.log('  - limite:', limite);
-        console.log('  - cpf:', cpf || 'não informado');
-        console.log('  - nome:', nome || 'não informado');
-        
         const limiteNum = Math.min(parseInt(limite) || 20, 100);
         
-        // Construir WHERE
         const whereConditions = [];
         const params = [];
         let paramIndex = 1;
         
         if (dataInicio && dataInicio.trim() !== '') {
             if (!isValidDate(dataInicio)) {
-                console.log('❌ Data início inválida:', dataInicio);
                 return res.status(400).json({
                     status: 'error',
-                    message: 'Data de início inválida. Use YYYY-MM-DD.',
+                    message: 'Data de início inválida',
                     timestamp: new Date().toISOString()
                 });
             }
             whereConditions.push(`p.data_pedido >= $${paramIndex}::date`);
             params.push(dataInicio);
             paramIndex++;
-            console.log('✅ Filtro data início aplicado');
+            console.log(`📅 Filtro data início: ${dataInicio}`);
         }
         
         if (dataFim && dataFim.trim() !== '') {
             if (!isValidDate(dataFim)) {
-                console.log('❌ Data fim inválida:', dataFim);
                 return res.status(400).json({
                     status: 'error',
-                    message: 'Data de fim inválida. Use YYYY-MM-DD.',
+                    message: 'Data de fim inválida',
                     timestamp: new Date().toISOString()
                 });
             }
             whereConditions.push(`p.data_pedido <= ($${paramIndex}::date + INTERVAL '1 day' - INTERVAL '1 second')`);
             params.push(dataFim);
             paramIndex++;
-            console.log('✅ Filtro data fim aplicado');
+            console.log(`📅 Filtro data fim: ${dataFim}`);
         }
         
         if (cpf && cpf.trim() !== '') {
@@ -339,47 +311,43 @@ exports.getClientesMaisCompram = async (req, res) => {
                 whereConditions.push(`c.cpf = $${paramIndex}`);
                 params.push(cpfLimpo);
                 paramIndex++;
-                console.log('✅ Filtro CPF aplicado:', cpfLimpo);
+                console.log(`🔍 Filtro CPF: ${cpfLimpo}`);
             }
         }
         
         if (nome && nome.trim() !== '') {
-            whereConditions.push(`LOWER(c.nome) LIKE LOWER($${paramIndex})`);
+            whereConditions.push(`LOWER(pe.nome_pessoa) LIKE LOWER($${paramIndex})`);
             params.push(`%${nome.trim()}%`);
             paramIndex++;
-            console.log('✅ Filtro nome aplicado:', nome);
+            console.log(`🔍 Filtro nome: ${nome}`);
         }
         
         const whereClause = whereConditions.length > 0 
             ? 'WHERE ' + whereConditions.join(' AND ')
             : '';
         
-        console.log('\n🔍 WHERE clause:', whereClause || '(sem filtros)');
-        console.log('🔍 Parâmetros SQL:', params);
+        console.log('🔍 WHERE Clause:', whereClause);
+        console.log('🔍 Parâmetros:', params);
+        console.log('🔍 ParamIndex:', paramIndex);
         
-        // Ordenação
         const orderByMap = {
             'total_compras': 'total_compras',
             'quantidade_pedidos': 'quantidade_pedidos',
             'ticket_medio': 'ticket_medio',
             'ultima_compra': 'ultima_compra',
-            'nome': 'c.nome'
+            'nome': 'nome_cliente'
         };
         
         const orderBy = orderByMap[ordenar] || 'total_compras';
         const orderDirection = direcao === 'asc' ? 'ASC' : 'DESC';
         
-        console.log('📊 Ordenação:', `${orderBy} ${orderDirection}`);
+        console.log('🔍 Order By:', orderBy, orderDirection);
         
-        // Query principal
         const query = `
             SELECT 
-                c.id_cliente,
-                c.nome,
                 c.cpf,
-                c.telefone,
-                c.email,
-                c.data_cadastro,
+                pe.nome_pessoa as nome_cliente,
+                pe.email_pessoa as email,
                 COALESCE(COUNT(DISTINCT p.id_pedido), 0) as quantidade_pedidos,
                 COALESCE(SUM(p.valor_total), 0) as total_compras,
                 CASE 
@@ -390,9 +358,10 @@ exports.getClientesMaisCompram = async (req, res) => {
                 MAX(p.data_pedido) as ultima_compra,
                 MIN(p.data_pedido) as primeira_compra
             FROM cliente c
-            LEFT JOIN pedido p ON c.id_cliente = p.id_cliente
+            INNER JOIN pessoa pe ON c.cpf = pe.cpf
+            LEFT JOIN pedido p ON c.cpf = p.cpf
             ${whereClause}
-            GROUP BY c.id_cliente, c.nome, c.cpf, c.telefone, c.email, c.data_cadastro
+            GROUP BY c.cpf, pe.nome_pessoa, pe.email_pessoa
             HAVING COUNT(DISTINCT p.id_pedido) > 0
             ORDER BY ${orderBy} ${orderDirection}
             LIMIT $${paramIndex}
@@ -400,27 +369,19 @@ exports.getClientesMaisCompram = async (req, res) => {
         
         params.push(limiteNum);
         
-        console.log('\n🔍 QUERY COMPLETA:');
+        console.log('🔍 Query completa:');
         console.log(query);
-        console.log('\n🔍 PARAMS:', params);
+        console.log('🔍 Parâmetros finais:', params);
+        console.log('🔍 Executando query...');
         
-        console.log('\n⏳ Executando query...');
         const result = await client.query(query, params);
-        console.log(`✅ Query executada com sucesso!`);
-        console.log(`📊 Resultado: ${result.rowCount} clientes encontrados`);
+        console.log(`📊 ${result.rowCount} clientes encontrados`);
         
-        if (result.rowCount > 0) {
-            console.log('📋 Primeiro resultado:', result.rows[0]);
-        }
-        
-        // Processar resultados
         const clientes = result.rows.map(row => ({
-            id_cliente: parseInt(row.id_cliente),
-            nome: row.nome || 'Cliente sem nome',
             cpf: row.cpf ? row.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : 'N/A',
-            telefone: row.telefone || 'N/A',
+            nome: row.nome_cliente || 'Cliente sem nome',
+            telefone: 'N/A',
             email: row.email || 'N/A',
-            data_cadastro: row.data_cadastro,
             quantidade_pedidos: parseInt(row.quantidade_pedidos) || 0,
             total_compras: parseFloat(row.total_compras) || 0,
             ticket_medio: parseFloat(row.ticket_medio) || 0,
@@ -428,7 +389,6 @@ exports.getClientesMaisCompram = async (req, res) => {
             primeira_compra: row.primeira_compra
         }));
         
-        // Calcular totais
         const totais = {
             total_clientes: clientes.length,
             total_pedidos: clientes.reduce((sum, c) => sum + c.quantidade_pedidos, 0),
@@ -440,11 +400,7 @@ exports.getClientesMaisCompram = async (req, res) => {
             totais.ticket_medio_geral = parseFloat((totais.total_vendas / totais.total_pedidos).toFixed(2));
         }
         
-        console.log('\n📊 TOTAIS CALCULADOS:');
-        console.log(JSON.stringify(totais, null, 2));
-        
-        console.log('\n✅ Retornando resposta com sucesso!');
-        console.log('═══════════════════════════════════════\n');
+        console.log(`✅ ${clientes.length} clientes processados`);
         
         res.status(200).json({
             status: 'success',
@@ -466,15 +422,8 @@ exports.getClientesMaisCompram = async (req, res) => {
         });
         
     } catch (error) {
-        console.log('\n❌❌❌ ERRO DETECTADO ❌❌❌');
-        console.log('Mensagem:', error.message);
-        console.log('Código:', error.code);
-        console.log('Detalhe:', error.detail);
-        console.log('Hint:', error.hint);
-        console.log('Stack:', error.stack);
-        console.log('═══════════════════════════════════════\n');
-        
-        handleError(res, error, 'Erro ao processar o relatório de clientes que mais compram');
+        console.error('❌ Erro completo:', error);
+        handleError(res, error, 'Erro ao processar clientes que mais compram');
     } finally {
         if (client) {
             client.release();
