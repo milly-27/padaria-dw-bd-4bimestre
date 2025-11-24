@@ -22,20 +22,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         console.log('🚀 [CARRINHO] Inicializando...');
         
-        // 1. LIMPAR sessionStorage antigo (CRÍTICO!)
-        console.log('🧹 [LIMPEZA] Verificando sessionStorage...');
-        const sessionUser = sessionStorage.getItem('usuarioLogado');
-        if (sessionUser) {
-            console.log('⚠️ [LIMPEZA] sessionStorage com dados antigos detectado!');
-            console.log('   Dados antigos:', JSON.parse(sessionUser).nome);
-            console.log('   🗑️ Removendo...');
-            sessionStorage.removeItem('usuarioLogado');
-        }
-        
-        // 2. VERIFICAR USUÁRIO - SEMPRE DO BACKEND PRIMEIRO
+        // 1. VERIFICAR USUÁRIO - SEMPRE DO BACKEND PRIMEIRO
         await verificarUsuarioLogado();
         
-        // 3. SE NÃO ESTÁ LOGADO, REDIRECIONAR
+        // 2. SE NÃO ESTÁ LOGADO, REDIRECIONAR
         if (!usuarioLogado) {
             console.log('❌ [AUTH] Usuário não autenticado!');
             mostrarMensagem('Você precisa estar logado para acessar o carrinho', 'error');
@@ -45,17 +35,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         
-        // 4. CARREGAR CARRINHO
+        // 3. CARREGAR CARRINHO (agora do sessionStorage)
         carregarCarrinho();
         
-        // 5. ATUALIZAR INTERFACE
+        // 4. ATUALIZAR INTERFACE
         atualizarInterface();
         
-        // 6. CONFIGURAR EVENT LISTENERS
+        // 5. CONFIGURAR EVENT LISTENERS
         configurarEventListeners();
         
         console.log('✅ [CARRINHO] Inicializado com sucesso!');
         console.log('👤 [USUÁRIO ATUAL]:', usuarioLogado.nome);
+        console.log('🛒 [CARRINHO]:', carrinho.length, 'itens');
         
     } catch (error) {
         console.error('❌ [ERRO FATAL] Erro ao inicializar:', error);
@@ -70,9 +61,6 @@ async function verificarUsuarioLogado() {
     try {
         console.log('\n🔍 [AUTH] Verificando autenticação...');
         console.log('════════════════════════════════════════');
-        
-        // SEMPRE BUSCAR DO BACKEND PRIMEIRO (fonte única da verdade)
-        console.log('📡 [BACKEND] Consultando servidor...');
         
         const response = await fetch(`${API_BASE_URL}/auth/user`, {
             method: 'GET',
@@ -92,7 +80,6 @@ async function verificarUsuarioLogado() {
         const data = await response.json();
         console.log('📦 [BACKEND] Dados recebidos:', JSON.stringify(data, null, 2));
         
-        // Verificar se está logado
         if (data.logged && data.cpf && data.nome) {
             usuarioLogado = {
                 id: data.cpf,
@@ -106,13 +93,9 @@ async function verificarUsuarioLogado() {
             console.log('✅ [AUTH] Usuário autenticado!');
             console.log('   👤 Nome:', usuarioLogado.nome);
             console.log('   🆔 CPF:', usuarioLogado.id);
-            console.log('   🏷️ Tipo:', usuarioLogado.tipo);
             console.log('════════════════════════════════════════\n');
             
-            // SALVAR NO sessionStorage (apenas para cache local)
             sessionStorage.setItem('usuarioLogado', JSON.stringify(usuarioLogado));
-            
-            // ATUALIZAR HEADER
             atualizarHeaderUsuario();
             
             return true;
@@ -134,18 +117,16 @@ async function verificarUsuarioLogado() {
 }
 
 // ========================================
-// ATUALIZAR HEADER COM INFO DO USUÁRIO - VERSÃO BONITA
+// ATUALIZAR HEADER COM INFO DO USUÁRIO
 // ========================================
 function atualizarHeaderUsuario() {
     const headerElement = document.querySelector('.header h1');
     if (headerElement && usuarioLogado) {
-        // Remover info antiga se existir
         const existingUserInfo = document.querySelector('.user-info-header');
         if (existingUserInfo) {
             existingUserInfo.remove();
         }
         
-        // Criar wrapper do lado esquerdo do header se não existir
         let headerLeft = document.querySelector('.header-left');
         if (!headerLeft) {
             headerLeft = document.createElement('div');
@@ -154,12 +135,10 @@ function atualizarHeaderUsuario() {
             headerLeft.appendChild(headerElement);
         }
         
-        // Criar nova info bonita
         const userInfoDiv = document.createElement('div');
         userInfoDiv.className = 'user-info-header';
         
         let badgeHTML = '';
-        // Mostrar badge APENAS se for gerente
         if (usuarioLogado.tipo === 'funcionario' && usuarioLogado.cargo && usuarioLogado.cargo.toLowerCase() === 'gerente') {
             badgeHTML = `<span class="user-badge">👑 Gerente</span>`;
         }
@@ -172,18 +151,78 @@ function atualizarHeaderUsuario() {
         
         headerLeft.appendChild(userInfoDiv);
         
-        console.log('✅ [HEADER] Atualizado com:', usuarioLogado.nome, usuarioLogado.cargo || '');
+        console.log('✅ [HEADER] Atualizado com:', usuarioLogado.nome);
     }
 }
 
 // ========================================
-// FINALIZAR PAGAMENTO - VERSÃO ROBUSTA
+// CARREGAR CARRINHO - AGORA DO sessionStorage
+// ========================================
+function carregarCarrinho() {
+    try {
+        console.log('📂 [CARRINHO] Carregando do sessionStorage...');
+        
+        const carrinhoSalvo = sessionStorage.getItem('carrinho');
+        
+        if (carrinhoSalvo) {
+            try {
+                carrinho = JSON.parse(carrinhoSalvo);
+                
+                carrinho = carrinho.map(item => ({
+                    ...item,
+                    quantidade: parseInt(item.quantidade) || 1,
+                    preco: parseFloat(item.preco) || 0
+                }));
+                
+                console.log('✅ [CARRINHO] Carregado:', carrinho.length, 'itens');
+            } catch (error) {
+                console.error('❌ [CARRINHO] Erro ao parsear:', error);
+                carrinho = [];
+                sessionStorage.removeItem('carrinho');
+            }
+        } else {
+            console.log('ℹ️ [CARRINHO] Vazio');
+            carrinho = [];
+        }
+        
+        return carrinho;
+    } catch (error) {
+        console.error('❌ [CARRINHO] Erro ao carregar:', error);
+        carrinho = [];
+        return [];
+    }
+}
+
+// ========================================
+// SALVAR CARRINHO - AGORA NO sessionStorage
+// ========================================
+function salvarCarrinho() {
+    try {
+        console.log('💾 [CARRINHO] Salvando no sessionStorage...');
+        
+        sessionStorage.setItem('carrinho', JSON.stringify(carrinho || []));
+        
+        console.log('✅ [CARRINHO] Salvo:', carrinho.length, 'itens');
+        return true;
+    } catch (error) {
+        console.error('❌ [CARRINHO] Erro ao salvar:', error);
+        mostrarMensagem('Erro ao salvar o carrinho. Tente novamente.', 'error');
+        return false;
+    }
+}
+
+// ========================================
+// FINALIZAR PAGAMENTO - VERSÃO TOTALMENTE CORRIGIDA
 // ========================================
 function finalizarPagamento() {
-    console.log('\n💳 [FINALIZAR] Iniciando...');
+    console.log('\n💳 [FINALIZAR] Iniciando finalização...');
     console.log('════════════════════════════════════════');
     
     // 1. VERIFICAR CARRINHO
+    console.log('📋 [FINALIZAR] Verificando carrinho...');
+    console.log('   Variável carrinho:', carrinho);
+    console.log('   Quantidade de itens:', carrinho ? carrinho.length : 0);
+    
     if (!carrinho || carrinho.length === 0) {
         console.log('❌ [FINALIZAR] Carrinho vazio!');
         mostrarMensagem('Seu carrinho está vazio!', 'error');
@@ -192,28 +231,25 @@ function finalizarPagamento() {
     console.log('✅ [FINALIZAR] Carrinho OK:', carrinho.length, 'itens');
     
     // 2. VERIFICAR USUÁRIO
-    console.log('🔍 [FINALIZAR] Verificando usuário...');
-    console.log('   usuarioLogado (variável global):', usuarioLogado);
-    console.log('   sessionStorage:', sessionStorage.getItem('usuarioLogado'));
+    console.log('👤 [FINALIZAR] Verificando usuário...');
+    console.log('   usuarioLogado:', usuarioLogado);
     
     if (!usuarioLogado) {
-        console.log('⚠️ [FINALIZAR] usuarioLogado é null! Tentando recuperar...');
+        console.log('⚠️ [FINALIZAR] Tentando recuperar do sessionStorage...');
         
-        // Tentar recuperar do sessionStorage
         const sessionUser = sessionStorage.getItem('usuarioLogado');
         if (sessionUser) {
             try {
                 usuarioLogado = JSON.parse(sessionUser);
-                console.log('✅ [FINALIZAR] Usuário recuperado do sessionStorage:', usuarioLogado.nome);
+                console.log('✅ [FINALIZAR] Usuário recuperado:', usuarioLogado.nome);
             } catch (e) {
-                console.error('❌ [FINALIZAR] Erro ao parsear sessionStorage:', e);
+                console.error('❌ [FINALIZAR] Erro ao parsear:', e);
             }
         }
     }
     
-    // 3. SE AINDA NÃO TEM USUÁRIO, REDIRECIONAR
     if (!usuarioLogado || !usuarioLogado.id || !usuarioLogado.nome) {
-        console.log('❌ [FINALIZAR] Sem usuário válido! Redirecionando...');
+        console.log('❌ [FINALIZAR] Sem usuário válido!');
         console.log('════════════════════════════════════════\n');
         mostrarMensagem('Sessão expirada. Faça login novamente.', 'error');
         setTimeout(() => {
@@ -222,28 +258,80 @@ function finalizarPagamento() {
         return;
     }
     
-    console.log('✅ [FINALIZAR] Usuário verificado:', usuarioLogado.nome);
-    console.log('════════════════════════════════════════\n');
+    console.log('✅ [FINALIZAR] Usuário OK:', usuarioLogado.nome);
     
-    // 4. SALVAR CARRINHO E REDIRECIONAR
-    salvarCarrinho();
+    // 3. GARANTIR QUE OS DADOS ESTÃO SALVOS NO sessionStorage
+    console.log('💾 [FINALIZAR] Salvando dados antes do redirecionamento...');
     
-    console.log('🚀 [FINALIZAR] Redirecionando para finalização...');
-    window.location.href = '../finalizacao/finalizacao.html';
+    // CRÍTICO: Salvar no sessionStorage E no localStorage
+    // finalizacao.js ainda usa localStorage, então salvamos nos dois
+    const carrinhoJSON = JSON.stringify(carrinho);
+    const usuarioJSON = JSON.stringify(usuarioLogado);
+    
+    // sessionStorage (prioridade)
+    sessionStorage.setItem('carrinho', carrinhoJSON);
+    sessionStorage.setItem('usuarioLogado', usuarioJSON);
+    
+    // localStorage (fallback para finalizacao.js)
+    localStorage.setItem('carrinho', carrinhoJSON);
+    localStorage.setItem('usuarioLogado', usuarioJSON);
+    
+    console.log('💾 [FINALIZAR] Dados salvos:');
+    console.log('   - Carrinho (sessionStorage):', carrinho.length, 'itens');
+    console.log('   - Carrinho (localStorage):', carrinho.length, 'itens');
+    console.log('   - Usuário:', usuarioLogado.nome);
+    
+    // 4. VERIFICAR SE OS DADOS FORAM SALVOS CORRETAMENTE
+    const verificarCarrinhoSession = sessionStorage.getItem('carrinho');
+    const verificarCarrinhoLocal = localStorage.getItem('carrinho');
+    const verificarUsuarioSession = sessionStorage.getItem('usuarioLogado');
+    const verificarUsuarioLocal = localStorage.getItem('usuarioLogado');
+    
+    if (!verificarCarrinhoSession || !verificarCarrinhoLocal || !verificarUsuarioSession || !verificarUsuarioLocal) {
+        console.error('❌ [FINALIZAR] Falha ao salvar dados!');
+        console.error('   Carrinho (session)?', !!verificarCarrinhoSession);
+        console.error('   Carrinho (local)?', !!verificarCarrinhoLocal);
+        console.error('   Usuário (session)?', !!verificarUsuarioSession);
+        console.error('   Usuário (local)?', !!verificarUsuarioLocal);
+        mostrarMensagem('Erro ao preparar finalização. Tente novamente.', 'error');
+        return;
+    }
+    
+    console.log('✅ [FINALIZAR] Todos os dados verificados e salvos!');
+    console.log('════════════════════════════════════════');
+    
+    // 5. REDIRECIONAR
+    console.log('🚀 [FINALIZAR] Redirecionando para finalizacao.html...');
+    console.log('   URL de destino: ../finalizacao/finalizacao.html');
+    
+    // Pequeno delay para garantir que os dados foram salvos
+    setTimeout(() => {
+        window.location.href = '../finalizacao/finalizacao.html';
+    }, 100);
 }
 
-// Event Listeners
+// ========================================
+// EVENT LISTENERS
+// ========================================
 function configurarEventListeners() {
     if (btnLimparCarrinho) {
         btnLimparCarrinho.addEventListener('click', limparCarrinho);
     }
     
     if (btnFinalizarPagamento) {
-        btnFinalizarPagamento.addEventListener('click', finalizarPagamento);
+        btnFinalizarPagamento.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevenir comportamento padrão
+            console.log('🖱️ [CLICK] Botão Finalizar Pagamento clicado');
+            finalizarPagamento();
+        });
+    } else {
+        console.warn('⚠️ Botão btnFinalizarPagamento não encontrado!');
     }
 }
 
-// Função para mostrar mensagens
+// ========================================
+// MOSTRAR MENSAGENS
+// ========================================
 function mostrarMensagem(texto, tipo = 'info') {
     if (!messageContainer) {
         console.log(`[${tipo.toUpperCase()}] ${texto}`);
@@ -263,44 +351,9 @@ function mostrarMensagem(texto, tipo = 'info') {
     }, 4000);
 }
 
-// Função para carregar carrinho do localStorage
-function carregarCarrinho() {
-    try {
-        const carrinhoSalvo = localStorage.getItem('carrinho');
-        if (carrinhoSalvo) {
-            try {
-                carrinho = JSON.parse(carrinhoSalvo);
-                carrinho = carrinho.map(item => ({
-                    ...item,
-                    quantidade: parseInt(item.quantidade) || 1,
-                    preco: parseFloat(item.preco) || 0
-                }));
-                console.log('✅ Carrinho carregado:', carrinho.length, 'itens');
-            } catch (error) {
-                console.error('❌ Erro ao parsear carrinho:', error);
-                carrinho = [];
-                localStorage.removeItem('carrinho');
-            }
-        }
-    } catch (error) {
-        console.error('❌ Erro ao carregar carrinho:', error);
-        carrinho = [];
-    }
-}
-
-// Função para salvar carrinho no localStorage
-function salvarCarrinho() {
-    try {
-        localStorage.setItem('carrinho', JSON.stringify(carrinho || []));
-        return true;
-    } catch (error) {
-        console.error('❌ Erro ao salvar carrinho:', error);
-        mostrarMensagem('Erro ao salvar o carrinho. Tente novamente.', 'error');
-        return false;
-    }
-}
-
-// Função para remover item do carrinho
+// ========================================
+// REMOVER ITEM DO CARRINHO
+// ========================================
 function removerDoCarrinho(idProduto) {
     if (!idProduto) return;
     
@@ -316,7 +369,9 @@ function removerDoCarrinho(idProduto) {
     }
 }
 
-// Função para atualizar quantidade de um item
+// ========================================
+// ATUALIZAR QUANTIDADE
+// ========================================
 function atualizarQuantidade(idProduto, novaQuantidade) {
     if (!idProduto || isNaN(novaQuantidade) || novaQuantidade < 0) return;
     
@@ -334,7 +389,9 @@ function atualizarQuantidade(idProduto, novaQuantidade) {
     }
 }
 
-// Função para limpar carrinho
+// ========================================
+// LIMPAR CARRINHO
+// ========================================
 function limparCarrinho() {
     if (!carrinho || carrinho.length === 0) {
         mostrarMensagem('O carrinho já está vazio!', 'info');
@@ -351,17 +408,23 @@ function limparCarrinho() {
     }
 }
 
-// Função para calcular subtotal
+// ========================================
+// CALCULAR SUBTOTAL
+// ========================================
 function calcularSubtotal() {
     return carrinho.reduce((total, item) => total + (item.preco * item.quantidade), 0);
 }
 
-// Função para calcular total
+// ========================================
+// CALCULAR TOTAL
+// ========================================
 function calcularTotal() {
     return calcularSubtotal();
 }
 
-// Função para atualizar interface
+// ========================================
+// ATUALIZAR INTERFACE
+// ========================================
 function atualizarInterface() {
     if (!carrinhoVazio || !carrinhoConteudo) return;
     
@@ -376,7 +439,9 @@ function atualizarInterface() {
     }
 }
 
-// Função para renderizar itens do carrinho
+// ========================================
+// RENDERIZAR ITENS
+// ========================================
 function renderizarItens() {
     if (!itensCarrinho) return;
     
@@ -389,26 +454,19 @@ function renderizarItens() {
 }
 
 // ========================================
-// FUNÇÃO CORRIGIDA - CONSTRUIR URL DA IMAGEM
+// CONSTRUIR URL DA IMAGEM
 // ========================================
 function construirUrlImagem(idProduto) {
-    // A imagem está salva fisicamente em: backend/uploads/images/{id_produto}.png
-    // URL completa: http://localhost:3001/uploads/images/{id_produto}.png
-    
     if (!idProduto) {
-        console.log('❌ ID do produto inválido');
         return 'https://via.placeholder.com/80?text=Sem+Imagem';
     }
     
-    // Construir URL da imagem usando o ID do produto
-    const urlImagem = `${API_BASE_URL}/uploads/images/${idProduto}.png`;
-    
-    console.log(`🖼️ URL da imagem construída: ${urlImagem}`);
-    
-    return urlImagem;
+    return `${API_BASE_URL}/uploads/images/${idProduto}.png`;
 }
 
-// Função para criar elemento de item
+// ========================================
+// CRIAR ELEMENTO DO ITEM
+// ========================================
 function criarElementoItem(item) {
     if (!item) return document.createElement('div');
     
@@ -416,9 +474,7 @@ function criarElementoItem(item) {
     itemElement.className = 'item-carrinho';
     
     try {
-        // USAR A NOVA FUNÇÃO QUE CONSTRÓI A URL CORRETAMENTE
         const imagemUrl = construirUrlImagem(item.id_produto);
-        
         const nomeProduto = item.nome_produto || 'Produto sem nome';
         const preco = parseFloat(item.preco) || 0;
         const quantidade = parseInt(item.quantidade) || 1;
@@ -443,7 +499,6 @@ function criarElementoItem(item) {
             <button class="btn-remover" data-id="${item.id_produto}">🗑️</button>
         `;
         
-        // Event listeners
         const btnsQuantidade = itemElement.querySelectorAll('.btn-quantidade');
         btnsQuantidade.forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -485,7 +540,9 @@ function criarElementoItem(item) {
     return itemElement;
 }
 
-// Função para atualizar resumo
+// ========================================
+// ATUALIZAR RESUMO
+// ========================================
 function atualizarResumo() {
     const subtotal = calcularSubtotal();
     const total = calcularTotal();
@@ -498,7 +555,9 @@ function atualizarResumo() {
     }
 }
 
-// Exportar funções globalmente
+// ========================================
+// FUNÇÕES GLOBAIS EXPORTADAS
+// ========================================
 window.adicionarAoCarrinho = (produto, quantidade = 1) => {
     const itemExistente = carrinho.find(item => item.id_produto === produto.id_produto);
     
@@ -526,4 +585,4 @@ window.obterTotalCarrinho = () => {
     return calcularTotal();
 };
 
-console.log('✅ carrinho.js carregado com sucesso!');
+console.log('✅ carrinho.js (sessionStorage + localStorage) carregado com sucesso!');

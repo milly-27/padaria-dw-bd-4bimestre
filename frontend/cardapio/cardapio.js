@@ -1,3 +1,7 @@
+// ========================================
+// CARDÁPIO.JS - VERSÃO COMPLETA COM sessionStorage
+// ========================================
+
 // Configuração da API
 const API_BASE_URL = 'http://localhost:3001';
 
@@ -11,59 +15,297 @@ const loadingMessage = document.getElementById('loadingMessage');
 const emptyMessage = document.getElementById('emptyMessage');
 const messageContainer = document.getElementById('messageContainer');
 
-// Carregar dados ao inicializar
+// Variável para armazenar produtos carregados
+let produtosCarregados = [];
+
+// ========================================
+// MIGRAÇÃO AUTOMÁTICA: localStorage → sessionStorage
+// ========================================
+function migrarCarrinhoParaSessionStorage() {
+    try {
+        const carrinhoLocal = localStorage.getItem('carrinho');
+        const carrinhoSession = sessionStorage.getItem('carrinho');
+        
+        if (carrinhoLocal && !carrinhoSession) {
+            console.log('🔄 [MIGRAÇÃO] Movendo carrinho para sessionStorage...');
+            sessionStorage.setItem('carrinho', carrinhoLocal);
+            localStorage.removeItem('carrinho');
+            console.log('✅ [MIGRAÇÃO] Concluída!');
+        } else if (carrinhoLocal) {
+            // Limpar localStorage antigo
+            localStorage.removeItem('carrinho');
+        }
+    } catch (error) {
+        console.error('❌ Erro na migração:', error);
+    }
+}
+
+// ========================================
+// OBTER QUANTIDADE DO CARRINHO - sessionStorage
+// ========================================
+function obterQuantidadeCarrinho() {
+    try {
+        // SEMPRE buscar do sessionStorage
+        const carrinhoStr = sessionStorage.getItem('carrinho');
+        
+        if (!carrinhoStr) {
+            return 0;
+        }
+        
+        const carrinho = JSON.parse(carrinhoStr);
+        
+        if (!Array.isArray(carrinho)) {
+            return 0;
+        }
+        
+        // Somar todas as quantidades
+        const total = carrinho.reduce((soma, item) => {
+            return soma + (parseInt(item.quantidade) || 0);
+        }, 0);
+        
+        console.log('🛒 [BADGE] Quantidade atual:', total);
+        return total;
+        
+    } catch (error) {
+        console.error('❌ Erro ao obter quantidade:', error);
+        return 0;
+    }
+}
+
+// ========================================
+// ATUALIZAR CONTADOR DO CARRINHO
+// ========================================
+function atualizarContadorCarrinho() {
+    try {
+        const carrinhoCount = document.getElementById('carrinhoCount');
+        
+        if (!carrinhoCount) {
+            console.log('⚠️ Contador do carrinho não encontrado no DOM');
+            return;
+        }
+        
+        const quantidade = obterQuantidadeCarrinho();
+        
+        carrinhoCount.textContent = quantidade;
+        
+        // Adicionar/remover classe visual se tiver itens
+        if (quantidade > 0) {
+            carrinhoCount.style.display = 'flex';
+        } else {
+            carrinhoCount.style.display = 'none';
+        }
+        
+        console.log('✅ [CONTADOR] Atualizado:', quantidade, 'itens');
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar contador:', error);
+    }
+}
+
+// ========================================
+// ADICIONAR PRODUTO AO CARRINHO - sessionStorage
+// ========================================
+function adicionarProdutoAoCarrinho(idProduto) {
+    try {
+        console.log('➕ [ADICIONAR] ID do produto:', idProduto);
+        
+        const produto = produtosCarregados.find(p => p.id_produto === idProduto);
+        
+        if (!produto) {
+            mostrarMensagem('Produto não encontrado!', 'error');
+            return;
+        }
+        
+        if (produto.quantidade_estoque === 0) {
+            mostrarMensagem('Produto esgotado!', 'warning');
+            return;
+        }
+        
+        // Buscar carrinho atual do sessionStorage
+        let carrinho = [];
+        const carrinhoStr = sessionStorage.getItem('carrinho');
+        
+        if (carrinhoStr) {
+            carrinho = JSON.parse(carrinhoStr);
+        }
+        
+        // Verificar se o produto já existe no carrinho
+        const itemExistente = carrinho.find(item => item.id_produto === produto.id_produto);
+        
+        if (itemExistente) {
+            // Verificar limite de estoque
+            if (itemExistente.quantidade >= produto.quantidade_estoque) {
+                mostrarMensagem('Quantidade máxima em estoque já adicionada!', 'warning');
+                return;
+            }
+            itemExistente.quantidade += 1;
+            console.log('   Quantidade atualizada:', itemExistente.quantidade);
+        } else {
+            carrinho.push({
+                id_produto: produto.id_produto,
+                nome_produto: produto.nome_produto,
+                preco: produto.preco,
+                imagem_produto: produto.imagem_produto,
+                nome_categoria: produto.nome_categoria,
+                quantidade: 1
+            });
+            console.log('   Novo item adicionado ao carrinho');
+        }
+        
+        // Salvar no sessionStorage
+        sessionStorage.setItem('carrinho', JSON.stringify(carrinho));
+        
+        // Limpar localStorage antigo (se existir)
+        if (localStorage.getItem('carrinho')) {
+            localStorage.removeItem('carrinho');
+        }
+        
+        // Atualizar contador
+        atualizarContadorCarrinho();
+        
+        // Disparar evento para outras páginas
+        window.dispatchEvent(new CustomEvent('carrinhoAtualizado', {
+            detail: {
+                quantidade: obterQuantidadeCarrinho(),
+                produto: produto.nome_produto
+            }
+        }));
+        
+        // Mostrar mensagem de sucesso
+        mostrarMensagem(`${produto.nome_produto} adicionado ao carrinho!`, 'success');
+        
+        console.log('✅ [CARRINHO] Item adicionado com sucesso!');
+        console.log('📊 Total de itens:', obterQuantidadeCarrinho());
+        
+    } catch (error) {
+        console.error('❌ Erro ao adicionar produto ao carrinho:', error);
+        mostrarMensagem('Erro ao adicionar produto ao carrinho', 'error');
+    }
+}
+
+// ========================================
+// INICIALIZAÇÃO
+// ========================================
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 [CARDÁPIO] Inicializando...');
+    
+    // 1. Migrar dados antigos
+    migrarCarrinhoParaSessionStorage();
+    
+    // 2. Carregar dados
     carregarCategorias();
     carregarProdutos();
+    
+    // 3. Atualizar contador inicial
     atualizarContadorCarrinho();
+    
+    // 4. Escutar eventos de atualização do carrinho
+    window.addEventListener('carrinhoAtualizado', (event) => {
+        console.log('📢 [EVENTO] Carrinho atualizado:', event.detail);
+        atualizarContadorCarrinho();
+    });
+    
+    // 5. Atualizar contador quando a página voltar a ter foco
+    window.addEventListener('focus', () => {
+        console.log('👁️ [FOCUS] Página em foco, atualizando contador...');
+        atualizarContadorCarrinho();
+    });
+    
+    // 6. Escutar mudanças no storage (entre abas)
+    window.addEventListener('storage', (event) => {
+        if (event.key === 'carrinho' || event.storageArea === sessionStorage) {
+            console.log('📢 [STORAGE] Mudança detectada no storage');
+            atualizarContadorCarrinho();
+        }
+    });
+    
+    console.log('✅ [CARDÁPIO] Inicializado com sucesso!');
 });
 
-// Event Listeners
-btnBuscar.addEventListener('click', buscarProdutos);
-btnLimpar.addEventListener('click', limparFiltros);
-filtroCategoria.addEventListener('change', buscarProdutos);
+// ========================================
+// EVENT LISTENERS
+// ========================================
+if (btnBuscar) {
+    btnBuscar.addEventListener('click', buscarProdutos);
+}
+
+if (btnLimpar) {
+    btnLimpar.addEventListener('click', limparFiltros);
+}
+
+if (filtroCategoria) {
+    filtroCategoria.addEventListener('change', buscarProdutos);
+}
 
 // Buscar ao pressionar Enter no campo de busca
-buscarProduto.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        buscarProdutos();
-    }
-});
+if (buscarProduto) {
+    buscarProduto.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            buscarProdutos();
+        }
+    });
+}
 
-// Função para mostrar mensagens
+// ========================================
+// FUNÇÃO PARA MOSTRAR MENSAGENS
+// ========================================
 function mostrarMensagem(texto, tipo = 'info') {
+    if (!messageContainer) {
+        console.log(`[${tipo.toUpperCase()}] ${texto}`);
+        return;
+    }
+    
     messageContainer.innerHTML = `<div class="message ${tipo}">${texto}</div>`;
+    
     setTimeout(() => {
-        messageContainer.innerHTML = '';
+        if (messageContainer) {
+            messageContainer.innerHTML = '';
+        }
     }, 3000);
 }
 
-// Função para carregar categorias no filtro
+// ========================================
+// CARREGAR CATEGORIAS
+// ========================================
 async function carregarCategorias() {
     try {
+        console.log('📂 [CATEGORIAS] Carregando...');
+        
         const response = await fetch(`${API_BASE_URL}/cardapio/categorias`);
-        if (!response.ok) throw new Error('Erro ao carregar categorias');
+        
+        if (!response.ok) {
+            throw new Error('Erro ao carregar categorias');
+        }
 
         const categorias = await response.json();
         
         // Limpar opções existentes (exceto "Todas as Categorias")
-        filtroCategoria.innerHTML = '<option value="todas">Todas as Categorias</option>';
+        if (filtroCategoria) {
+            filtroCategoria.innerHTML = '<option value="todas">Todas as Categorias</option>';
 
-        categorias.forEach(categoria => {
-            const option = document.createElement('option');
-            option.value = categoria.id_categoria;
-            option.textContent = categoria.nome_categoria;
-            filtroCategoria.appendChild(option);
-        });
+            categorias.forEach(categoria => {
+                const option = document.createElement('option');
+                option.value = categoria.id_categoria;
+                option.textContent = categoria.nome_categoria;
+                filtroCategoria.appendChild(option);
+            });
+        }
+        
+        console.log('✅ [CATEGORIAS]', categorias.length, 'categorias carregadas');
+        
     } catch (error) {
-        console.error('Erro ao carregar categorias:', error);
+        console.error('❌ [CATEGORIAS] Erro ao carregar:', error);
         mostrarMensagem('Erro ao carregar categorias', 'error');
     }
 }
 
-// Função para carregar produtos
+// ========================================
+// CARREGAR PRODUTOS
+// ========================================
 async function carregarProdutos(categoriaId = 'todas') {
     try {
+        console.log('📦 [PRODUTOS] Carregando...');
+        
         mostrarLoading(true);
         
         let url = `${API_BASE_URL}/cardapio/produtos`;
@@ -72,31 +314,38 @@ async function carregarProdutos(categoriaId = 'todas') {
         }
 
         const response = await fetch(url);
-        if (!response.ok) throw new Error('Erro ao carregar produtos');
+        
+        if (!response.ok) {
+            throw new Error('Erro ao carregar produtos');
+        }
 
         const produtos = await response.json();
         
         mostrarLoading(false);
         renderizarProdutos(produtos);
         
+        console.log('✅ [PRODUTOS]', produtos.length, 'produtos carregados');
+        
     } catch (error) {
-        console.error('Erro ao carregar produtos:', error);
+        console.error('❌ [PRODUTOS] Erro ao carregar:', error);
         mostrarLoading(false);
         mostrarMensagem('Erro ao carregar produtos', 'error');
     }
 }
 
-// Função para buscar produtos com filtros
+// ========================================
+// BUSCAR PRODUTOS COM FILTROS
+// ========================================
 async function buscarProdutos() {
     try {
         mostrarLoading(true);
         
-        const categoriaId = filtroCategoria.value;
-        const termoBusca = buscarProduto.value.trim().toLowerCase();
+        const categoriaId = filtroCategoria ? filtroCategoria.value : 'todas';
+        const termoBusca = buscarProduto ? buscarProduto.value.trim().toLowerCase() : '';
         
-        console.log('🔍 Buscando produtos...');
+        console.log('🔍 [BUSCA] Buscando produtos...');
         console.log('   Categoria:', categoriaId);
-        console.log('   Termo de busca:', termoBusca || '(vazio)');
+        console.log('   Termo:', termoBusca || '(vazio)');
         
         let url = `${API_BASE_URL}/cardapio/produtos`;
         if (categoriaId !== 'todas') {
@@ -104,7 +353,10 @@ async function buscarProdutos() {
         }
 
         const response = await fetch(url);
-        if (!response.ok) throw new Error('Erro ao carregar produtos');
+        
+        if (!response.ok) {
+            throw new Error('Erro ao carregar produtos');
+        }
 
         let produtos = await response.json();
         
@@ -124,50 +376,61 @@ async function buscarProdutos() {
         }
         
     } catch (error) {
-        console.error('❌ Erro ao buscar produtos:', error);
+        console.error('❌ [BUSCA] Erro ao buscar produtos:', error);
         mostrarLoading(false);
         mostrarMensagem('Erro ao buscar produtos', 'error');
     }
 }
 
-// Função para limpar filtros
+// ========================================
+// LIMPAR FILTROS
+// ========================================
 function limparFiltros() {
-    console.log('🔄 Limpando filtros...');
+    console.log('🔄 [FILTROS] Limpando...');
     
-    filtroCategoria.value = 'todas';
-    buscarProduto.value = '';
+    if (filtroCategoria) {
+        filtroCategoria.value = 'todas';
+    }
+    
+    if (buscarProduto) {
+        buscarProduto.value = '';
+    }
     
     carregarProdutos();
     mostrarMensagem('Filtros limpos!', 'info');
 }
 
-// Função para mostrar/ocultar loading
+// ========================================
+// MOSTRAR/OCULTAR LOADING
+// ========================================
 function mostrarLoading(mostrar) {
     if (mostrar) {
-        loadingMessage.style.display = 'block';
-        produtosContainer.style.display = 'none';
-        emptyMessage.style.display = 'none';
+        if (loadingMessage) loadingMessage.style.display = 'block';
+        if (produtosContainer) produtosContainer.style.display = 'none';
+        if (emptyMessage) emptyMessage.style.display = 'none';
     } else {
-        loadingMessage.style.display = 'none';
-        produtosContainer.style.display = 'grid';
+        if (loadingMessage) loadingMessage.style.display = 'none';
+        if (produtosContainer) produtosContainer.style.display = 'grid';
     }
 }
 
-// Variável para armazenar produtos carregados
-let produtosCarregados = [];
-
-// Função para renderizar produtos
+// ========================================
+// RENDERIZAR PRODUTOS
+// ========================================
 function renderizarProdutos(produtos) {
     produtosCarregados = produtos; // Armazenar produtos para uso posterior
+    
+    if (!produtosContainer) return;
+    
     produtosContainer.innerHTML = '';
     
     if (produtos.length === 0) {
         produtosContainer.style.display = 'none';
-        emptyMessage.style.display = 'block';
+        if (emptyMessage) emptyMessage.style.display = 'block';
         return;
     }
     
-    emptyMessage.style.display = 'none';
+    if (emptyMessage) emptyMessage.style.display = 'none';
     produtosContainer.style.display = 'grid';
 
     produtos.forEach(produto => {
@@ -176,7 +439,9 @@ function renderizarProdutos(produtos) {
     });
 }
 
-// Função para criar card do produto
+// ========================================
+// CRIAR CARD DO PRODUTO
+// ========================================
 function criarCardProduto(produto) {
     if (!produto) return document.createElement('div');
     
@@ -198,9 +463,14 @@ function criarCardProduto(produto) {
             estoqueTexto = `Últimas ${produto.quantidade_estoque} unidades`;
         }
         
+        // Construir URL da imagem
+        const imagemUrl = produto.imagem_produto 
+            ? `${API_BASE_URL}${produto.imagem_produto}`
+            : null;
+        
         // HTML da imagem
-        const imagemHtml = produto.imagem_produto 
-            ? `<img src="${produto.imagem_produto}" alt="${produto.nome_produto}">`
+        const imagemHtml = imagemUrl
+            ? `<img src="${imagemUrl}" alt="${produto.nome_produto}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'sem-imagem\\'>Sem imagem</div>';">`
             : '<div class="sem-imagem">Sem imagem disponível</div>';
         
         card.innerHTML = `
@@ -210,122 +480,54 @@ function criarCardProduto(produto) {
             <div class="produto-info">
                 <h3 class="produto-nome">${produto.nome_produto}</h3>
                 <span class="produto-categoria">${produto.nome_categoria}</span>
-                <div class="produto-preco">R$ ${Number(produto.preco).toFixed(2)}</div>
+                <div class="produto-preco">R$ ${Number(produto.preco).toFixed(2).replace('.', ',')}</div>
                 <div class="produto-estoque ${estoqueClasse}">${estoqueTexto}</div>
                 <button class="btn-adicionar-carrinho" ${botaoDisabled} 
                         onclick="adicionarProdutoAoCarrinho(${produto.id_produto})">
-                    ${produto.quantidade_estoque === 0 ? 'Esgotado' : '🛒 Adicionar'}
+                    ${produto.quantidade_estoque === 0 ? '❌ Esgotado' : '🛒 Adicionar'}
                 </button>
             </div>
         `;
         
     } catch (error) {
-        console.error('❌ Erro ao criar elemento do item:', error);
-        card.innerHTML = '<div class="error">Erro ao carregar o item</div>';
+        console.error('❌ Erro ao criar card do produto:', error);
+        card.innerHTML = '<div class="error">Erro ao carregar produto</div>';
     }
     
     return card;
 }
 
-// Função para adicionar produto ao carrinho
-function adicionarProdutoAoCarrinho(idProduto) {
-    const produto = produtosCarregados.find(p => p.id_produto === idProduto);
-    if (!produto) {
-        mostrarMensagem('Produto não encontrado!', 'error');
-        return;
-    }
-    
-    if (produto.quantidade_estoque === 0) {
-        mostrarMensagem('Produto esgotado!', 'warning');
-        return;
-    }
-    
-    // Carregar carrinho atual
-    let carrinho = [];
-    const carrinhoSalvo = localStorage.getItem('carrinho');
-    if (carrinhoSalvo) {
-        try {
-            carrinho = JSON.parse(carrinhoSalvo);
-        } catch (error) {
-            console.error('Erro ao carregar carrinho:', error);
-        }
-    }
-    
-    // Verificar se produto já está no carrinho
-    const itemExistente = carrinho.find(item => item.id_produto === produto.id_produto);
-    
-    if (itemExistente) {
-        if (itemExistente.quantidade >= produto.quantidade_estoque) {
-            mostrarMensagem('Quantidade máxima em estoque já adicionada!', 'warning');
-            return;
-        }
-        itemExistente.quantidade += 1;
-    } else {
-        carrinho.push({
-            id_produto: produto.id_produto,
-            nome_produto: produto.nome_produto,
-            preco: produto.preco,
-            imagem_path: produto.imagem_path,
-            nome_categoria: produto.nome_categoria,
-            quantidade: 1
-        });
-    }
-    
-    // Salvar carrinho
-    localStorage.setItem('carrinho', JSON.stringify(carrinho));
-    
-    // Atualizar contador do carrinho
-    atualizarContadorCarrinho();
-    
-    // Mostrar mensagem de sucesso
-    mostrarMensagem(`${produto.nome_produto} adicionado ao carrinho!`, 'success');
-}
+// ========================================
+// FUNÇÕES GLOBAIS EXPORTADAS
+// ========================================
+window.adicionarProdutoAoCarrinho = adicionarProdutoAoCarrinho;
+window.obterQuantidadeCarrinho = obterQuantidadeCarrinho;
+window.atualizarContadorCarrinho = atualizarContadorCarrinho;
 
-// Função para atualizar contador do carrinho
-function atualizarContadorCarrinho() {
-    const carrinhoCount = document.getElementById('carrinhoCount');
-    if (!carrinhoCount) return;
-    
-    let carrinho = [];
-    const carrinhoSalvo = localStorage.getItem('carrinho');
-    if (carrinhoSalvo) {
-        try {
-            carrinho = JSON.parse(carrinhoSalvo);
-        } catch (error) {
-            console.error('Erro ao carregar carrinho:', error);
+// Função para obter o carrinho completo
+window.obterCarrinho = () => {
+    try {
+        const carrinhoStr = sessionStorage.getItem('carrinho');
+        if (carrinhoStr) {
+            return JSON.parse(carrinhoStr);
         }
+    } catch (error) {
+        console.error('❌ Erro ao obter carrinho:', error);
     }
-    
-    const totalItens = carrinho.reduce((total, item) => total + item.quantidade, 0);
-    carrinhoCount.textContent = totalItens;
-}
-
-// Exportar funções globalmente
-window.adicionarAoCarrinho = (produto, quantidade = 1) => {
-    const itemExistente = carrinho.find(item => item.id_produto === produto.id_produto);
-    
-    if (itemExistente) {
-        itemExistente.quantidade += quantidade;
-    } else {
-        carrinho.push({
-            id_produto: produto.id_produto,
-            nome_produto: produto.nome_produto,
-            preco: produto.preco,
-            quantidade: quantidade
-        });
-    }
-    
-    salvarCarrinho();
-    atualizarInterface();
-    mostrarMensagem(`${produto.nome_produto} adicionado ao carrinho!`, 'success');
+    return [];
 };
 
-window.obterQuantidadeItens = () => {
-    return carrinho.reduce((total, item) => total + item.quantidade, 0);
-};
-
+// Função para obter o total do carrinho
 window.obterTotalCarrinho = () => {
-    return calcularTotal();
+    try {
+        const carrinho = window.obterCarrinho();
+        return carrinho.reduce((total, item) => {
+            return total + (item.preco * item.quantidade);
+        }, 0);
+    } catch (error) {
+        console.error('❌ Erro ao calcular total:', error);
+    }
+    return 0;
 };
 
-console.log('✅ cardapio.js carregado com sucesso!');
+console.log('✅ cardapio.js (sessionStorage) carregado com sucesso!');
