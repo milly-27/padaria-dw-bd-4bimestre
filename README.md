@@ -1,7 +1,20 @@
 # padaria-dw-bd-4bimestre
-para funcionar o recuoeperar senha é necessaorio
+para funcionar o recuperar senha é necessario criar uma senha de app no email da empresa
+
 # Instalar nodemailer
 npm install nodemailer
 
 # Instalar dotenv (para variáveis de ambiente)
 npm install dotenv
+
+
+# RELATÓRIO DE DW
+
+    O meu projeto é um site de uma padaria onde os clientes podem entrar e fazer uma compra, e tem a parte de gerente onde ele pode ver os relatório que tem botões de imprimir, fazer um pdf do relatório. O Gerente pode ver  relatório de produtos mais vendidos, de clientes que mais compram e de mês com mais vendas. Além de também podem ver e gerenciar os cruds (que é o onde fica organizado todos os dados salvos dentro do site, como pessoas cadastradas, produtos e pedidos, por exemplo)e também pode fazer compras como um cliente.
+    No meu código aparece também o botão de minhas compras onde você pode ver o que você já comprou no site. Também é possível mandar mensagem para a padaria por whatsapp. Na parte de login tem o botão de recuperar senha que manda um código para o seu email que foi cadastrado no site e quando você coloca o código pode colocar sua nova senha e já fica salva no banco de dados do site.
+    Você pode adicionar coisas no carrinho e quando você escolher todos os produtos que quiser você vai para finalizar pagamento onde vc vai ver um resumo do seu pedido e vai poder selecionar a sua forma de pagamento e se você escolher pix vai gerar o qr code onde se você ler vai vai sua conta e você pode fazer um pix pois o qr code funciona corretamente com o valor do seu pedido.
+Esse site é mais para ser utilizado em padarias físicas pois não tem nenhum sistema ou gerenciamento de entrega, ou seja, seria mais para ao invés de ter um cardápio ou um pessoa atendendo, tudo pode ser feito pelo site.
+     A IA foi algo que utilizei bastante, me ajudou muito a fazer o meu projeto, mas também estressou muito, pois ela não fazia exatamente o que eu queria…. Aprendi como utilizá-lá, mas não 100 por cento pois, querendo ou não ela ainda não faz exatamente do jeito que você quer. E para usá-la tem que explicar exatamente o que você quer e como você quer que funcione, ela não tem um bola de cristal para adivinhar (infelizmente). 
+    As partes do backend foram as que mais deram trabalho (principalmente a parte de login com cookies, pedi muita ajuda para a ia, mas ela não deixava funcionando do jeito que eu queria e às vezes quando isso funcionava ela estragava tudo o resto, aí para arrumar olhei como estava no projeto da Deh e passei para o meu, assim começou a funcionar. Pois para mim o login era a parte mais importante pois sem ele não teria como separar o que o cliente pode ver da parte que só o gerente poderia ver) pois além de entender o que eu queria que o código fizesse e explicar passo a passo o que eu queria, muitas vezes ainda dava errado, mas no final dá tudo certo. Temos que mandar passo a passo para a IA pois para compreender o que queremos, mas também mandar por pedaços pois por experiência própria geralmente ela faz muito melhor e mais rápido se você mandar o problema em pedaços e um problema por vez, por que ate mesmo ela se embola com muitas coisas para fazer.
+     E na parte do frontend(que é a parte que eu acho mais legal)… a parte mais difícil é explicar como você quer que ela faça, aí tem que explicar com o máximo de detalhes possíveis. O no meu projeto chegou um hora que não estava do jeito que eu queria ou simplesmente queria melhorar, mas não tinha ideias então comecei a pesquisar para ter uma ideia do jeito que eu queria que ficasse, você pode você mesmo tentar explicar  o que dá certo, mais as vezes demora um pouquinho, tirar um print, mandar e explicar q ai ela vai ter uma ideia visual ou mandar para outra ia e pedir um prompt sobre o design daquela tela e pode mandar para a ia q você mais usa.
+     Meu projeto ficou melhor do que eu imaginava que ele ficaria no começo do bimestre, mas claro ainda tem muita coisa para melhorar e que eu quero melhorar como ver de o número do cartão existe, ver se o e-mail realmente existe, entre muitas outras modificações
